@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mapbox_gl/mapbox_gl.dart';
+import 'package:flutter/services.dart' show rootBundle;
+import 'dart:convert';
 
 class GeneratorPage extends StatefulWidget {
   @override
@@ -8,6 +10,74 @@ class GeneratorPage extends StatefulWidget {
 
 class _GeneratorPageState extends State<GeneratorPage> {
   MapboxMapController? mapController;
+  String? geojsonData;
+
+  // Function to load GeoJSON from assets
+  Future<void> _loadGeoJsonFromAssets() async {
+    String data = await rootBundle.loadString('assets/les_2_alps.geojson');
+    setState(() {
+      geojsonData = data;
+    });
+    _addGeoJsonSourceAndLayer();
+  }
+
+  // Function to add source and layers for the GeoJSON data
+  void _addGeoJsonSourceAndLayer() {
+    if (geojsonData == null) return;
+
+    final parsedGeoJson = json.decode(geojsonData!);
+
+    // Separate aerialway features
+    final aerialwayFeatures = {
+      "type": "FeatureCollection",
+      "features": (parsedGeoJson['features'] as List).where((feature) {
+        return feature['properties'].containsKey('aerialway');
+      }).toList(),
+    };
+
+    // Separate piste:type features
+    final pisteFeatures = {
+      "type": "FeatureCollection",
+      "features": (parsedGeoJson['features'] as List).where((feature) {
+        return feature['properties'].containsKey('piste:type') &&
+        !feature['properties'].containsKey('area'); // Filter out areas;
+      }).toList(),
+    };
+
+    // Add the aerialway source
+    mapController?.addSource(
+      'aerialway-source',
+      GeojsonSourceProperties(data: aerialwayFeatures),
+    );
+
+    // Add the piste source
+    mapController?.addSource(
+      'piste-source',
+      GeojsonSourceProperties(data: pisteFeatures),
+    );
+
+    // Add black polyline for aerialway
+    mapController?.addLineLayer(
+      'aerialway-source',
+      'aerialway-layer',
+      LineLayerProperties(
+        lineColor: '#000000',
+        lineWidth: 3.0,
+      ),
+    );
+
+    // Add blue polyline for piste:type
+    mapController?.addLineLayer(
+      'piste-source',
+      'piste-layer',
+      LineLayerProperties(
+        lineColor: '#0000ff',
+        lineWidth: 3.0,
+      ),
+    );
+
+    print('Layers for aerialway and piste added successfully');
+  }
 
   // Function to add the OpenSnowMap pistes layer as the top layer
   void _addPistesLayer() {
@@ -31,7 +101,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
   }
 
   void _onStyleLoadedCallback() async {
-    _addPistesLayer();
+    // _addPistesLayer();
+    _loadGeoJsonFromAssets();
   }
 
   // Callback when the Mapbox map is created
