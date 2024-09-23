@@ -1,16 +1,17 @@
-# flutter_demo
+# OpenSnowNavi with Flutter
 
-A new Flutter project.
+Ski Map Visualization implemented with Flutter.
 
 ## Getting Started
+### General Info
+This project is using Flutter with mapbox_gl plugin.
+The demo is doing the following:
+1. Display a mapbox basemap.
+2. Load pistes and lifts from a GeoJSON file of Les 2 Alps (France).
+3. Visualize the pistes and lifts on the map.
 
-This project is a starting point for a Flutter application.
+### Building
+1. Clone this repository.
+2. Open the project in Visual Studio Code.
+3. Run the application for your desired platform.
 
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
