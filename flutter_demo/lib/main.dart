@@ -1,108 +1,70 @@
-import 'package:english_words/english_words.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_demo/mapbox_view.dart';
-import 'package:provider/provider.dart';
+import 'mapbox_view.dart';  // Make sure to import your mapbox_view.dart
 
 void main() {
   runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final GeneratorPage _generatorPage = GeneratorPage();  // Persistent instance of GeneratorPage
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (context) => MyAppState(),
-      child: MaterialApp(
-        title: 'Ultimate Ski Route Planner | SnowNavi',
-        theme: ThemeData(
-          useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepOrange),
-        ),
-        home: MyHomePage(),
+    return MaterialApp(
+      title: 'Ultimate Ski Route Planner | SnowNavi',
+      theme: ThemeData(
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepOrange),
       ),
+      home: MyHomePage(generatorPage: _generatorPage),  // Pass the persistent instance
     );
   }
 }
 
-class MyAppState extends ChangeNotifier {
-  var current = WordPair.random();
-
-  void getNext() {
-    current = WordPair.random();
-    notifyListeners();
-  }
-
-  var favorites = <WordPair>[];
-
-  void toggleFavorite() {
-    if (favorites.contains(current)) {
-      favorites.remove(current);
-    } else {
-      favorites.add(current);
-    }
-    notifyListeners();
-  }
-}
-
 class MyHomePage extends StatefulWidget {
+  final GeneratorPage generatorPage;
+
+  MyHomePage({required this.generatorPage});
+
   @override
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  var selectedIndex = 0; 
+  var selectedIndex = 0;  // Control which page to show on top
 
   @override
   Widget build(BuildContext context) {
-    Widget page;
-
-    switch (selectedIndex) {
-      case 0:
-        page = GeneratorPage();
-        break;
-      case 1:
-        page = FavoritePage();
-        break;
-      default:
-        throw UnimplementedError('no widget for $selectedIndex');
-    }
-
     return LayoutBuilder(
       builder: (context, constraints) {
         return Scaffold(
-          body: Row(
+          body: Stack(
             children: [
-              SafeArea(
-                child: NavigationRail(
-                  extended: false,
-                  destinations: [
-                    NavigationRailDestination(
-                      icon: Icon(Icons.home),
-                      label: Text('Home'),
-                    ),
-                    NavigationRailDestination(
-                      icon: Icon(Icons.favorite),
-                      label: Text('Favorites'),
-                    ),
-                  ],
-                  selectedIndex: selectedIndex,
-                  onDestinationSelected: (value) {
-                    print('selected: $value');
-                    setState(() {
-                      selectedIndex = value;
-                    });
-                  },
-                ),
+              // GeneratorPage is always visible
+              widget.generatorPage,
+
+              // FavoritePage is shown on top when selectedIndex == 1
+              if (selectedIndex == 1)
+                FavoritePage(),  // Overlay the FavoritePage
+            ],
+          ),
+          bottomNavigationBar: BottomNavigationBar(
+            currentIndex: selectedIndex,
+            items: const [
+              BottomNavigationBarItem(
+                icon: Icon(Icons.home),
+                label: 'Home',
               ),
-              Expanded(
-                child: Container(
-                  color: Theme.of(context).colorScheme.primaryContainer,
-                  child: page,
-                ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.favorite),
+                label: 'Favorites',
               ),
             ],
+            onTap: (index) {
+              setState(() {
+                selectedIndex = index;  // Change the index to show/hide FavoritePage
+              });
+            },
           ),
         );
       }
@@ -113,28 +75,14 @@ class _MyHomePageState extends State<MyHomePage> {
 class FavoritePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    var appState = context.watch<MyAppState>();
-    var favorites = appState.favorites;
-
-    if (favorites.isEmpty) {
-      return Center(
-        child: Text('No favorites'),
-      );
-    }
-
-    return ListView(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(20), 
-          child: Text('You have '
-              '${favorites.length} favorites:'),
+    return Scaffold(
+      backgroundColor: Colors.white.withOpacity(0.8),  // Semi-transparent background
+      body: Center(
+        child: Text(
+          'Favorites Page',
+          style: TextStyle(fontSize: 24),
         ),
-        for (var pair in favorites)
-          ListTile(
-            leading: Icon(Icons.favorite),
-            title: Text(pair.asLowerCase),
-          )
-      ],
+      ),
     );
   }
 }
