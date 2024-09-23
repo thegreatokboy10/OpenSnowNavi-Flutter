@@ -54,6 +54,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
               zoom: 13,  // Adjust the zoom level if necessary
             ),
             styleString: 'mapbox://styles/okboy2008/clx1zai3s01ck01rb5zsv600u', // Your custom Mapbox style
+            compassEnabled: false, // Disable the compass button
           ),
           Positioned(
             top: 20,
