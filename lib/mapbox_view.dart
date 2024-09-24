@@ -77,24 +77,65 @@ class _GeneratorPageState extends State<GeneratorPage> {
     };
 
     // Separate piste:type features and filter out those that have the 'area' key
-    final pisteFeatures = {
+    final novicePisteFeatures = {
       "type": "FeatureCollection",
       "features": (parsedGeoJson['features'] as List).where((feature) {
+        // 检查 feature['properties'] 中是否包含 'piste:type' 键
+        // 并且 'piste:type' 的值为 'downhill'
+        // 同时排除包含 'area' 键的条目
+        final pisteType = feature['properties']['piste:type'];
+        final difficulty = feature['properties']['piste:difficulty'];
         return feature['properties'].containsKey('piste:type') &&
-               !feature['properties'].containsKey('area'); // Filter out areas
+              (pisteType == 'downhill' || pisteType == 'connection') &&
+              difficulty == 'novice' &&
+              !feature['properties'].containsKey('area');
       }).toList(),
     };
 
+
+    ////////////////////////////////////////////////////////////////
+    // Add novice piste features
+    ////////////////////////////////////////////////////////////////
+    
+    // Add the novice piste source
+    mapController?.addSource(
+      'novice-piste-source',
+      GeojsonSourceProperties(data: novicePisteFeatures),
+    );
+
+    // Add green polyline for novice pistes
+    mapController?.addLineLayer(
+      'novice-piste-source',
+      'novice-piste-layer',
+      LineLayerProperties(
+        lineColor: '#347928',
+        lineWidth: 2.0,
+      ),
+    );
+
+    // Add arrows for piste:type (one arrow per line)
+    mapController?.addSymbolLayer(
+      'novice-piste-source',
+      'novice-piste-arrow-layer',
+      SymbolLayerProperties(
+        iconImage: "novice-piste-arrow", // Built-in arrow icon
+        symbolPlacement: 'line', // Place along the line
+        symbolSpacing: 300, // Ensures only one arrow is placed on the line
+        iconAllowOverlap: false,
+        iconRotate: ['get', 'bearing'], // Rotate arrow based on line bearing
+        iconRotationAlignment: 'map',
+      ),
+      minzoom: 14.0,
+    );
+
+    ////////////////////////////////////////////////////////////////
+    // Add aerialway features
+    ////////////////////////////////////////////////////////////////
+    
     // Add the aerialway source
     mapController?.addSource(
       'aerialway-source',
       GeojsonSourceProperties(data: aerialwayFeatures),
-    );
-
-    // Add the piste source
-    mapController?.addSource(
-      'piste-source',
-      GeojsonSourceProperties(data: pisteFeatures),
     );
 
     // Add black polyline for aerialway
@@ -105,16 +146,6 @@ class _GeneratorPageState extends State<GeneratorPage> {
         lineColor: '#000000',
         lineWidth: 1.0,
         lineDasharray: [2, 2],
-      ),
-    );
-
-    // Add blue polyline for piste:type
-    mapController?.addLineLayer(
-      'piste-source',
-      'piste-layer',
-      LineLayerProperties(
-        lineColor: '#0000ff',
-        lineWidth: 2.0,
       ),
     );
 
@@ -131,21 +162,6 @@ class _GeneratorPageState extends State<GeneratorPage> {
         iconRotationAlignment: 'map',
       ),
       minzoom: 12,
-    );
-
-    // Add arrows for piste:type (one arrow per line)
-    mapController?.addSymbolLayer(
-      'piste-source',
-      'piste-arrow-layer',
-      SymbolLayerProperties(
-        iconImage: "piste-arrow", // Built-in arrow icon
-        symbolPlacement: 'line', // Place along the line
-        symbolSpacing: 300, // Ensures only one arrow is placed on the line
-        iconAllowOverlap: false,
-        iconRotate: ['get', 'bearing'], // Rotate arrow based on line bearing
-        iconRotationAlignment: 'map',
-      ),
-      minzoom: 14.5,
     );
 
     print('Layers for aerialway and piste added successfully');
@@ -181,9 +197,9 @@ class _GeneratorPageState extends State<GeneratorPage> {
     );
     _addFlutterIconToMap(
       icon: Icons.arrow_right,
-      color: const Color.fromARGB(255, 0, 0, 255),
+      color: const Color.fromARGB(255, 52, 124, 40),
       size: 25.0,
-      imageName: 'piste-arrow',
+      imageName: 'novice-piste-arrow',
     );
     _loadGeoJsonFromAssets();
   }
