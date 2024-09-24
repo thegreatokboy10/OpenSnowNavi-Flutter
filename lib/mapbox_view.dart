@@ -140,7 +140,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
       SymbolLayerProperties(
         iconImage: "piste-arrow", // Built-in arrow icon
         symbolPlacement: 'line', // Place along the line
-        symbolSpacing: 100, // Ensures only one arrow is placed on the line
+        symbolSpacing: 300, // Ensures only one arrow is placed on the line
         iconAllowOverlap: false,
         iconRotate: ['get', 'bearing'], // Rotate arrow based on line bearing
         iconRotationAlignment: 'map',
