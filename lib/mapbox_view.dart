@@ -11,6 +11,11 @@ class GeneratorPage extends StatefulWidget {
 }
 
 class _GeneratorPageState extends State<GeneratorPage> {
+  // Colors for the map
+  Color novice_piste_color = Color.fromARGB(255, 52, 124, 40);
+  Color easy_piste_color = Color.fromARGB(255, 63, 162, 246);
+  Color lift_color = Color.fromARGB(255, 0, 0, 0);
+
   MapboxMapController? mapController;
   // Function to create a Flutter icon as an image (in memory) that takes the icon as a parameter
   Future<Uint8List> _createFlutterIconAsImage(IconData iconData, Color color, double size) async {
@@ -124,7 +129,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
       'novice-piste-source',
       'novice-piste-layer',
       LineLayerProperties(
-        lineColor: '#347928',
+        lineColor: novice_piste_color.toHexStringRGB(),
         lineWidth: 2.0,
       ),
     );
@@ -159,7 +164,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
       'easy-piste-source',
       'easy-piste-layer',
       LineLayerProperties(
-        lineColor: '#3FA2F6',
+        lineColor: easy_piste_color.toHexStringRGB(),
         lineWidth: 2.0,
       ),
     );
@@ -195,7 +200,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
       'aerialway-source',
       'aerialway-layer',
       LineLayerProperties(
-        lineColor: '#000000',
+        lineColor: lift_color.toHexStringRGB(),
         lineWidth: 1.0,
         lineDasharray: [2, 2],
       ),
@@ -243,19 +248,19 @@ class _GeneratorPageState extends State<GeneratorPage> {
   void _onStyleLoadedCallback() async {
     _addFlutterIconToMap(
       icon: Icons.arrow_right,
-      color: const Color.fromARGB(255, 0, 0, 0),
+      color: lift_color,
       size: 25.0,
       imageName: 'lift-arrow',
     );
     _addFlutterIconToMap(
       icon: Icons.arrow_right,
-      color: const Color.fromARGB(255, 52, 124, 40),
+      color: novice_piste_color,
       size: 25.0,
       imageName: 'novice-piste-arrow',
     );
     _addFlutterIconToMap(
       icon: Icons.arrow_right,
-      color: const Color.fromARGB(255, 63, 162, 246),
+      color: easy_piste_color,
       size: 25.0,
       imageName: 'easy-piste-arrow',
     );
