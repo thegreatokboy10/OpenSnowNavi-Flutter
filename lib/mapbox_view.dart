@@ -14,6 +14,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
   // Colors for the map
   Color novice_piste_color = Color.fromARGB(255, 52, 124, 40);
   Color easy_piste_color = Color.fromARGB(255, 63, 162, 246);
+  Color intermediate_piste_color = Color.fromARGB(255, 199, 37, 62);
   Color lift_color = Color.fromARGB(255, 0, 0, 0);
 
   MapboxMapController? mapController;
@@ -113,6 +114,22 @@ class _GeneratorPageState extends State<GeneratorPage> {
       }).toList(),
     };
 
+    // Separate piste:type features and filter out those that have the 'area' key
+    final intermediatePisteFeatures = {
+      "type": "FeatureCollection",
+      "features": (parsedGeoJson['features'] as List).where((feature) {
+        // 检查 feature['properties'] 中是否包含 'piste:type' 键
+        // 并且 'piste:type' 的值为 'downhill'
+        // 同时排除包含 'area' 键的条目
+        final pisteType = feature['properties']['piste:type'];
+        final difficulty = feature['properties']['piste:difficulty'];
+        return feature['properties'].containsKey('piste:type') &&
+              (pisteType == 'downhill' || pisteType == 'connection') &&
+              difficulty == 'intermediate' &&
+              !feature['properties'].containsKey('area');
+      }).toList(),
+    };
+
 
     ////////////////////////////////////////////////////////////////
     // Add novice piste features
@@ -175,6 +192,41 @@ class _GeneratorPageState extends State<GeneratorPage> {
       'easy-piste-arrow-layer',
       SymbolLayerProperties(
         iconImage: "easy-piste-arrow", // Built-in arrow icon
+        symbolPlacement: 'line', // Place along the line
+        symbolSpacing: 300, // Ensures only one arrow is placed on the line
+        iconAllowOverlap: false,
+        iconRotate: ['get', 'bearing'], // Rotate arrow based on line bearing
+        iconRotationAlignment: 'map',
+      ),
+      minzoom: 14.0,
+    );
+
+    ////////////////////////////////////////////////////////////////
+    // Add intermediate piste features
+    ////////////////////////////////////////////////////////////////
+    
+    // Add the intermediate piste source
+    mapController?.addSource(
+      'intermediate-piste-source',
+      GeojsonSourceProperties(data: intermediatePisteFeatures),
+    );
+
+    // Add red polyline for intermediate pistes
+    mapController?.addLineLayer(
+      'intermediate-piste-source',
+      'intermediate-piste-layer',
+      LineLayerProperties(
+        lineColor: intermediate_piste_color.toHexStringRGB(),
+        lineWidth: 2.0,
+      ),
+    );
+
+    // Add arrows for piste:type (one arrow per line)
+    mapController?.addSymbolLayer(
+      'intermediate-piste-source',
+      'intermediate-piste-arrow-layer',
+      SymbolLayerProperties(
+        iconImage: "intermediate-piste-arrow", // Built-in arrow icon
         symbolPlacement: 'line', // Place along the line
         symbolSpacing: 300, // Ensures only one arrow is placed on the line
         iconAllowOverlap: false,
@@ -263,6 +315,12 @@ class _GeneratorPageState extends State<GeneratorPage> {
       color: easy_piste_color,
       size: 25.0,
       imageName: 'easy-piste-arrow',
+    );
+    _addFlutterIconToMap(
+      icon: Icons.arrow_right,
+      color: intermediate_piste_color,
+      size: 25.0,
+      imageName: 'intermediate-piste-arrow',
     );
     _loadGeoJsonFromAssets();
   }
