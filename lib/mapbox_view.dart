@@ -126,7 +126,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
         iconImage: "lift-arrow", // Built-in arrow icon
         symbolPlacement: 'line-center', // Place along the line
         symbolSpacing: 5000000, // Ensures only one arrow is placed on the line
-        iconAllowOverlap: true,
+        iconAllowOverlap: false,
         iconRotate: ['get', 'bearing'], // Rotate arrow based on line bearing
         iconRotationAlignment: 'map',
       ),
@@ -137,7 +137,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
       'piste-source',
       'piste-arrow-layer',
       SymbolLayerProperties(
-        iconImage: "lift-arrow", // Built-in arrow icon
+        iconImage: "piste-arrow", // Built-in arrow icon
         symbolPlacement: 'line', // Place along the line
         symbolSpacing: 100, // Ensures only one arrow is placed on the line
         iconAllowOverlap: false,
@@ -176,6 +176,12 @@ class _GeneratorPageState extends State<GeneratorPage> {
       color: const Color.fromARGB(255, 0, 0, 0),
       size: 25.0,
       imageName: 'lift-arrow',
+    );
+    _addFlutterIconToMap(
+      icon: Icons.arrow_right,
+      color: const Color.fromARGB(255, 0, 0, 255),
+      size: 25.0,
+      imageName: 'piste-arrow',
     );
     _loadGeoJsonFromAssets();
   }
