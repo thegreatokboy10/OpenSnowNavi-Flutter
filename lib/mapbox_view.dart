@@ -62,7 +62,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
       'aerialway-layer',
       LineLayerProperties(
         lineColor: '#000000',
-        lineWidth: 3.0,
+        lineWidth: 1.0,
+        lineDasharray: [2, 2],
       ),
     );
 
@@ -72,7 +73,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
       'piste-layer',
       LineLayerProperties(
         lineColor: '#0000ff',
-        lineWidth: 3.0,
+        lineWidth: 2.0,
       ),
     );
 
