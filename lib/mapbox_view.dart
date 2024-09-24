@@ -15,8 +15,10 @@ class _GeneratorPageState extends State<GeneratorPage> {
   Color novice_piste_color = Color.fromARGB(255, 52, 124, 40);
   Color easy_piste_color = Color.fromARGB(255, 63, 162, 246);
   Color intermediate_piste_color = Color.fromARGB(255, 199, 37, 62);
-  Color advanced_piste_color = Color.fromARGB(255, 27, 27, 27);
+  Color advanced_piste_color = Color.fromARGB(200, 27, 27, 27);
   Color lift_color = Color.fromARGB(255, 0, 0, 0);
+  // Icon size
+  double iconSize = 50;
 
   MapboxMapController? mapController;
   // Function to create a Flutter icon as an image (in memory) that takes the icon as a parameter
@@ -351,31 +353,31 @@ class _GeneratorPageState extends State<GeneratorPage> {
     _addFlutterIconToMap(
       icon: Icons.arrow_right,
       color: lift_color,
-      size: 25.0,
+      size: iconSize,
       imageName: 'lift-arrow',
     );
     _addFlutterIconToMap(
       icon: Icons.arrow_right,
       color: novice_piste_color,
-      size: 25.0,
+      size: iconSize,
       imageName: 'novice-piste-arrow',
     );
     _addFlutterIconToMap(
       icon: Icons.arrow_right,
       color: easy_piste_color,
-      size: 25.0,
+      size: iconSize,
       imageName: 'easy-piste-arrow',
     );
     _addFlutterIconToMap(
       icon: Icons.arrow_right,
       color: intermediate_piste_color,
-      size: 25.0,
+      size: iconSize,
       imageName: 'intermediate-piste-arrow',
     );
     _addFlutterIconToMap(
       icon: Icons.arrow_right,
       color: advanced_piste_color,
-      size: 25.0,
+      size: iconSize,
       imageName: 'advanced-piste-arrow',
     );
     _loadGeoJsonFromAssets();
