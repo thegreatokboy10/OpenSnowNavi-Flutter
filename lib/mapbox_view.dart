@@ -130,6 +130,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
         iconRotate: ['get', 'bearing'], // Rotate arrow based on line bearing
         iconRotationAlignment: 'map',
       ),
+      minzoom: 12,
     );
 
     // Add arrows for piste:type (one arrow per line)
@@ -144,6 +145,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
         iconRotate: ['get', 'bearing'], // Rotate arrow based on line bearing
         iconRotationAlignment: 'map',
       ),
+      minzoom: 14.5,
     );
 
     print('Layers for aerialway and piste added successfully');
@@ -191,6 +193,11 @@ class _GeneratorPageState extends State<GeneratorPage> {
     mapController = controller;
   }
 
+  void _onCameraIdle() async {
+    // Get the current zoom level and print it
+    print('Current zoom level: ${mapController?.cameraPosition?.zoom}');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -200,6 +207,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
             accessToken:
                 'pk.eyJ1Ijoib2tib3kyMDA4IiwiYSI6ImNsdGE1dzd6OTAxbHQyanA0aWM1MjU5c24ifQ.vbbY3gzL8nnUFctmDv9UBQ',
             onMapCreated: _onMapCreated,
+            onCameraIdle: _onCameraIdle,
             onStyleLoadedCallback: _onStyleLoadedCallback,
             initialCameraPosition: CameraPosition(
               target: LatLng(45.009487, 6.124711), // Coordinates for Les 2 Alpes
