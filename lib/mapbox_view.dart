@@ -92,6 +92,22 @@ class _GeneratorPageState extends State<GeneratorPage> {
       }).toList(),
     };
 
+    // Separate piste:type features and filter out those that have the 'area' key
+    final easyPisteFeatures = {
+      "type": "FeatureCollection",
+      "features": (parsedGeoJson['features'] as List).where((feature) {
+        // 检查 feature['properties'] 中是否包含 'piste:type' 键
+        // 并且 'piste:type' 的值为 'downhill'
+        // 同时排除包含 'area' 键的条目
+        final pisteType = feature['properties']['piste:type'];
+        final difficulty = feature['properties']['piste:difficulty'];
+        return feature['properties'].containsKey('piste:type') &&
+              (pisteType == 'downhill' || pisteType == 'connection') &&
+              difficulty == 'easy' &&
+              !feature['properties'].containsKey('area');
+      }).toList(),
+    };
+
 
     ////////////////////////////////////////////////////////////////
     // Add novice piste features
@@ -127,6 +143,42 @@ class _GeneratorPageState extends State<GeneratorPage> {
       ),
       minzoom: 14.0,
     );
+
+    ////////////////////////////////////////////////////////////////
+    // Add easy piste features
+    ////////////////////////////////////////////////////////////////
+    
+    // Add the easy piste source
+    mapController?.addSource(
+      'easy-piste-source',
+      GeojsonSourceProperties(data: easyPisteFeatures),
+    );
+
+    // Add blue polyline for easy pistes
+    mapController?.addLineLayer(
+      'easy-piste-source',
+      'easy-piste-layer',
+      LineLayerProperties(
+        lineColor: '#3FA2F6',
+        lineWidth: 2.0,
+      ),
+    );
+
+    // Add arrows for piste:type (one arrow per line)
+    mapController?.addSymbolLayer(
+      'easy-piste-source',
+      'easy-piste-arrow-layer',
+      SymbolLayerProperties(
+        iconImage: "easy-piste-arrow", // Built-in arrow icon
+        symbolPlacement: 'line', // Place along the line
+        symbolSpacing: 300, // Ensures only one arrow is placed on the line
+        iconAllowOverlap: false,
+        iconRotate: ['get', 'bearing'], // Rotate arrow based on line bearing
+        iconRotationAlignment: 'map',
+      ),
+      minzoom: 14.0,
+    );
+
 
     ////////////////////////////////////////////////////////////////
     // Add aerialway features
@@ -200,6 +252,12 @@ class _GeneratorPageState extends State<GeneratorPage> {
       color: const Color.fromARGB(255, 52, 124, 40),
       size: 25.0,
       imageName: 'novice-piste-arrow',
+    );
+    _addFlutterIconToMap(
+      icon: Icons.arrow_right,
+      color: const Color.fromARGB(255, 63, 162, 246),
+      size: 25.0,
+      imageName: 'easy-piste-arrow',
     );
     _loadGeoJsonFromAssets();
   }
