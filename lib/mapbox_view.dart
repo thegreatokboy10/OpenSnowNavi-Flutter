@@ -15,6 +15,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
   Color novice_piste_color = Color.fromARGB(255, 52, 124, 40);
   Color easy_piste_color = Color.fromARGB(255, 63, 162, 246);
   Color intermediate_piste_color = Color.fromARGB(255, 199, 37, 62);
+  Color advanced_piste_color = Color.fromARGB(255, 27, 27, 27);
   Color lift_color = Color.fromARGB(255, 0, 0, 0);
 
   MapboxMapController? mapController;
@@ -130,6 +131,21 @@ class _GeneratorPageState extends State<GeneratorPage> {
       }).toList(),
     };
 
+    // Separate piste:type features and filter out those that have the 'area' key
+    final advancedPisteFeatures = {
+      "type": "FeatureCollection",
+      "features": (parsedGeoJson['features'] as List).where((feature) {
+        // 检查 feature['properties'] 中是否包含 'piste:type' 键
+        // 并且 'piste:type' 的值为 'downhill'
+        // 同时排除包含 'area' 键的条目
+        final pisteType = feature['properties']['piste:type'];
+        final difficulty = feature['properties']['piste:difficulty'];
+        return feature['properties'].containsKey('piste:type') &&
+              (pisteType == 'downhill' || pisteType == 'connection') &&
+              difficulty == 'advanced' &&
+              !feature['properties'].containsKey('area');
+      }).toList(),
+    };
 
     ////////////////////////////////////////////////////////////////
     // Add novice piste features
@@ -236,6 +252,40 @@ class _GeneratorPageState extends State<GeneratorPage> {
       minzoom: 14.0,
     );
 
+    ////////////////////////////////////////////////////////////////
+    // Add advanced piste features
+    ////////////////////////////////////////////////////////////////
+    
+    // Add the advanced piste source
+    mapController?.addSource(
+      'advanced-piste-source',
+      GeojsonSourceProperties(data: advancedPisteFeatures),
+    );
+
+    // Add black polyline for advanced pistes
+    mapController?.addLineLayer(
+      'advanced-piste-source',
+      'advanced-piste-layer',
+      LineLayerProperties(
+        lineColor: advanced_piste_color.toHexStringRGB(),
+        lineWidth: 2.0,
+      ),
+    );
+
+    // Add arrows for piste:type (one arrow per line)
+    mapController?.addSymbolLayer(
+      'advanced-piste-source',
+      'advanced-piste-arrow-layer',
+      SymbolLayerProperties(
+        iconImage: "advanced-piste-arrow", // Built-in arrow icon
+        symbolPlacement: 'line', // Place along the line
+        symbolSpacing: 300, // Ensures only one arrow is placed on the line
+        iconAllowOverlap: false,
+        iconRotate: ['get', 'bearing'], // Rotate arrow based on line bearing
+        iconRotationAlignment: 'map',
+      ),
+      minzoom: 14.0,
+    );
 
     ////////////////////////////////////////////////////////////////
     // Add aerialway features
@@ -321,6 +371,12 @@ class _GeneratorPageState extends State<GeneratorPage> {
       color: intermediate_piste_color,
       size: 25.0,
       imageName: 'intermediate-piste-arrow',
+    );
+    _addFlutterIconToMap(
+      icon: Icons.arrow_right,
+      color: advanced_piste_color,
+      size: 25.0,
+      imageName: 'advanced-piste-arrow',
     );
     _loadGeoJsonFromAssets();
   }
