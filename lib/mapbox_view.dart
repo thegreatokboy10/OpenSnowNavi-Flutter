@@ -21,6 +21,11 @@ class _GeneratorPageState extends State<GeneratorPage> {
   Color lift_color = Color.fromARGB(255, 0, 0, 0);
   // Icon size
   double iconSize = 30;
+  // Piste/Lift name
+  double fontSize = 13;
+  double nameOffset = 0.6;
+  // Floating button
+  double floatingbuttonopacity = 0.8;
 
   // Variable to track whether the map is in 3D mode or not
   bool is3DMode = false;
@@ -240,6 +245,22 @@ class _GeneratorPageState extends State<GeneratorPage> {
       minzoom: 14.0,
     );
 
+    // Add piste name labels along the piste lines
+    mapController?.addSymbolLayer(
+      'novice-piste-source',
+      'novice-piste-name-layer',
+      SymbolLayerProperties(
+        textField: ['get', 'name'],  // Use 'piste:name' property from GeoJSON
+        textSize: fontSize,
+        symbolPlacement: 'line',  // Place labels along the line
+        textAnchor: 'center',  // Anchor the text in the center
+        textAllowOverlap: false,  // Prevent overlapping text
+        textOffset: [0, nameOffset],  // Adjust text position slightly
+        textColor: novice_piste_color.toHexStringRGB(),  // Set text color
+      ),
+      minzoom: 14.0,
+    );
+
     ////////////////////////////////////////////////////////////////
     // Add easy piste features
     ////////////////////////////////////////////////////////////////
@@ -271,6 +292,22 @@ class _GeneratorPageState extends State<GeneratorPage> {
         iconAllowOverlap: false,
         iconRotate: ['get', 'bearing'], // Rotate arrow based on line bearing
         iconRotationAlignment: 'map',
+      ),
+      minzoom: 14.0,
+    );
+
+    // Add piste name labels along the piste lines
+    mapController?.addSymbolLayer(
+      'easy-piste-source',
+      'easy-piste-name-layer',
+      SymbolLayerProperties(
+        textField: ['get', 'name'],  // Use 'piste:name' property from GeoJSON
+        textSize: fontSize,
+        symbolPlacement: 'line',  // Place labels along the line
+        textAnchor: 'center',  // Anchor the text in the center
+        textAllowOverlap: false,  // Prevent overlapping text
+        textOffset: [0, nameOffset],  // Adjust text position slightly
+        textColor: easy_piste_color.toHexStringRGB(),  // Set text color
       ),
       minzoom: 14.0,
     );
@@ -310,6 +347,22 @@ class _GeneratorPageState extends State<GeneratorPage> {
       minzoom: 14.0,
     );
 
+    // Add piste name labels along the piste lines
+    mapController?.addSymbolLayer(
+      'intermediate-piste-source',
+      'intermediate-piste-name-layer',
+      SymbolLayerProperties(
+        textField: ['get', 'name'],  // Use 'piste:name' property from GeoJSON
+        textSize: fontSize,
+        symbolPlacement: 'line',  // Place labels along the line
+        textAnchor: 'center',  // Anchor the text in the center
+        textAllowOverlap: false,  // Prevent overlapping text
+        textOffset: [0, nameOffset],  // Adjust text position slightly
+        textColor: intermediate_piste_color.toHexStringRGB(),  // Set text color
+      ),
+      minzoom: 14.0,
+    );
+
     ////////////////////////////////////////////////////////////////
     // Add advanced piste features
     ////////////////////////////////////////////////////////////////
@@ -345,6 +398,22 @@ class _GeneratorPageState extends State<GeneratorPage> {
       minzoom: 14.0,
     );
 
+    // Add piste name labels along the piste lines
+    mapController?.addSymbolLayer(
+      'advanced-piste-source',
+      'advanced-piste-name-layer',
+      SymbolLayerProperties(
+        textField: ['get', 'name'],  // Use 'piste:name' property from GeoJSON
+        textSize: fontSize,
+        symbolPlacement: 'line',  // Place labels along the line
+        textAnchor: 'center',  // Anchor the text in the center
+        textAllowOverlap: false,  // Prevent overlapping text
+        textOffset: [0, nameOffset],  // Adjust text position slightly
+        textColor: advanced_piste_color.toHexStringRGB(),  // Set text color
+      ),
+      minzoom: 14.0,
+    );
+
     ////////////////////////////////////////////////////////////////
     // Add expert piste features
     ////////////////////////////////////////////////////////////////
@@ -376,6 +445,22 @@ class _GeneratorPageState extends State<GeneratorPage> {
         iconAllowOverlap: false,
         iconRotate: ['get', 'bearing'], // Rotate arrow based on line bearing
         iconRotationAlignment: 'map',
+      ),
+      minzoom: 14.0,
+    );
+
+    // Add piste name labels along the piste lines
+    mapController?.addSymbolLayer(
+      'expert-piste-source',
+      'expert-piste-name-layer',
+      SymbolLayerProperties(
+        textField: ['get', 'name'],  // Use 'piste:name' property from GeoJSON
+        textSize: fontSize,
+        symbolPlacement: 'line',  // Place labels along the line
+        textAnchor: 'center',  // Anchor the text in the center
+        textAllowOverlap: false,  // Prevent overlapping text
+        textOffset: [0, nameOffset],  // Adjust text position slightly
+        textColor: expert_piste_color.toHexStringRGB(),  // Set text color
       ),
       minzoom: 14.0,
     );
@@ -416,9 +501,27 @@ class _GeneratorPageState extends State<GeneratorPage> {
       minzoom: 12,
     );
 
+    // Add piste name labels along the piste lines
+    mapController?.addSymbolLayer(
+      'aerialway-source',
+      'aerialway-name-layer',
+      SymbolLayerProperties(
+        textField: ['get', 'name'],  // Use 'piste:name' property from GeoJSON
+        textSize: fontSize,
+        symbolPlacement: 'line',  // Place labels along the line
+        textAnchor: 'center',  // Anchor the text in the center
+        textAllowOverlap: false,  // Prevent overlapping text
+        textOffset: [0, nameOffset],  // Adjust text position slightly
+        textColor: lift_color.toHexStringRGB(),  // Set text color
+      ),
+      minzoom: 14.0,
+    );
+
     print('Layers for aerialway and piste added successfully');
   }
 
+  ///////////////////////////////////////////////////////////////////
+  
   // Function to add the OpenSnowMap pistes layer as the top layer
   void _addPistesLayer() {
     // Add raster source with OpenSnowMap tiles
@@ -557,7 +660,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
             top: 20, // Position at the top
             right: 20, // Align to the right
             child: FloatingActionButton(
-              backgroundColor: Colors.white.withOpacity(0.6),
+              backgroundColor: Colors.white.withOpacity(floatingbuttonopacity),
               onPressed: _toggle2D3DView,
               child: Text(
                 is3DMode ? '2D' : '3D',
