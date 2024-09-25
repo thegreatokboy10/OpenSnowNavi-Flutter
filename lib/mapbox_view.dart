@@ -12,6 +12,7 @@ class GeneratorPage extends StatefulWidget {
 
 class _GeneratorPageState extends State<GeneratorPage> {
   // Colors for the map
+  Color connection_piste_color = Color.fromARGB(255, 52, 124, 40);
   Color novice_piste_color = Color.fromARGB(255, 52, 124, 40);
   Color easy_piste_color = Color.fromARGB(255, 63, 162, 246);
   Color intermediate_piste_color = Color.fromARGB(255, 199, 37, 62);
@@ -87,6 +88,21 @@ class _GeneratorPageState extends State<GeneratorPage> {
     };
 
     // Separate piste:type features and filter out those that have the 'area' key
+    final connectionPisteFeatures = {
+      "type": "FeatureCollection",
+      "features": (parsedGeoJson['features'] as List).where((feature) {
+        // 检查 feature['properties'] 中是否包含 'piste:type' 键
+        // 并且 'piste:type' 的值为 'downhill'
+        // 同时排除包含 'area' 键的条目
+        final pisteType = feature['properties']['piste:type'];
+        final difficulty = feature['properties']['piste:difficulty'];
+        return feature['properties'].containsKey('piste:type') &&
+              pisteType == 'connection' && 
+              !feature['properties'].containsKey('area');
+      }).toList(),
+    };
+
+    // Separate piste:type features and filter out those that have the 'area' key
     final novicePisteFeatures = {
       "type": "FeatureCollection",
       "features": (parsedGeoJson['features'] as List).where((feature) {
@@ -96,7 +112,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
         final pisteType = feature['properties']['piste:type'];
         final difficulty = feature['properties']['piste:difficulty'];
         return feature['properties'].containsKey('piste:type') &&
-              (pisteType == 'downhill' || pisteType == 'connection') &&
+              pisteType == 'downhill' && 
               difficulty == 'novice' &&
               !feature['properties'].containsKey('area');
       }).toList(),
@@ -112,7 +128,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
         final pisteType = feature['properties']['piste:type'];
         final difficulty = feature['properties']['piste:difficulty'];
         return feature['properties'].containsKey('piste:type') &&
-              (pisteType == 'downhill' || pisteType == 'connection') &&
+              pisteType == 'downhill' &&
               difficulty == 'easy' &&
               !feature['properties'].containsKey('area');
       }).toList(),
@@ -128,7 +144,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
         final pisteType = feature['properties']['piste:type'];
         final difficulty = feature['properties']['piste:difficulty'];
         return feature['properties'].containsKey('piste:type') &&
-              (pisteType == 'downhill' || pisteType == 'connection') &&
+              pisteType == 'downhill' &&
               difficulty == 'intermediate' &&
               !feature['properties'].containsKey('area');
       }).toList(),
@@ -144,7 +160,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
         final pisteType = feature['properties']['piste:type'];
         final difficulty = feature['properties']['piste:difficulty'];
         return feature['properties'].containsKey('piste:type') &&
-              (pisteType == 'downhill' || pisteType == 'connection') &&
+              pisteType == 'downhill' &&
               difficulty == 'advanced' &&
               !feature['properties'].containsKey('area');
       }).toList(),
@@ -160,11 +176,31 @@ class _GeneratorPageState extends State<GeneratorPage> {
         final pisteType = feature['properties']['piste:type'];
         final difficulty = feature['properties']['piste:difficulty'];
         return feature['properties'].containsKey('piste:type') &&
-              (pisteType == 'downhill' || pisteType == 'connection') &&
+              pisteType == 'downhill' &&
               difficulty == 'expert' &&
               !feature['properties'].containsKey('area');
       }).toList(),
     };
+
+    ////////////////////////////////////////////////////////////////
+    // Add connection piste features
+    ////////////////////////////////////////////////////////////////
+    
+    // Add the connection piste source
+    mapController?.addSource(
+      'connection-piste-source',
+      GeojsonSourceProperties(data: connectionPisteFeatures),
+    );
+
+    // Add green polyline for connection pistes
+    mapController?.addLineLayer(
+      'connection-piste-source',
+      'connection-piste-layer',
+      LineLayerProperties(
+        lineColor: connection_piste_color.toHexStringRGB(),
+        lineWidth: 2.0,
+      ),
+    );
 
     ////////////////////////////////////////////////////////////////
     // Add novice piste features
