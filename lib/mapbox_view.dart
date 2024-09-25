@@ -20,11 +20,18 @@ class _GeneratorPageState extends State<GeneratorPage> {
   Color advanced_piste_color = Color.fromARGB(200, 27, 27, 27);
   Color expert_piste_color = Color.fromARGB(255, 255, 136, 91);
   Color lift_color = Color.fromARGB(255, 0, 0, 0);
+  Color lift_stroke_color = Colors.yellow;
+  double strokeOpacity = 0.5;
+  double liftStrokeOpacity = 0.8;
+
   // Icon size
-  double iconSize = 30;
+  double iconSize = 40;
   // Piste/Lift name
   double fontSize = 13;
   double nameOffset = 0.6;
+  // Line size
+  double pisteLineWidth = 2.0;
+  double liftLineWidth = 3.0;
   // Floating button
   double floatingbuttonopacity = 0.8;
 
@@ -191,6 +198,31 @@ class _GeneratorPageState extends State<GeneratorPage> {
       }).toList(),
     };
 
+    void _addLineWithStroke(String lineSourceString, String lineLayerString, Color lineColor, double lineWidth, String? strokeSourceString, String? strokeLayerString, Color? strokeColor, double? strokeWidth, double? strokeOpacity) {
+      // stroke
+      if (strokeSourceString != null && strokeLayerString != null && strokeColor != null && strokeWidth != null && strokeOpacity != null) {
+        mapController?.addLineLayer(
+          strokeSourceString,
+          strokeLayerString,
+          LineLayerProperties(
+            lineColor: strokeColor.toHexStringRGB(), 
+            lineOpacity: strokeOpacity,
+            lineWidth: strokeWidth,
+          ),
+        );
+      }
+
+      // line
+      mapController?.addLineLayer(
+        lineSourceString,
+        lineLayerString,
+        LineLayerProperties(
+          lineColor: lineColor.toHexStringRGB(), 
+          lineWidth: lineWidth, 
+        ),
+      );
+    }
+
     ////////////////////////////////////////////////////////////////
     // Add connection piste features
     ////////////////////////////////////////////////////////////////
@@ -207,9 +239,10 @@ class _GeneratorPageState extends State<GeneratorPage> {
       'connection-piste-layer',
       LineLayerProperties(
         lineColor: connection_piste_color.toHexStringRGB(),
-        lineWidth: 2.0,
+        lineWidth: pisteLineWidth,
       ),
     );
+    _addLineWithStroke('connection-piste-source', 'connection-piste-layer', connection_piste_color, pisteLineWidth, null, null, null, null, null);
 
     ////////////////////////////////////////////////////////////////
     // Add novice piste features
@@ -222,14 +255,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
     );
 
     // Add green polyline for novice pistes
-    mapController?.addLineLayer(
-      'novice-piste-source',
-      'novice-piste-layer',
-      LineLayerProperties(
-        lineColor: novice_piste_color.toHexStringRGB(),
-        lineWidth: 2.0,
-      ),
-    );
+    _addLineWithStroke('novice-piste-source', 'novice-piste-layer', novice_piste_color, pisteLineWidth, 'novice-piste-source', 'novice-piste-stroke-layer', novice_piste_color, pisteLineWidth * 3, strokeOpacity);
 
     // Add arrows for piste:type (one arrow per line)
     mapController?.addSymbolLayer(
@@ -273,14 +299,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
     );
 
     // Add blue polyline for easy pistes
-    mapController?.addLineLayer(
-      'easy-piste-source',
-      'easy-piste-layer',
-      LineLayerProperties(
-        lineColor: easy_piste_color.toHexStringRGB(),
-        lineWidth: 2.0,
-      ),
-    );
+    _addLineWithStroke('easy-piste-source', 'easy-piste-layer', easy_piste_color, pisteLineWidth, 'easy-piste-source', 'easy-piste-stroke-layer', easy_piste_color, pisteLineWidth * 3, strokeOpacity);
 
     // Add arrows for piste:type (one arrow per line)
     mapController?.addSymbolLayer(
@@ -324,14 +343,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
     );
 
     // Add red polyline for intermediate pistes
-    mapController?.addLineLayer(
-      'intermediate-piste-source',
-      'intermediate-piste-layer',
-      LineLayerProperties(
-        lineColor: intermediate_piste_color.toHexStringRGB(),
-        lineWidth: 2.0,
-      ),
-    );
+    _addLineWithStroke('intermediate-piste-source', 'intermediate-piste-layer', intermediate_piste_color, pisteLineWidth, 'intermediate-piste-source', 'intermediate-piste-stroke-layer', intermediate_piste_color, pisteLineWidth * 3, strokeOpacity);
 
     // Add arrows for piste:type (one arrow per line)
     mapController?.addSymbolLayer(
@@ -375,14 +387,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
     );
 
     // Add black polyline for advanced pistes
-    mapController?.addLineLayer(
-      'advanced-piste-source',
-      'advanced-piste-layer',
-      LineLayerProperties(
-        lineColor: advanced_piste_color.toHexStringRGB(),
-        lineWidth: 2.0,
-      ),
-    );
+    _addLineWithStroke('advanced-piste-source', 'advanced-piste-layer', advanced_piste_color, pisteLineWidth, 'advanced-piste-source', 'advanced-piste-stroke-layer', advanced_piste_color, pisteLineWidth * 3, strokeOpacity);
 
     // Add arrows for piste:type (one arrow per line)
     mapController?.addSymbolLayer(
@@ -426,14 +431,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
     );
 
     // Add black polyline for expert pistes
-    mapController?.addLineLayer(
-      'expert-piste-source',
-      'expert-piste-layer',
-      LineLayerProperties(
-        lineColor: expert_piste_color.toHexStringRGB(),
-        lineWidth: 2.0,
-      ),
-    );
+    _addLineWithStroke('expert-piste-source', 'expert-piste-layer', expert_piste_color, pisteLineWidth, 'expert-piste-source', 'expert-piste-stroke-layer', expert_piste_color, pisteLineWidth * 3, strokeOpacity);
 
     // Add arrows for piste:type (one arrow per line)
     mapController?.addSymbolLayer(
@@ -476,16 +474,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
       GeojsonSourceProperties(data: aerialwayFeatures),
     );
 
-    // Add black polyline for aerialway
-    mapController?.addLineLayer(
-      'aerialway-source',
-      'aerialway-layer',
-      LineLayerProperties(
-        lineColor: lift_color.toHexStringRGB(),
-        lineWidth: 1.0,
-        lineDasharray: [2, 2],
-      ),
-    );
+    _addLineWithStroke('aerialway-source', 'aerialway-layer', lift_color, liftLineWidth, 'aerialway-source', 'aerialway-stroke-layer', lift_stroke_color, liftLineWidth * 3, liftStrokeOpacity);
 
     // Add arrows for aerialway (one arrow per line)
     mapController?.addSymbolLayer(
