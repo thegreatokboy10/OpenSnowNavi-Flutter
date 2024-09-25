@@ -33,7 +33,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
   double pisteLineWidth = 2.0;
   double liftLineWidth = 3.0;
   // Floating button
-  double floatingbuttonopacity = 0.8;
+  double floatingbuttonopacity = 0.9;
 
   // Variable to track whether the map is in 3D mode or not
   bool is3DMode = false;
@@ -512,21 +512,50 @@ class _GeneratorPageState extends State<GeneratorPage> {
 
   ///////////////////////////////////////////////////////////////////
   
-  void onFeatureTap(dynamic featureId, Point<double> point, LatLng latLng) async{
-    List features = await mapController!.queryRenderedFeatures(point, [], null);
-    if (features.length > 0) {
-      print(features[0]["properties"]["name"]);
-    }
-    final snackBar = SnackBar(
-      content: Text(
-        'Tapped feature with id $featureId, with content ${features[0]["properties"]["name"]}',
-        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-      ),
-      backgroundColor: Theme.of(context).primaryColor,
+  void onFeatureTap(dynamic featureId, Point<double> point, LatLng latLng) async {
+  List features = await mapController!.queryRenderedFeatures(point, [], null);
+  
+  if (features.isNotEmpty) {
+    dynamic type = features[0]["properties"]["aerialway"] ?? features[0]["properties"]["piste:type"] + " piste" ;
+    dynamic name = features[0]["properties"]["name"] ?? "No name";
+    dynamic difficulty = features[0]["properties"]["piste:difficulty"] ?? "N/A";
+    print(features[0]["properties"]["name"]);
+
+    // Show bottom sheet instead of SnackBar
+    showBottomSheet(
+      context: context,
+      backgroundColor: Colors.white.withOpacity(floatingbuttonopacity),
+      enableDrag: true,
+      builder: (BuildContext context) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: EdgeInsets.all(16.0),
+              width: double.infinity, // Ensure full width
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '$type: $name',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(height: 8.0),
+                  Text(
+                    'Difficulty: $difficulty',
+                    style: TextStyle(fontSize: 16),
+                  ),
+                  SizedBox(height: 20.0),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
     );
-    ScaffoldMessenger.of(context).clearSnackBars();
-    ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
+}
+
   
   // Function to add the OpenSnowMap pistes layer as the top layer
   void _addPistesLayer() {
