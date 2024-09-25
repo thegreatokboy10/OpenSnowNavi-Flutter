@@ -4,6 +4,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
+import 'dart:math';
 
 class GeneratorPage extends StatefulWidget {
   @override
@@ -522,6 +523,22 @@ class _GeneratorPageState extends State<GeneratorPage> {
 
   ///////////////////////////////////////////////////////////////////
   
+  void onFeatureTap(dynamic featureId, Point<double> point, LatLng latLng) async{
+    List features = await mapController!.queryRenderedFeatures(point, [], null);
+    if (features.length > 0) {
+      print(features[0]["properties"]["name"]);
+    }
+    final snackBar = SnackBar(
+      content: Text(
+        'Tapped feature with id $featureId, with content ${features[0]["properties"]["name"]}',
+        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+      ),
+      backgroundColor: Theme.of(context).primaryColor,
+    );
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(snackBar);
+  }
+  
   // Function to add the OpenSnowMap pistes layer as the top layer
   void _addPistesLayer() {
     // Add raster source with OpenSnowMap tiles
@@ -586,6 +603,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
   // Callback when the Mapbox map is created
   void _onMapCreated(MapboxMapController controller) {
     mapController = controller;
+    mapController?.onFeatureTapped.add(onFeatureTap);
   }
 
   void _onCameraIdle() async {
