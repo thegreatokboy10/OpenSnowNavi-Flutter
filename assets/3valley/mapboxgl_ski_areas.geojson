@@ -1,0 +1,3 @@
+{"type": "FeatureCollection", "features":[
+{"type":"Feature","geometry":{"coordinates":[6.5813000077147,45.340717443977816],"type":"Point"},"properties":{"id":"68b126bc3175516c9263aed7635d14e37ff360dc","name":"Les Trois Vallées","status":"operating","downhillDistance":520,"nordicDistance":20,"maxElevation":null,"vertical":null,"has_downhill":true,"has_nordic":true}}
+]}
