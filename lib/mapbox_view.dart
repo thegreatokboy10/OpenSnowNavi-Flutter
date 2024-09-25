@@ -630,7 +630,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
               zoom: 13,  // Adjust the zoom level if necessary
             ),
             styleString: 'mapbox://styles/okboy2008/clx1zai3s01ck01rb5zsv600u', // Your custom Mapbox style
-            compassEnabled: false, // Disable the compass button
+            compassEnabled: true, // Disable the compass button
+            compassViewPosition: CompassViewPosition.BottomRight,
           ),
           Positioned(
             top: 20,
@@ -657,8 +658,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
             ),
           ),
           Positioned(
-            top: 20, // Position at the top
-            right: 20, // Align to the right
+            bottom: 40, // Position at the bottom
+            left: 20, // Align to the left
             child: FloatingActionButton(
               backgroundColor: Colors.white.withOpacity(floatingbuttonopacity),
               onPressed: _toggle2D3DView,
