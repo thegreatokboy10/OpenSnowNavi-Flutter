@@ -16,6 +16,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
   Color easy_piste_color = Color.fromARGB(255, 63, 162, 246);
   Color intermediate_piste_color = Color.fromARGB(255, 199, 37, 62);
   Color advanced_piste_color = Color.fromARGB(200, 27, 27, 27);
+  Color expert_piste_color = Color.fromARGB(255, 255, 136, 91);
   Color lift_color = Color.fromARGB(255, 0, 0, 0);
   // Icon size
   double iconSize = 30;
@@ -145,6 +146,22 @@ class _GeneratorPageState extends State<GeneratorPage> {
         return feature['properties'].containsKey('piste:type') &&
               (pisteType == 'downhill' || pisteType == 'connection') &&
               difficulty == 'advanced' &&
+              !feature['properties'].containsKey('area');
+      }).toList(),
+    };
+
+    // Separate piste:type features and filter out those that have the 'area' key
+    final expertPisteFeatures = {
+      "type": "FeatureCollection",
+      "features": (parsedGeoJson['features'] as List).where((feature) {
+        // 检查 feature['properties'] 中是否包含 'piste:type' 键
+        // 并且 'piste:type' 的值为 'downhill'
+        // 同时排除包含 'area' 键的条目
+        final pisteType = feature['properties']['piste:type'];
+        final difficulty = feature['properties']['piste:difficulty'];
+        return feature['properties'].containsKey('piste:type') &&
+              (pisteType == 'downhill' || pisteType == 'connection') &&
+              difficulty == 'expert' &&
               !feature['properties'].containsKey('area');
       }).toList(),
     };
@@ -290,6 +307,41 @@ class _GeneratorPageState extends State<GeneratorPage> {
     );
 
     ////////////////////////////////////////////////////////////////
+    // Add expert piste features
+    ////////////////////////////////////////////////////////////////
+    
+    // Add the expert piste source
+    mapController?.addSource(
+      'expert-piste-source',
+      GeojsonSourceProperties(data: expertPisteFeatures),
+    );
+
+    // Add black polyline for expert pistes
+    mapController?.addLineLayer(
+      'expert-piste-source',
+      'expert-piste-layer',
+      LineLayerProperties(
+        lineColor: expert_piste_color.toHexStringRGB(),
+        lineWidth: 2.0,
+      ),
+    );
+
+    // Add arrows for piste:type (one arrow per line)
+    mapController?.addSymbolLayer(
+      'expert-piste-source',
+      'expert-piste-arrow-layer',
+      SymbolLayerProperties(
+        iconImage: "expert-piste-arrow", // Built-in arrow icon
+        symbolPlacement: 'line', // Place along the line
+        symbolSpacing: 300, // Ensures only one arrow is placed on the line
+        iconAllowOverlap: false,
+        iconRotate: ['get', 'bearing'], // Rotate arrow based on line bearing
+        iconRotationAlignment: 'map',
+      ),
+      minzoom: 14.0,
+    );
+
+    ////////////////////////////////////////////////////////////////
     // Add aerialway features
     ////////////////////////////////////////////////////////////////
     
@@ -379,6 +431,12 @@ class _GeneratorPageState extends State<GeneratorPage> {
       color: advanced_piste_color,
       size: iconSize,
       imageName: 'advanced-piste-arrow',
+    );
+    _addFlutterIconToMap(
+      icon: Icons.arrow_right,
+      color: expert_piste_color,
+      size: iconSize,
+      imageName: 'expert-piste-arrow',
     );
     _loadGeoJsonFromAssets('assets/les_2_alps.geojson');
   }
