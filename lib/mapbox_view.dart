@@ -18,7 +18,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
   Color advanced_piste_color = Color.fromARGB(200, 27, 27, 27);
   Color lift_color = Color.fromARGB(255, 0, 0, 0);
   // Icon size
-  double iconSize = 50;
+  double iconSize = 30;
 
   MapboxMapController? mapController;
   // Function to create a Flutter icon as an image (in memory) that takes the icon as a parameter
@@ -63,8 +63,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
   String? geojsonData;
 
   // Function to load GeoJSON from assets
-  Future<void> _loadGeoJsonFromAssets() async {
-    String data = await rootBundle.loadString('assets/les_2_alps.geojson');
+  Future<void> _loadGeoJsonFromAssets(String filepath) async {
+    String data = await rootBundle.loadString(filepath);
     setState(() {
       geojsonData = data;
     });
@@ -380,7 +380,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
       size: iconSize,
       imageName: 'advanced-piste-arrow',
     );
-    _loadGeoJsonFromAssets();
+    _loadGeoJsonFromAssets('assets/les_2_alps.geojson');
   }
 
   // Callback when the Mapbox map is created
