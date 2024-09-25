@@ -22,6 +22,9 @@ class _GeneratorPageState extends State<GeneratorPage> {
   // Icon size
   double iconSize = 30;
 
+  // Variable to track whether the map is in 3D mode or not
+  bool is3DMode = false;
+
   MapboxMapController? mapController;
   // Function to create a Flutter icon as an image (in memory) that takes the icon as a parameter
   Future<Uint8List> _createFlutterIconAsImage(IconData iconData, Color color, double size) async {
@@ -487,6 +490,27 @@ class _GeneratorPageState extends State<GeneratorPage> {
     print('Current zoom level: ${mapController?.cameraPosition?.zoom}');
   }
 
+  void _toggle2D3DView() {
+    if (mapController != null) {
+      setState(() {
+        is3DMode = !is3DMode;
+      });
+
+      // Get the current camera position
+      final currentCameraPosition = mapController!.cameraPosition;
+
+      // Update only the tilt, keeping other values unchanged
+      mapController!.animateCamera(CameraUpdate.newCameraPosition(
+        CameraPosition(
+          target: currentCameraPosition!.target,
+          zoom: currentCameraPosition.zoom,
+          bearing: currentCameraPosition.bearing,
+          tilt: is3DMode ? 60.0 : 0.0,  // Change tilt only
+        ),
+      ));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -525,6 +549,22 @@ class _GeneratorPageState extends State<GeneratorPage> {
                     borderSide: BorderSide.none,
                   ),
                   contentPadding: EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 20, // Position at the top
+            right: 20, // Align to the right
+            child: FloatingActionButton(
+              backgroundColor: Colors.white.withOpacity(0.6),
+              onPressed: _toggle2D3DView,
+              child: Text(
+                is3DMode ? '2D' : '3D',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: const Color.fromARGB(255, 0, 0, 0),
                 ),
               ),
             ),
