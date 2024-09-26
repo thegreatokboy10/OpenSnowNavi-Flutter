@@ -80,6 +80,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
   }
 
   String? geojsonData;
+
   ///////////////////////////////////////////////////////////////////////////////
   /// Function to add GeoJSON data as a source and layer using Pipeline Exports
   ///////////////////////////////////////////////////////////////////////////////
@@ -92,7 +93,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
     });
   }
 
-  void _addLiftSourceAndLayer(String? geojsonData) {
+  void _addSourceAndLayer(String? geojsonData) {
     if (geojsonData == null) {
       print("GeoJSON data is null in _addLiftSourceAndLayer");
       return;
@@ -107,34 +108,57 @@ class _GeneratorPageState extends State<GeneratorPage> {
       "type": "FeatureCollection",
       "features": (parsedGeoJson['features'] as List).where((feature) {
         type = feature['properties']['type'];
-        return feature['properties'].containsKey('type') && type == 'lift';
+        if (type == 'lift') {
+          return feature['properties'].containsKey('type') && type == 'lift';
+        } else {
+          // piste "run"
+          final uses = feature['properties']['uses'];
+          print("uses: $uses");
+          return feature['properties'].containsKey('type') && 
+          type == 'run' &&
+          (uses == 'downhill' || uses == 'connection');
+        }
       }).toList(),
     };
 
     // line layer helper function
-    void _addLineWithStroke(String lineSourceString, String lineLayerString, Color lineColor, double lineWidth, String? strokeSourceString, String? strokeLayerString, Color? strokeColor, double? strokeWidth, double? strokeOpacity) {
-      // stroke
-      if (strokeSourceString != null && strokeLayerString != null && strokeColor != null && strokeWidth != null && strokeOpacity != null) {
+    void _addLineWithStroke(String lineSourceString, String lineLayerString, double lineWidth, String? strokeSourceString, String? strokeLayerString, double? strokeWidth, double? strokeOpacity) {
+      if (type == 'lift') {
+        // lift: no stroke, line color is ['get', 'color']
+        // line
         mapController?.addLineLayer(
-          strokeSourceString,
-          strokeLayerString,
+          lineSourceString,
+          lineLayerString,
           LineLayerProperties(
-            lineColor: strokeColor.toHexStringRGB(), // todo: make it dynamic,
-            lineOpacity: strokeOpacity,
-            lineWidth: strokeWidth,
+            lineColor: ['get', 'color'], // Use 'color' property from GeoJSON
+            lineWidth: lineWidth, 
+          ),
+        );
+      } else {
+        // piste: stroke color is ['get', 'color'], line color is piste_default_color
+        // stroke
+        if (strokeSourceString != null && strokeLayerString != null && strokeWidth != null && strokeOpacity != null) {
+          mapController?.addLineLayer(
+            strokeSourceString,
+            strokeLayerString,
+            LineLayerProperties(
+              lineColor: ['get', 'color'], // Use 'color' property from GeoJSON
+              lineOpacity: strokeOpacity,
+              lineWidth: strokeWidth,
+            ),
+          );
+        }
+
+        // line
+        mapController?.addLineLayer(
+          lineSourceString,
+          lineLayerString,
+          LineLayerProperties(
+            lineColor: piste_default_color, // Use piste_default_color
+            lineWidth: lineWidth, 
           ),
         );
       }
-
-      // line
-      mapController?.addLineLayer(
-        lineSourceString,
-        lineLayerString,
-        LineLayerProperties(
-          lineColor: ['get', 'color'], // Use 'color' property from GeoJSON
-          lineWidth: lineWidth, 
-        ),
-      );
     }
 
     if (type != '') {
@@ -144,8 +168,26 @@ class _GeneratorPageState extends State<GeneratorPage> {
         GeojsonSourceProperties(data: features),
       );
 
+      // Decide line properties based on type
+      var _lineWidth = 0.0;
+      var _strokeSourceString = null;
+      var _strokeLayerString = null;
+      var _strokeWidth = null;
+      var _strokeOpacity = null;
+
+      if (type == 'lift') {
+        // only line, no stroke
+        _lineWidth = liftLineWidth;
+      } else {
+        // piste: line and stroke
+        _lineWidth = pisteLineWidth;
+        _strokeSourceString = '$type-source';
+        _strokeLayerString = '$type-stroke-layer';
+        _strokeWidth = pisteLineWidth * 3;
+        _strokeOpacity = strokeOpacity;
+      }
       // Add Line Layer
-      _addLineWithStroke('$type-source', '$type-layer', lift_color, liftLineWidth, null, null, null, null, null);
+      _addLineWithStroke('$type-source', '$type-layer', _lineWidth, _strokeSourceString, _strokeLayerString, _strokeWidth, _strokeOpacity);
 
       // Add Name Layer
       mapController?.addSymbolLayer(
@@ -164,28 +206,46 @@ class _GeneratorPageState extends State<GeneratorPage> {
       );
 
       // Add Arrow Layer
-      mapController?.addSymbolLayer(
-        '$type-source',
-        '$type-arrow-layer',
-        SymbolLayerProperties(
-          iconImage: "lift-arrow", // todo: make it dynamic
-          symbolPlacement: 'line-center', // Place along the line
-          symbolSpacing: 5000000, // Ensures only one arrow is placed on the line
-          iconAllowOverlap: false,
-          iconRotate: ['get', 'bearing'], // Rotate arrow based on line bearing
-          iconRotationAlignment: 'map',
-        ),
-        minzoom: 12,
-      );
+      if (type == 'lift') {
+        mapController?.addSymbolLayer(
+          '$type-source',
+          '$type-arrow-layer',
+          SymbolLayerProperties(
+            iconImage: 'lift-arrow',
+            symbolPlacement: 'line-center', // Place along the line
+            symbolSpacing: 5000000, // Ensures only one arrow is placed on the line
+            iconAllowOverlap: false,
+            iconRotate: ['get', 'bearing'], // Rotate arrow based on line bearing
+            iconRotationAlignment: 'map',
+          ),
+          minzoom: 12,
+        );
+      } else {
+        mapController?.addSymbolLayer(
+          '$type-source',
+          '$type-arrow-layer',
+          SymbolLayerProperties(
+            iconImage:[
+              'concat', ['get', 'difficulty'], '-piste-arrow'
+            ],
+            symbolPlacement: 'line-center', // Place along the line
+            symbolSpacing: 5000000, // Ensures only one arrow is placed on the line
+            iconAllowOverlap: false,
+            iconRotate: ['get', 'bearing'], // Rotate arrow based on line bearing
+            iconRotationAlignment: 'map',
+          ),
+          minzoom: 12,
+        );
+      }
 
     }
 
     print('Layers for $type added successfully');
   }
 
-  Future<void> _addLiftLayersFromGeoJsonAssets(String filepath) async {
+  Future<void> _addLayersFromGeoJsonAssets(String filepath) async {
     await _loadGeoJsonFromAssets(filepath);
-    _addLiftSourceAndLayer(geojsonData);
+    _addSourceAndLayer(geojsonData);
   }
   ///////////////////////////////////////////////////////////////////////////////
   /// outdated: Function to add GeoJSON data as a source and layer
@@ -719,7 +779,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
       imageName: 'expert-piste-arrow',
     );
     _loadGeoJsonFromAssets_outdated('assets/les_2_alps.geojson');
-    _addLiftLayersFromGeoJsonAssets('assets/3valley/lifts.geojson');
+    _addLayersFromGeoJsonAssets('assets/3valley/runs.geojson');
+    _addLayersFromGeoJsonAssets('assets/3valley/lifts.geojson');
   }
 
   // Callback when the Mapbox map is created
