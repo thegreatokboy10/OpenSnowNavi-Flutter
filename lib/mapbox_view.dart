@@ -19,8 +19,9 @@ class _GeneratorPageState extends State<GeneratorPage> {
   Color intermediate_piste_color = Color.fromARGB(255, 199, 37, 62);
   Color advanced_piste_color = Color.fromARGB(200, 27, 27, 27);
   Color expert_piste_color = Color.fromARGB(255, 255, 136, 91);
-  Color lift_color = Color.fromARGB(255, 0, 0, 0);
-  Color lift_stroke_color = Colors.yellow;
+  Color lift_color =  Color.fromRGBO(216, 59, 59, 1); // RGB values from hsl(0, 82%, 42%) and opacity set to 1 (fully opaque)
+  Color lift_stroke_color =  Color.fromRGBO(216, 59, 59, 1); // RGB values from hsl(0, 82%, 42%) and opacity set to 1 (fully opaque)
+  Color piste_default_color = Color.fromARGB(255, 255, 255, 255);
   double strokeOpacity = 0.5;
   double liftStrokeOpacity = 0.8;
 
@@ -79,9 +80,119 @@ class _GeneratorPageState extends State<GeneratorPage> {
   }
 
   String? geojsonData;
+  ///////////////////////////////////////////////////////////////////////////////
+  /// Function to add GeoJSON data as a source and layer using Pipeline Exports
+  ///////////////////////////////////////////////////////////////////////////////
+  Future<void> _loadGeoJsonFromAssets(String filepath) async {
+    String data = await rootBundle.loadString(filepath);
+    // print load from filepath
+    print('load from $filepath');
+    setState(() {
+      geojsonData = data;
+    });
+  }
+
+  void _addLiftSourceAndLayer(String? geojsonData) {
+    if (geojsonData == null) {
+      print("GeoJSON data is null in _addLiftSourceAndLayer");
+      return;
+    }
+
+    final parsedGeoJson = json.decode(geojsonData);
+
+    String type = '';
+
+    // Separate features
+    final features = {
+      "type": "FeatureCollection",
+      "features": (parsedGeoJson['features'] as List).where((feature) {
+        type = feature['properties']['type'];
+        return feature['properties'].containsKey('type') && type == 'lift';
+      }).toList(),
+    };
+
+    // line layer helper function
+    void _addLineWithStroke(String lineSourceString, String lineLayerString, Color lineColor, double lineWidth, String? strokeSourceString, String? strokeLayerString, Color? strokeColor, double? strokeWidth, double? strokeOpacity) {
+      // stroke
+      if (strokeSourceString != null && strokeLayerString != null && strokeColor != null && strokeWidth != null && strokeOpacity != null) {
+        mapController?.addLineLayer(
+          strokeSourceString,
+          strokeLayerString,
+          LineLayerProperties(
+            lineColor: strokeColor.toHexStringRGB(), // todo: make it dynamic,
+            lineOpacity: strokeOpacity,
+            lineWidth: strokeWidth,
+          ),
+        );
+      }
+
+      // line
+      mapController?.addLineLayer(
+        lineSourceString,
+        lineLayerString,
+        LineLayerProperties(
+          lineColor: ['get', 'color'], // Use 'color' property from GeoJSON
+          lineWidth: lineWidth, 
+        ),
+      );
+    }
+
+    if (type != '') {
+      // Add Layer Data Source
+      mapController?.addSource(
+        '$type-source',
+        GeojsonSourceProperties(data: features),
+      );
+
+      // Add Line Layer
+      _addLineWithStroke('$type-source', '$type-layer', lift_color, liftLineWidth, null, null, null, null, null);
+
+      // Add Name Layer
+      mapController?.addSymbolLayer(
+        '$type-source',
+        '$type-name-layer',
+        SymbolLayerProperties(
+          textField: ['get', 'name'],  // Use 'name' property from GeoJSON
+          textSize: fontSize,
+          symbolPlacement: 'line',  // Place labels along the line
+          textAnchor: 'center',  // Anchor the text in the center
+          textAllowOverlap: false,  // Prevent overlapping text
+          textOffset: [0, nameOffset],  // Adjust text position slightly
+          textColor: ['get', 'color'] // Use 'color' property from GeoJSON
+        ),
+        minzoom: 14.0,
+      );
+
+      // Add Arrow Layer
+      mapController?.addSymbolLayer(
+        '$type-source',
+        '$type-arrow-layer',
+        SymbolLayerProperties(
+          iconImage: "lift-arrow", // todo: make it dynamic
+          symbolPlacement: 'line-center', // Place along the line
+          symbolSpacing: 5000000, // Ensures only one arrow is placed on the line
+          iconAllowOverlap: false,
+          iconRotate: ['get', 'bearing'], // Rotate arrow based on line bearing
+          iconRotationAlignment: 'map',
+        ),
+        minzoom: 12,
+      );
+
+    }
+
+    print('Layers for $type added successfully');
+  }
+
+  Future<void> _addLiftLayersFromGeoJsonAssets(String filepath) async {
+    await _loadGeoJsonFromAssets(filepath);
+    _addLiftSourceAndLayer(geojsonData);
+  }
+  ///////////////////////////////////////////////////////////////////////////////
+  /// outdated: Function to add GeoJSON data as a source and layer
+  ///////////////////////////////////////////////////////////////////////////////
 
   // Function to load GeoJSON from assets
-  Future<void> _loadGeoJsonFromAssets(String filepath) async {
+  Future<void> _loadGeoJsonFromAssets_outdated(String filepath) async {
     String data = await rootBundle.loadString(filepath);
     setState(() {
       geojsonData = data;
@@ -234,14 +345,6 @@ class _GeneratorPageState extends State<GeneratorPage> {
     );
 
     // Add green polyline for connection pistes
-    mapController?.addLineLayer(
-      'connection-piste-source',
-      'connection-piste-layer',
-      LineLayerProperties(
-        lineColor: connection_piste_color.toHexStringRGB(),
-        lineWidth: pisteLineWidth,
-      ),
-    );
     _addLineWithStroke('connection-piste-source', 'connection-piste-layer', connection_piste_color, pisteLineWidth, null, null, null, null, null);
 
     ////////////////////////////////////////////////////////////////
@@ -255,7 +358,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
     );
 
     // Add green polyline for novice pistes
-    _addLineWithStroke('novice-piste-source', 'novice-piste-layer', novice_piste_color, pisteLineWidth, 'novice-piste-source', 'novice-piste-stroke-layer', novice_piste_color, pisteLineWidth * 3, strokeOpacity);
+    _addLineWithStroke('novice-piste-source', 'novice-piste-layer', piste_default_color, pisteLineWidth, 'novice-piste-source', 'novice-piste-stroke-layer', novice_piste_color, pisteLineWidth * 3, strokeOpacity);
 
     // Add arrows for piste:type (one arrow per line)
     mapController?.addSymbolLayer(
@@ -299,7 +402,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
     );
 
     // Add blue polyline for easy pistes
-    _addLineWithStroke('easy-piste-source', 'easy-piste-layer', easy_piste_color, pisteLineWidth, 'easy-piste-source', 'easy-piste-stroke-layer', easy_piste_color, pisteLineWidth * 3, strokeOpacity);
+    _addLineWithStroke('easy-piste-source', 'easy-piste-layer', piste_default_color, pisteLineWidth, 'easy-piste-source', 'easy-piste-stroke-layer', easy_piste_color, pisteLineWidth * 3, strokeOpacity);
 
     // Add arrows for piste:type (one arrow per line)
     mapController?.addSymbolLayer(
@@ -343,7 +446,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
     );
 
     // Add red polyline for intermediate pistes
-    _addLineWithStroke('intermediate-piste-source', 'intermediate-piste-layer', intermediate_piste_color, pisteLineWidth, 'intermediate-piste-source', 'intermediate-piste-stroke-layer', intermediate_piste_color, pisteLineWidth * 3, strokeOpacity);
+    _addLineWithStroke('intermediate-piste-source', 'intermediate-piste-layer', piste_default_color, pisteLineWidth, 'intermediate-piste-source', 'intermediate-piste-stroke-layer', intermediate_piste_color, pisteLineWidth * 3, strokeOpacity);
 
     // Add arrows for piste:type (one arrow per line)
     mapController?.addSymbolLayer(
@@ -387,7 +490,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
     );
 
     // Add black polyline for advanced pistes
-    _addLineWithStroke('advanced-piste-source', 'advanced-piste-layer', advanced_piste_color, pisteLineWidth, 'advanced-piste-source', 'advanced-piste-stroke-layer', advanced_piste_color, pisteLineWidth * 3, strokeOpacity);
+    _addLineWithStroke('advanced-piste-source', 'advanced-piste-layer', piste_default_color, pisteLineWidth, 'advanced-piste-source', 'advanced-piste-stroke-layer', advanced_piste_color, pisteLineWidth * 3, strokeOpacity);
 
     // Add arrows for piste:type (one arrow per line)
     mapController?.addSymbolLayer(
@@ -431,7 +534,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
     );
 
     // Add black polyline for expert pistes
-    _addLineWithStroke('expert-piste-source', 'expert-piste-layer', expert_piste_color, pisteLineWidth, 'expert-piste-source', 'expert-piste-stroke-layer', expert_piste_color, pisteLineWidth * 3, strokeOpacity);
+    _addLineWithStroke('expert-piste-source', 'expert-piste-layer', piste_default_color, pisteLineWidth, 'expert-piste-source', 'expert-piste-stroke-layer', expert_piste_color, pisteLineWidth * 3, strokeOpacity);
 
     // Add arrows for piste:type (one arrow per line)
     mapController?.addSymbolLayer(
@@ -474,7 +577,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
       GeojsonSourceProperties(data: aerialwayFeatures),
     );
 
-    _addLineWithStroke('aerialway-source', 'aerialway-layer', lift_color, liftLineWidth, 'aerialway-source', 'aerialway-stroke-layer', lift_stroke_color, liftLineWidth * 3, liftStrokeOpacity);
+    _addLineWithStroke('aerialway-source', 'aerialway-layer', lift_color, liftLineWidth, null, null, null, null, null);
 
     // Add arrows for aerialway (one arrow per line)
     mapController?.addSymbolLayer(
@@ -615,7 +718,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
       size: iconSize,
       imageName: 'expert-piste-arrow',
     );
-    _loadGeoJsonFromAssets('assets/les_2_alps.geojson');
+    _loadGeoJsonFromAssets_outdated('assets/les_2_alps.geojson');
+    _addLiftLayersFromGeoJsonAssets('assets/3valley/lifts.geojson');
   }
 
   // Callback when the Mapbox map is created
