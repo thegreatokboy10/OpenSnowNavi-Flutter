@@ -710,11 +710,12 @@ class _GeneratorPageState extends State<GeneratorPage> {
   if (features.isNotEmpty) {
     dynamic type = features[0]["properties"]["aerialway"];
     type ??= features[0]["properties"]["piste:type"];
-    type ??= features[0]["properties"]["type"];
+    type ??= features[0]["properties"]["uses"];
+    type ??= features[0]["properties"]["liftType"];
     dynamic name = features[0]["properties"]["name"] ?? "No name";
     dynamic difficulty = features[0]["properties"]["piste:difficulty"];
-    difficulty ??= "N/A";
     difficulty ??= features[0]["properties"]["difficulty"];
+    difficulty ??= "N/A";
     print("onFeatureTap: $type, $name, $difficulty");
 
     // Show bottom sheet instead of SnackBar
