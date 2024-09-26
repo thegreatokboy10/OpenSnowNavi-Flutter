@@ -27,6 +27,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
 
   // Icon size
   double iconSize = 40;
+  double pisteArrowIconSize = 30;
   // Piste/Lift name
   double fontSize = 13;
   double nameOffset = 0.6;
@@ -80,26 +81,37 @@ class _GeneratorPageState extends State<GeneratorPage> {
   }
 
   String? geojsonData;
+  String? geojsonLiftData;
+  String? geojsonPisteData;
 
   ///////////////////////////////////////////////////////////////////////////////
   /// Function to add GeoJSON data as a source and layer using Pipeline Exports
   ///////////////////////////////////////////////////////////////////////////////
-  Future<void> _loadGeoJsonFromAssets(String filepath) async {
+  
+  Future<bool> _loadGeoJsonFromAssets(String filepath) async {
     String data = await rootBundle.loadString(filepath);
     // print load from filepath
     print('load from $filepath');
+    bool result = false;
     setState(() {
-      geojsonData = data;
+      if (filepath.contains('lift'))  {
+        geojsonLiftData = data;
+      } else {
+        geojsonPisteData = data;
+      }
+      result = true;
     });
+    return result;
   }
 
-  void _addSourceAndLayer(String? geojsonData) {
-    if (geojsonData == null) {
+  void _addSourceAndLayer(String? geojson) {
+    if (geojson == null) {
       print("GeoJSON data is null in _addLiftSourceAndLayer");
       return;
     }
 
-    final parsedGeoJson = json.decode(geojsonData);
+    print("start to parse geojson");
+    final parsedGeoJson = json.decode(geojson);
 
     String type = '';
 
@@ -113,13 +125,15 @@ class _GeneratorPageState extends State<GeneratorPage> {
         } else {
           // piste "run"
           final uses = feature['properties']['uses'];
-          print("uses: $uses");
-          return feature['properties'].containsKey('type') && 
-          type == 'run' &&
-          (uses == 'downhill' || uses == 'connection');
+          final color = feature['properties']['color'];
+          final geometry = feature['geometry']['type'];
+          // print("type:$type, uses: $uses, color: $color, geometry: $geometry");
+          return geometry == 'LineString' && (uses.contains('downhill') || uses.contains('connection'));
         }
       }).toList(),
     };
+
+    // print("features for $type: $features");
 
     // line layer helper function
     void _addLineWithStroke(String lineSourceString, String lineLayerString, double lineWidth, String? strokeSourceString, String? strokeLayerString, double? strokeWidth, double? strokeOpacity) {
@@ -148,13 +162,12 @@ class _GeneratorPageState extends State<GeneratorPage> {
             ),
           );
         }
-
         // line
         mapController?.addLineLayer(
           lineSourceString,
           lineLayerString,
           LineLayerProperties(
-            lineColor: piste_default_color, // Use piste_default_color
+            lineColor: piste_default_color.toHexStringRGB(), // Use piste_default_color
             lineWidth: lineWidth, 
           ),
         );
@@ -163,12 +176,14 @@ class _GeneratorPageState extends State<GeneratorPage> {
 
     if (type != '') {
       // Add Layer Data Source
+      var _lineSourceString = '$type-data-source';
       mapController?.addSource(
-        '$type-source',
+        _lineSourceString,
         GeojsonSourceProperties(data: features),
       );
 
       // Decide line properties based on type
+      var _lineLayerString = '$type-data-layer';
       var _lineWidth = 0.0;
       var _strokeSourceString = null;
       var _strokeLayerString = null;
@@ -181,18 +196,20 @@ class _GeneratorPageState extends State<GeneratorPage> {
       } else {
         // piste: line and stroke
         _lineWidth = pisteLineWidth;
-        _strokeSourceString = '$type-source';
-        _strokeLayerString = '$type-stroke-layer';
+        _strokeSourceString = _lineSourceString;
+        _strokeLayerString = 'stroke-$_lineLayerString';
         _strokeWidth = pisteLineWidth * 3;
         _strokeOpacity = strokeOpacity;
       }
       // Add Line Layer
-      _addLineWithStroke('$type-source', '$type-layer', _lineWidth, _strokeSourceString, _strokeLayerString, _strokeWidth, _strokeOpacity);
+      _addLineWithStroke(_lineSourceString, _lineLayerString, _lineWidth, _strokeSourceString, _strokeLayerString, _strokeWidth, _strokeOpacity);
 
       // Add Name Layer
+      var _nameSourceString = _lineSourceString;
+      var _nameLayerString = 'name-$_lineLayerString';
       mapController?.addSymbolLayer(
-        '$type-source',
-        '$type-name-layer',
+        _nameSourceString,
+        _nameLayerString,
         SymbolLayerProperties(
           textField: ['get', 'name'],  // Use 'name' property from GeoJSON
           textSize: fontSize,
@@ -206,12 +223,16 @@ class _GeneratorPageState extends State<GeneratorPage> {
       );
 
       // Add Arrow Layer
+      var _arrowSourceString = _lineSourceString;
+      var _arrowLayerString = 'arrow-$_lineLayerString';
       if (type == 'lift') {
         mapController?.addSymbolLayer(
-          '$type-source',
-          '$type-arrow-layer',
+          _arrowSourceString,
+          _arrowLayerString,
           SymbolLayerProperties(
-            iconImage: 'lift-arrow',
+            iconImage: [
+              'concat', ['get', 'type'], '-arrow'
+            ],
             symbolPlacement: 'line-center', // Place along the line
             symbolSpacing: 5000000, // Ensures only one arrow is placed on the line
             iconAllowOverlap: false,
@@ -222,8 +243,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
         );
       } else {
         mapController?.addSymbolLayer(
-          '$type-source',
-          '$type-arrow-layer',
+          _arrowSourceString,
+          _arrowLayerString,
           SymbolLayerProperties(
             iconImage:[
               'concat', ['get', 'difficulty'], '-piste-arrow'
@@ -234,18 +255,26 @@ class _GeneratorPageState extends State<GeneratorPage> {
             iconRotate: ['get', 'bearing'], // Rotate arrow based on line bearing
             iconRotationAlignment: 'map',
           ),
-          minzoom: 12,
+          minzoom: 14,
         );
       }
-
     }
 
     print('Layers for $type added successfully');
   }
 
   Future<void> _addLayersFromGeoJsonAssets(String filepath) async {
-    await _loadGeoJsonFromAssets(filepath);
-    _addSourceAndLayer(geojsonData);
+    final result = await _loadGeoJsonFromAssets(filepath);
+    if (result) {
+      print("start to add layers $filepath from assets");
+      if (filepath.contains('lift')) {
+        _addSourceAndLayer(geojsonLiftData);
+      } else {
+        _addSourceAndLayer(geojsonPisteData);
+      }
+    } else {
+      print('Error: GeoJSON data not loaded $filepath from assets');
+    }
   }
   ///////////////////////////////////////////////////////////////////////////////
   /// outdated: Function to add GeoJSON data as a source and layer
@@ -677,12 +706,16 @@ class _GeneratorPageState extends State<GeneratorPage> {
   
   void onFeatureTap(dynamic featureId, Point<double> point, LatLng latLng) async {
   List features = await mapController!.queryRenderedFeatures(point, [], null);
-  
+  print("onFeatureTap: $features");
   if (features.isNotEmpty) {
-    dynamic type = features[0]["properties"]["aerialway"] ?? features[0]["properties"]["piste:type"] + " piste" ;
+    dynamic type = features[0]["properties"]["aerialway"];
+    type ??= features[0]["properties"]["piste:type"];
+    type ??= features[0]["properties"]["type"];
     dynamic name = features[0]["properties"]["name"] ?? "No name";
-    dynamic difficulty = features[0]["properties"]["piste:difficulty"] ?? "N/A";
-    print(features[0]["properties"]["name"]);
+    dynamic difficulty = features[0]["properties"]["piste:difficulty"];
+    difficulty ??= "N/A";
+    difficulty ??= features[0]["properties"]["difficulty"];
+    print("onFeatureTap: $type, $name, $difficulty");
 
     // Show bottom sheet instead of SnackBar
     showBottomSheet(
@@ -751,35 +784,35 @@ class _GeneratorPageState extends State<GeneratorPage> {
     _addFlutterIconToMap(
       icon: Icons.arrow_right,
       color: novice_piste_color,
-      size: iconSize,
+      size: pisteArrowIconSize,
       imageName: 'novice-piste-arrow',
     );
     _addFlutterIconToMap(
       icon: Icons.arrow_right,
       color: easy_piste_color,
-      size: iconSize,
+      size: pisteArrowIconSize,
       imageName: 'easy-piste-arrow',
     );
     _addFlutterIconToMap(
       icon: Icons.arrow_right,
       color: intermediate_piste_color,
-      size: iconSize,
+      size: pisteArrowIconSize,
       imageName: 'intermediate-piste-arrow',
     );
     _addFlutterIconToMap(
       icon: Icons.arrow_right,
       color: advanced_piste_color,
-      size: iconSize,
+      size: pisteArrowIconSize,
       imageName: 'advanced-piste-arrow',
     );
     _addFlutterIconToMap(
       icon: Icons.arrow_right,
       color: expert_piste_color,
-      size: iconSize,
+      size: pisteArrowIconSize,
       imageName: 'expert-piste-arrow',
     );
     _loadGeoJsonFromAssets_outdated('assets/les_2_alps.geojson');
-    _addLayersFromGeoJsonAssets('assets/3valley/runs.geojson');
+    await _addLayersFromGeoJsonAssets('assets/3valley/runs.geojson');
     _addLayersFromGeoJsonAssets('assets/3valley/lifts.geojson');
   }
 
