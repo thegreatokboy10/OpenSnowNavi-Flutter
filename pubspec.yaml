@@ -25,6 +25,5 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - assets/les_2_alps.geojson
     - assets/3valley/lifts.geojson
     - assets/3valley/runs.geojson

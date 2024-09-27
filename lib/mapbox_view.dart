@@ -24,9 +24,12 @@ class _GeneratorPageState extends State<GeneratorPage> {
   Color piste_default_color = Color.fromARGB(255, 255, 255, 255);
   double strokeOpacity = 0.5;
   double liftStrokeOpacity = 0.8;
-
+  // Min zoom level
+  double minZoomPiste = 14.0;
+  double minZoomLift = 12.0;
   // Icon size
   double iconSize = 40;
+  double arrowIconSize = 30;
   // Piste/Lift name
   double fontSize = 13;
   double nameOffset = 0.6;
@@ -38,6 +41,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
 
   // Variable to track whether the map is in 3D mode or not
   bool is3DMode = false;
+
+  var layerIds = <String>[];
 
   MapboxMapController? mapController;
   // Function to create a Flutter icon as an image (in memory) that takes the icon as a parameter
@@ -113,10 +118,10 @@ class _GeneratorPageState extends State<GeneratorPage> {
         } else {
           // piste "run"
           final uses = feature['properties']['uses'];
+          final geometry = feature['geometry']['type'];
           print("uses: $uses");
-          return feature['properties'].containsKey('type') && 
-          type == 'run' &&
-          (uses == 'downhill' || uses == 'connection');
+          return geometry == 'LineString' &&
+          (uses.contains('downhill') || uses.contains('connection'));
         }
       }).toList(),
     };
@@ -134,6 +139,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
             lineWidth: lineWidth, 
           ),
         );
+        layerIds.add(lineLayerString);
       } else {
         // piste: stroke color is ['get', 'color'], line color is piste_default_color
         // stroke
@@ -147,6 +153,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
               lineWidth: strokeWidth,
             ),
           );
+          layerIds.add(strokeLayerString);
         }
 
         // line
@@ -154,7 +161,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
           lineSourceString,
           lineLayerString,
           LineLayerProperties(
-            lineColor: piste_default_color, // Use piste_default_color
+            lineColor: piste_default_color.toHexStringRGB(), // Use piste_default_color
             lineWidth: lineWidth, 
           ),
         );
@@ -202,7 +209,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
           textOffset: [0, nameOffset],  // Adjust text position slightly
           textColor: ['get', 'color'] // Use 'color' property from GeoJSON
         ),
-        minzoom: 14.0,
+        minzoom: minZoomPiste,
       );
 
       // Add Arrow Layer
@@ -218,7 +225,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
             iconRotate: ['get', 'bearing'], // Rotate arrow based on line bearing
             iconRotationAlignment: 'map',
           ),
-          minzoom: 12,
+          minzoom: minZoomLift,
         );
       } else {
         mapController?.addSymbolLayer(
@@ -234,7 +241,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
             iconRotate: ['get', 'bearing'], // Rotate arrow based on line bearing
             iconRotationAlignment: 'map',
           ),
-          minzoom: 12,
+          minzoom: minZoomPiste,
         );
       }
 
@@ -247,500 +254,69 @@ class _GeneratorPageState extends State<GeneratorPage> {
     await _loadGeoJsonFromAssets(filepath);
     _addSourceAndLayer(geojsonData);
   }
-  ///////////////////////////////////////////////////////////////////////////////
-  /// outdated: Function to add GeoJSON data as a source and layer
-  ///////////////////////////////////////////////////////////////////////////////
-
-  // Function to load GeoJSON from assets
-  Future<void> _loadGeoJsonFromAssets_outdated(String filepath) async {
-    String data = await rootBundle.loadString(filepath);
-    setState(() {
-      geojsonData = data;
-    });
-    _addGeoJsonSourceAndLayer();
-  }
-
-  // Function to add source and layers for the GeoJSON data
-  void _addGeoJsonSourceAndLayer() {
-    if (geojsonData == null) return;
-
-    final parsedGeoJson = json.decode(geojsonData!);
-
-    // Separate aerialway features
-    final aerialwayFeatures = {
-      "type": "FeatureCollection",
-      "features": (parsedGeoJson['features'] as List).where((feature) {
-        return feature['properties'].containsKey('aerialway');
-      }).toList(),
-    };
-
-    // Separate piste:type features and filter out those that have the 'area' key
-    final connectionPisteFeatures = {
-      "type": "FeatureCollection",
-      "features": (parsedGeoJson['features'] as List).where((feature) {
-        // 检查 feature['properties'] 中是否包含 'piste:type' 键
-        // 并且 'piste:type' 的值为 'downhill'
-        // 同时排除包含 'area' 键的条目
-        final pisteType = feature['properties']['piste:type'];
-        final difficulty = feature['properties']['piste:difficulty'];
-        return feature['properties'].containsKey('piste:type') &&
-              pisteType == 'connection' && 
-              !feature['properties'].containsKey('area');
-      }).toList(),
-    };
-
-    // Separate piste:type features and filter out those that have the 'area' key
-    final novicePisteFeatures = {
-      "type": "FeatureCollection",
-      "features": (parsedGeoJson['features'] as List).where((feature) {
-        // 检查 feature['properties'] 中是否包含 'piste:type' 键
-        // 并且 'piste:type' 的值为 'downhill'
-        // 同时排除包含 'area' 键的条目
-        final pisteType = feature['properties']['piste:type'];
-        final difficulty = feature['properties']['piste:difficulty'];
-        return feature['properties'].containsKey('piste:type') &&
-              pisteType == 'downhill' && 
-              difficulty == 'novice' &&
-              !feature['properties'].containsKey('area');
-      }).toList(),
-    };
-
-    // Separate piste:type features and filter out those that have the 'area' key
-    final easyPisteFeatures = {
-      "type": "FeatureCollection",
-      "features": (parsedGeoJson['features'] as List).where((feature) {
-        // 检查 feature['properties'] 中是否包含 'piste:type' 键
-        // 并且 'piste:type' 的值为 'downhill'
-        // 同时排除包含 'area' 键的条目
-        final pisteType = feature['properties']['piste:type'];
-        final difficulty = feature['properties']['piste:difficulty'];
-        return feature['properties'].containsKey('piste:type') &&
-              pisteType == 'downhill' &&
-              difficulty == 'easy' &&
-              !feature['properties'].containsKey('area');
-      }).toList(),
-    };
-
-    // Separate piste:type features and filter out those that have the 'area' key
-    final intermediatePisteFeatures = {
-      "type": "FeatureCollection",
-      "features": (parsedGeoJson['features'] as List).where((feature) {
-        // 检查 feature['properties'] 中是否包含 'piste:type' 键
-        // 并且 'piste:type' 的值为 'downhill'
-        // 同时排除包含 'area' 键的条目
-        final pisteType = feature['properties']['piste:type'];
-        final difficulty = feature['properties']['piste:difficulty'];
-        return feature['properties'].containsKey('piste:type') &&
-              pisteType == 'downhill' &&
-              difficulty == 'intermediate' &&
-              !feature['properties'].containsKey('area');
-      }).toList(),
-    };
-
-    // Separate piste:type features and filter out those that have the 'area' key
-    final advancedPisteFeatures = {
-      "type": "FeatureCollection",
-      "features": (parsedGeoJson['features'] as List).where((feature) {
-        // 检查 feature['properties'] 中是否包含 'piste:type' 键
-        // 并且 'piste:type' 的值为 'downhill'
-        // 同时排除包含 'area' 键的条目
-        final pisteType = feature['properties']['piste:type'];
-        final difficulty = feature['properties']['piste:difficulty'];
-        return feature['properties'].containsKey('piste:type') &&
-              pisteType == 'downhill' &&
-              difficulty == 'advanced' &&
-              !feature['properties'].containsKey('area');
-      }).toList(),
-    };
-
-    // Separate piste:type features and filter out those that have the 'area' key
-    final expertPisteFeatures = {
-      "type": "FeatureCollection",
-      "features": (parsedGeoJson['features'] as List).where((feature) {
-        // 检查 feature['properties'] 中是否包含 'piste:type' 键
-        // 并且 'piste:type' 的值为 'downhill'
-        // 同时排除包含 'area' 键的条目
-        final pisteType = feature['properties']['piste:type'];
-        final difficulty = feature['properties']['piste:difficulty'];
-        return feature['properties'].containsKey('piste:type') &&
-              pisteType == 'downhill' &&
-              difficulty == 'expert' &&
-              !feature['properties'].containsKey('area');
-      }).toList(),
-    };
-
-    void _addLineWithStroke(String lineSourceString, String lineLayerString, Color lineColor, double lineWidth, String? strokeSourceString, String? strokeLayerString, Color? strokeColor, double? strokeWidth, double? strokeOpacity) {
-      // stroke
-      if (strokeSourceString != null && strokeLayerString != null && strokeColor != null && strokeWidth != null && strokeOpacity != null) {
-        mapController?.addLineLayer(
-          strokeSourceString,
-          strokeLayerString,
-          LineLayerProperties(
-            lineColor: strokeColor.toHexStringRGB(), 
-            lineOpacity: strokeOpacity,
-            lineWidth: strokeWidth,
-          ),
-        );
-      }
-
-      // line
-      mapController?.addLineLayer(
-        lineSourceString,
-        lineLayerString,
-        LineLayerProperties(
-          lineColor: lineColor.toHexStringRGB(), 
-          lineWidth: lineWidth, 
-        ),
-      );
-    }
-
-    ////////////////////////////////////////////////////////////////
-    // Add connection piste features
-    ////////////////////////////////////////////////////////////////
-    
-    // Add the connection piste source
-    mapController?.addSource(
-      'connection-piste-source',
-      GeojsonSourceProperties(data: connectionPisteFeatures),
-    );
-
-    // Add green polyline for connection pistes
-    _addLineWithStroke('connection-piste-source', 'connection-piste-layer', connection_piste_color, pisteLineWidth, null, null, null, null, null);
-
-    ////////////////////////////////////////////////////////////////
-    // Add novice piste features
-    ////////////////////////////////////////////////////////////////
-    
-    // Add the novice piste source
-    mapController?.addSource(
-      'novice-piste-source',
-      GeojsonSourceProperties(data: novicePisteFeatures),
-    );
-
-    // Add green polyline for novice pistes
-    _addLineWithStroke('novice-piste-source', 'novice-piste-layer', piste_default_color, pisteLineWidth, 'novice-piste-source', 'novice-piste-stroke-layer', novice_piste_color, pisteLineWidth * 3, strokeOpacity);
-
-    // Add arrows for piste:type (one arrow per line)
-    mapController?.addSymbolLayer(
-      'novice-piste-source',
-      'novice-piste-arrow-layer',
-      SymbolLayerProperties(
-        iconImage: "novice-piste-arrow", // Built-in arrow icon
-        symbolPlacement: 'line', // Place along the line
-        symbolSpacing: 300, // Ensures only one arrow is placed on the line
-        iconAllowOverlap: false,
-        iconRotate: ['get', 'bearing'], // Rotate arrow based on line bearing
-        iconRotationAlignment: 'map',
-      ),
-      minzoom: 14.0,
-    );
-
-    // Add piste name labels along the piste lines
-    mapController?.addSymbolLayer(
-      'novice-piste-source',
-      'novice-piste-name-layer',
-      SymbolLayerProperties(
-        textField: ['get', 'name'],  // Use 'piste:name' property from GeoJSON
-        textSize: fontSize,
-        symbolPlacement: 'line',  // Place labels along the line
-        textAnchor: 'center',  // Anchor the text in the center
-        textAllowOverlap: false,  // Prevent overlapping text
-        textOffset: [0, nameOffset],  // Adjust text position slightly
-        textColor: novice_piste_color.toHexStringRGB(),  // Set text color
-      ),
-      minzoom: 14.0,
-    );
-
-    ////////////////////////////////////////////////////////////////
-    // Add easy piste features
-    ////////////////////////////////////////////////////////////////
-    
-    // Add the easy piste source
-    mapController?.addSource(
-      'easy-piste-source',
-      GeojsonSourceProperties(data: easyPisteFeatures),
-    );
-
-    // Add blue polyline for easy pistes
-    _addLineWithStroke('easy-piste-source', 'easy-piste-layer', piste_default_color, pisteLineWidth, 'easy-piste-source', 'easy-piste-stroke-layer', easy_piste_color, pisteLineWidth * 3, strokeOpacity);
-
-    // Add arrows for piste:type (one arrow per line)
-    mapController?.addSymbolLayer(
-      'easy-piste-source',
-      'easy-piste-arrow-layer',
-      SymbolLayerProperties(
-        iconImage: "easy-piste-arrow", // Built-in arrow icon
-        symbolPlacement: 'line', // Place along the line
-        symbolSpacing: 300, // Ensures only one arrow is placed on the line
-        iconAllowOverlap: false,
-        iconRotate: ['get', 'bearing'], // Rotate arrow based on line bearing
-        iconRotationAlignment: 'map',
-      ),
-      minzoom: 14.0,
-    );
-
-    // Add piste name labels along the piste lines
-    mapController?.addSymbolLayer(
-      'easy-piste-source',
-      'easy-piste-name-layer',
-      SymbolLayerProperties(
-        textField: ['get', 'name'],  // Use 'piste:name' property from GeoJSON
-        textSize: fontSize,
-        symbolPlacement: 'line',  // Place labels along the line
-        textAnchor: 'center',  // Anchor the text in the center
-        textAllowOverlap: false,  // Prevent overlapping text
-        textOffset: [0, nameOffset],  // Adjust text position slightly
-        textColor: easy_piste_color.toHexStringRGB(),  // Set text color
-      ),
-      minzoom: 14.0,
-    );
-
-    ////////////////////////////////////////////////////////////////
-    // Add intermediate piste features
-    ////////////////////////////////////////////////////////////////
-    
-    // Add the intermediate piste source
-    mapController?.addSource(
-      'intermediate-piste-source',
-      GeojsonSourceProperties(data: intermediatePisteFeatures),
-    );
-
-    // Add red polyline for intermediate pistes
-    _addLineWithStroke('intermediate-piste-source', 'intermediate-piste-layer', piste_default_color, pisteLineWidth, 'intermediate-piste-source', 'intermediate-piste-stroke-layer', intermediate_piste_color, pisteLineWidth * 3, strokeOpacity);
-
-    // Add arrows for piste:type (one arrow per line)
-    mapController?.addSymbolLayer(
-      'intermediate-piste-source',
-      'intermediate-piste-arrow-layer',
-      SymbolLayerProperties(
-        iconImage: "intermediate-piste-arrow", // Built-in arrow icon
-        symbolPlacement: 'line', // Place along the line
-        symbolSpacing: 300, // Ensures only one arrow is placed on the line
-        iconAllowOverlap: false,
-        iconRotate: ['get', 'bearing'], // Rotate arrow based on line bearing
-        iconRotationAlignment: 'map',
-      ),
-      minzoom: 14.0,
-    );
-
-    // Add piste name labels along the piste lines
-    mapController?.addSymbolLayer(
-      'intermediate-piste-source',
-      'intermediate-piste-name-layer',
-      SymbolLayerProperties(
-        textField: ['get', 'name'],  // Use 'piste:name' property from GeoJSON
-        textSize: fontSize,
-        symbolPlacement: 'line',  // Place labels along the line
-        textAnchor: 'center',  // Anchor the text in the center
-        textAllowOverlap: false,  // Prevent overlapping text
-        textOffset: [0, nameOffset],  // Adjust text position slightly
-        textColor: intermediate_piste_color.toHexStringRGB(),  // Set text color
-      ),
-      minzoom: 14.0,
-    );
-
-    ////////////////////////////////////////////////////////////////
-    // Add advanced piste features
-    ////////////////////////////////////////////////////////////////
-    
-    // Add the advanced piste source
-    mapController?.addSource(
-      'advanced-piste-source',
-      GeojsonSourceProperties(data: advancedPisteFeatures),
-    );
-
-    // Add black polyline for advanced pistes
-    _addLineWithStroke('advanced-piste-source', 'advanced-piste-layer', piste_default_color, pisteLineWidth, 'advanced-piste-source', 'advanced-piste-stroke-layer', advanced_piste_color, pisteLineWidth * 3, strokeOpacity);
-
-    // Add arrows for piste:type (one arrow per line)
-    mapController?.addSymbolLayer(
-      'advanced-piste-source',
-      'advanced-piste-arrow-layer',
-      SymbolLayerProperties(
-        iconImage: "advanced-piste-arrow", // Built-in arrow icon
-        symbolPlacement: 'line', // Place along the line
-        symbolSpacing: 300, // Ensures only one arrow is placed on the line
-        iconAllowOverlap: false,
-        iconRotate: ['get', 'bearing'], // Rotate arrow based on line bearing
-        iconRotationAlignment: 'map',
-      ),
-      minzoom: 14.0,
-    );
-
-    // Add piste name labels along the piste lines
-    mapController?.addSymbolLayer(
-      'advanced-piste-source',
-      'advanced-piste-name-layer',
-      SymbolLayerProperties(
-        textField: ['get', 'name'],  // Use 'piste:name' property from GeoJSON
-        textSize: fontSize,
-        symbolPlacement: 'line',  // Place labels along the line
-        textAnchor: 'center',  // Anchor the text in the center
-        textAllowOverlap: false,  // Prevent overlapping text
-        textOffset: [0, nameOffset],  // Adjust text position slightly
-        textColor: advanced_piste_color.toHexStringRGB(),  // Set text color
-      ),
-      minzoom: 14.0,
-    );
-
-    ////////////////////////////////////////////////////////////////
-    // Add expert piste features
-    ////////////////////////////////////////////////////////////////
-    
-    // Add the expert piste source
-    mapController?.addSource(
-      'expert-piste-source',
-      GeojsonSourceProperties(data: expertPisteFeatures),
-    );
-
-    // Add black polyline for expert pistes
-    _addLineWithStroke('expert-piste-source', 'expert-piste-layer', piste_default_color, pisteLineWidth, 'expert-piste-source', 'expert-piste-stroke-layer', expert_piste_color, pisteLineWidth * 3, strokeOpacity);
-
-    // Add arrows for piste:type (one arrow per line)
-    mapController?.addSymbolLayer(
-      'expert-piste-source',
-      'expert-piste-arrow-layer',
-      SymbolLayerProperties(
-        iconImage: "expert-piste-arrow", // Built-in arrow icon
-        symbolPlacement: 'line', // Place along the line
-        symbolSpacing: 300, // Ensures only one arrow is placed on the line
-        iconAllowOverlap: false,
-        iconRotate: ['get', 'bearing'], // Rotate arrow based on line bearing
-        iconRotationAlignment: 'map',
-      ),
-      minzoom: 14.0,
-    );
-
-    // Add piste name labels along the piste lines
-    mapController?.addSymbolLayer(
-      'expert-piste-source',
-      'expert-piste-name-layer',
-      SymbolLayerProperties(
-        textField: ['get', 'name'],  // Use 'piste:name' property from GeoJSON
-        textSize: fontSize,
-        symbolPlacement: 'line',  // Place labels along the line
-        textAnchor: 'center',  // Anchor the text in the center
-        textAllowOverlap: false,  // Prevent overlapping text
-        textOffset: [0, nameOffset],  // Adjust text position slightly
-        textColor: expert_piste_color.toHexStringRGB(),  // Set text color
-      ),
-      minzoom: 14.0,
-    );
-
-    ////////////////////////////////////////////////////////////////
-    // Add aerialway features
-    ////////////////////////////////////////////////////////////////
-    
-    // Add the aerialway source
-    mapController?.addSource(
-      'aerialway-source',
-      GeojsonSourceProperties(data: aerialwayFeatures),
-    );
-
-    _addLineWithStroke('aerialway-source', 'aerialway-layer', lift_color, liftLineWidth, null, null, null, null, null);
-
-    // Add arrows for aerialway (one arrow per line)
-    mapController?.addSymbolLayer(
-      'aerialway-source',
-      'aerialway-arrow-layer',
-      SymbolLayerProperties(
-        iconImage: "lift-arrow", // Built-in arrow icon
-        symbolPlacement: 'line-center', // Place along the line
-        symbolSpacing: 5000000, // Ensures only one arrow is placed on the line
-        iconAllowOverlap: false,
-        iconRotate: ['get', 'bearing'], // Rotate arrow based on line bearing
-        iconRotationAlignment: 'map',
-      ),
-      minzoom: 12,
-    );
-
-    // Add piste name labels along the piste lines
-    mapController?.addSymbolLayer(
-      'aerialway-source',
-      'aerialway-name-layer',
-      SymbolLayerProperties(
-        textField: ['get', 'name'],  // Use 'piste:name' property from GeoJSON
-        textSize: fontSize,
-        symbolPlacement: 'line',  // Place labels along the line
-        textAnchor: 'center',  // Anchor the text in the center
-        textAllowOverlap: false,  // Prevent overlapping text
-        textOffset: [0, nameOffset],  // Adjust text position slightly
-        textColor: lift_color.toHexStringRGB(),  // Set text color
-      ),
-      minzoom: 14.0,
-    );
-
-    print('Layers for aerialway and piste added successfully');
-  }
-
   ///////////////////////////////////////////////////////////////////
   
   void onFeatureTap(dynamic featureId, Point<double> point, LatLng latLng) async {
-  List features = await mapController!.queryRenderedFeatures(point, [], null);
-  
-  if (features.isNotEmpty) {
-    dynamic type = features[0]["properties"]["aerialway"] ?? features[0]["properties"]["piste:type"] + " piste" ;
-    dynamic name = features[0]["properties"]["name"] ?? "No name";
-    dynamic difficulty = features[0]["properties"]["piste:difficulty"] ?? "N/A";
-    print(features[0]["properties"]["name"]);
+    List features = await mapController!.queryRenderedFeatures(point, layerIds, null);
+    
+    if (features.isNotEmpty) {
+      dynamic type = features[0]["properties"]["aerialway"];
+      type ??= features[0]["properties"]["piste:type"];
+      type ??= features[0]["properties"]["uses"];
+      type ??= features[0]["properties"]["liftType"];
+      type ??= "N/A";
+      dynamic name = features[0]["properties"]["name"] ?? "No name";
+      dynamic difficulty = features[0]["properties"]["piste:difficulty"];
+      difficulty ??= features[0]["properties"]["difficulty"];
+      difficulty ??= "N/A";
+      print(features[0]["properties"]["name"]);
 
-    // Show bottom sheet instead of SnackBar
-    showBottomSheet(
-      context: context,
-      backgroundColor: Colors.white.withOpacity(floatingbuttonopacity),
-      enableDrag: true,
-      builder: (BuildContext context) {
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: EdgeInsets.all(16.0),
-              width: double.infinity, // Ensure full width
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '$type: $name',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  SizedBox(height: 8.0),
-                  Text(
-                    'Difficulty: $difficulty',
-                    style: TextStyle(fontSize: 16),
-                  ),
-                  SizedBox(height: 20.0),
-                ],
+      // Show bottom sheet
+      showBottomSheet(
+        context: context,
+        backgroundColor: Colors.white.withOpacity(floatingbuttonopacity),
+        enableDrag: false,
+        builder: (BuildContext context) {
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: EdgeInsets.all(16.0),
+                width: double.infinity, // Ensure full width
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: <Widget>[
+                        Text(
+                          '$type: $name',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.close),
+                          onPressed: () {
+                            Navigator.pop(context); // Close the BottomSheet
+                          },
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 8.0),
+                    Text(
+                      'Difficulty: $difficulty',
+                      style: TextStyle(fontSize: 16),
+                    ),
+                    SizedBox(height: 40.0),
+                  ],
+                ),
               ),
-            ),
-          ],
-        );
-      },
-    );
+            ],
+          );
+        },
+      );
+    }
   }
-}
-
   
-  // Function to add the OpenSnowMap pistes layer as the top layer
-  void _addPistesLayer() {
-    // Add raster source with OpenSnowMap tiles
-    mapController?.addSource(
-      'pistes',
-      RasterSourceProperties(
-        tiles: ['https://tiles.opensnowmap.org/pistes/{z}/{x}/{y}.png'],
-        tileSize: 256,
-      ),
-    );
-    print('Raster source for OpenSnowMap added successfully');
-
-    // Add the raster layer as the top layer
-    mapController?.addRasterLayer(
-      'pistes',  // Source ID
-      'pistes-layer', // Layer ID
-      RasterLayerProperties(),
-    );
-    print('Raster layer for OpenSnowMap added successfully');
-  }
-
   void _onStyleLoadedCallback() async {
     _addFlutterIconToMap(
       icon: Icons.arrow_right,
@@ -751,35 +327,36 @@ class _GeneratorPageState extends State<GeneratorPage> {
     _addFlutterIconToMap(
       icon: Icons.arrow_right,
       color: novice_piste_color,
-      size: iconSize,
+      size: arrowIconSize,
       imageName: 'novice-piste-arrow',
     );
     _addFlutterIconToMap(
       icon: Icons.arrow_right,
       color: easy_piste_color,
-      size: iconSize,
+      size: arrowIconSize,
       imageName: 'easy-piste-arrow',
     );
     _addFlutterIconToMap(
       icon: Icons.arrow_right,
       color: intermediate_piste_color,
-      size: iconSize,
+      size: arrowIconSize,
       imageName: 'intermediate-piste-arrow',
     );
     _addFlutterIconToMap(
       icon: Icons.arrow_right,
       color: advanced_piste_color,
-      size: iconSize,
+      size: arrowIconSize,
       imageName: 'advanced-piste-arrow',
     );
     _addFlutterIconToMap(
       icon: Icons.arrow_right,
       color: expert_piste_color,
-      size: iconSize,
+      size: arrowIconSize,
       imageName: 'expert-piste-arrow',
     );
-    _loadGeoJsonFromAssets_outdated('assets/les_2_alps.geojson');
-    _addLayersFromGeoJsonAssets('assets/3valley/runs.geojson');
+
+    // Add layers from GeoJSON assets
+    await _addLayersFromGeoJsonAssets('assets/3valley/runs.geojson');
     _addLayersFromGeoJsonAssets('assets/3valley/lifts.geojson');
   }
 
@@ -827,7 +404,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
             onCameraIdle: _onCameraIdle,
             onStyleLoadedCallback: _onStyleLoadedCallback,
             initialCameraPosition: CameraPosition(
-              target: LatLng(45.009487, 6.124711), // Coordinates for Les 2 Alpes
+              target: LatLng(45.318460699999996, 6.578992100000002), // Coordinates for 3 valleys
               zoom: 13,  // Adjust the zoom level if necessary
             ),
             styleString: 'mapbox://styles/okboy2008/clx1zai3s01ck01rb5zsv600u', // Your custom Mapbox style
