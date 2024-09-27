@@ -20,7 +20,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
   Color advanced_piste_color = Color.fromARGB(200, 27, 27, 27);
   Color expert_piste_color = Color.fromARGB(255, 255, 136, 91);
   Color lift_color =  Color.fromRGBO(216, 59, 59, 1); // RGB values from hsl(0, 82%, 42%) and opacity set to 1 (fully opaque)
-  Color lift_stroke_color =  Color.fromRGBO(216, 59, 59, 1); // RGB values from hsl(0, 82%, 42%) and opacity set to 1 (fully opaque)
+  Color lift_stroke_color =  Color.fromRGBO(255, 255, 255, 1); // RGB values from hsl(0, 82%, 42%) and opacity set to 1 (fully opaque)
   Color piste_default_color = Color.fromARGB(255, 255, 255, 255);
   double strokeOpacity = 0.5;
   double liftStrokeOpacity = 0.8;
@@ -269,7 +269,90 @@ class _GeneratorPageState extends State<GeneratorPage> {
       dynamic difficulty = features[0]["properties"]["piste:difficulty"];
       difficulty ??= features[0]["properties"]["difficulty"];
       difficulty ??= "N/A";
+      dynamic color = features[0]["properties"]["color"] ?? "#FF0000"; // Default color if not specified
+
       print(features[0]["properties"]["name"]);
+
+      // Get the geometry and calculate bounds
+      var geometry = features[0]["geometry"];
+      if (geometry["type"] == "LineString") {
+        final coordinates = geometry["coordinates"];
+        
+        // Initialize bounds with the first coordinate
+        LatLng southwest = LatLng(coordinates[0][1], coordinates[0][0]);
+        LatLng northeast = LatLng(coordinates[0][1], coordinates[0][0]);
+        
+        for (var coord in coordinates) {
+          LatLng point = LatLng(coord[1], coord[0]);
+          southwest = LatLng(
+            southwest.latitude < point.latitude ? southwest.latitude : point.latitude,
+            southwest.longitude < point.longitude ? southwest.longitude : point.longitude,
+          );
+          northeast = LatLng(
+            northeast.latitude > point.latitude ? northeast.latitude : point.latitude,
+            northeast.longitude > point.longitude ? northeast.longitude : point.longitude,
+          );
+        }
+
+        // Create the LatLngBounds object
+        LatLngBounds bounds = LatLngBounds(southwest: southwest, northeast: northeast);
+
+        // Change camera to focus on the LineString bounds
+        await mapController!.animateCamera(
+          CameraUpdate.newLatLngBounds(bounds, top: 50.0, bottom: 3 * 50.0, left: 50.0, right: 50.0), // 50 is padding
+        );
+      }
+
+      // Remove existing highlighted source and layer if they exist
+      try {
+        await mapController!.removeLayer('highlighted-layer');
+        await mapController!.removeSource('highlighted-feature');
+      } catch (e) {
+        // Handle the case where the layer or source does not exist
+        print("Layer or source not found: $e");
+      }
+
+      // Highlight the selected feature
+      mapController!.addSource(
+        'highlighted-feature',
+        GeojsonSourceProperties(
+          data: {
+            "type": "FeatureCollection",
+            "features": [
+              {
+                "type": "Feature",
+                "geometry": geometry,
+                "properties": {
+                  "color": color,
+                },
+              },
+            ],
+          },
+        ),
+      );
+
+      // get feature type
+      dynamic featureType = features[0]["properties"]["type"];
+
+      if (featureType == "run") {
+        mapController!.addLineLayer(
+          'highlighted-feature',
+          'highlighted-layer',
+          LineLayerProperties(
+            lineColor: color,
+            lineWidth: pisteLineWidth,
+          ),
+        );
+      } else if (featureType == "lift") {
+        mapController!.addLineLayer(
+          'highlighted-feature',
+          'highlighted-layer',
+          LineLayerProperties(
+            lineColor: lift_color.withOpacity(0.6).toHexStringRGB(),
+            lineWidth: liftLineWidth * 2,
+          ),
+        );
+      }
 
       // Show bottom sheet
       showBottomSheet(
@@ -295,7 +378,10 @@ class _GeneratorPageState extends State<GeneratorPage> {
                         ),
                         IconButton(
                           icon: Icon(Icons.close),
-                          onPressed: () {
+                          onPressed: () async {
+                            // Remove highlighted layer and source when closing
+                            await mapController!.removeLayer('highlighted-layer');
+                            await mapController!.removeSource('highlighted-feature');
                             Navigator.pop(context); // Close the BottomSheet
                           },
                         ),
@@ -316,7 +402,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
       );
     }
   }
-  
+
   void _onStyleLoadedCallback() async {
     _addFlutterIconToMap(
       icon: Icons.arrow_right,
