@@ -340,7 +340,9 @@ class _GeneratorPageState extends State<GeneratorPage> {
           'highlighted-layer',
           LineLayerProperties(
             lineColor: color,
-            lineWidth: pisteLineWidth,
+            lineWidth: pisteLineWidth * 10,
+            lineOpacity: strokeOpacity,
+            lineCap: 'round',
           ),
         );
       } else if (featureType == "lift") {
@@ -348,8 +350,10 @@ class _GeneratorPageState extends State<GeneratorPage> {
           'highlighted-feature',
           'highlighted-layer',
           LineLayerProperties(
-            lineColor: lift_color.withOpacity(0.6).toHexStringRGB(),
-            lineWidth: liftLineWidth * 2,
+            lineColor: lift_color.toHexStringRGB(),
+            lineWidth: liftLineWidth * 10,
+            lineOpacity: strokeOpacity,
+            lineCap: 'round',
           ),
         );
       }
