@@ -12,6 +12,16 @@ class GeneratorPage extends StatefulWidget {
 }
 
 class _GeneratorPageState extends State<GeneratorPage> {
+  // Filter set for pistes and lifts
+  List<String> pisteDifficultyFilters = [
+    'novice',
+    'easy',
+    'intermediate', 
+    'advanced', 
+    'expert', 
+    'freeride',
+  ];
+
   // Colors for the map
   Color connection_piste_color = Color.fromARGB(255, 52, 124, 40);
   Color novice_piste_color = Color.fromARGB(255, 52, 124, 40);
@@ -448,6 +458,11 @@ class _GeneratorPageState extends State<GeneratorPage> {
     // Add layers from GeoJSON assets
     await _addLayersFromGeoJsonAssets('assets/3valley/runs.geojson');
     _addLayersFromGeoJsonAssets('assets/3valley/lifts.geojson');
+    mapController?.setFilter("run-layer", 
+    ['==', 
+    ['get', 'difficulty'], 
+    'novice'
+    ]);
   }
 
   // Callback when the Mapbox map is created
