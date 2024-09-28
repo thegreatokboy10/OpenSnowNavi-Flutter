@@ -351,7 +351,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
           'highlighted-layer',
           LineLayerProperties(
             lineColor: lift_color.toHexStringRGB(),
-            lineWidth: liftLineWidth * 10,
+            lineWidth: liftLineWidth * 5,
             lineOpacity: strokeOpacity,
             lineCap: 'round',
           ),
