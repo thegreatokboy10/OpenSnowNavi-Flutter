@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'dart:math';
+import 'timer_flag.dart';
 
 class GeneratorPage extends StatefulWidget {
   @override
@@ -63,6 +64,9 @@ class _GeneratorPageState extends State<GeneratorPage> {
 
   // Variable to track whether the map is in 3D mode or not
   bool is3DMode = false;
+
+  // isUiOpen is a flag to track if the UI panels are open or not
+  TimerFlag isUiOpen = TimerFlag(); // Initialize flag
 
   var layerIds = <String>[];
 
@@ -287,8 +291,13 @@ class _GeneratorPageState extends State<GeneratorPage> {
     _addSourceAndLayer(geojsonData);
   }
   ///////////////////////////////////////////////////////////////////
-  
+
   void onFeatureTap(dynamic featureId, Point<double> point, LatLng latLng) async {
+    if (isUiOpen.flag) {
+      print("set isUiOpen to false");
+      isUiOpen.flag = false;
+      return;
+    }
     List features = await mapController!.queryRenderedFeatures(point, layerIds, null);
     
     if (features.isNotEmpty) {
@@ -396,46 +405,58 @@ class _GeneratorPageState extends State<GeneratorPage> {
         backgroundColor: Colors.white.withOpacity(floatingbuttonopacity),
         enableDrag: false,
         builder: (BuildContext context) {
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: EdgeInsets.all(16.0),
-                width: double.infinity, // Ensure full width
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: <Widget>[
-                        Text(
-                          '$type: $name',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-                        IconButton(
-                          icon: Icon(Icons.close),
-                          onPressed: () async {
-                            // Remove highlighted layer and source when closing
-                            await mapController!.removeLayer('highlighted-layer');
-                            await mapController!.removeSource('highlighted-feature');
-                            Navigator.pop(context); // Close the BottomSheet
-                          },
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 8.0),
-                    Text(
-                      'Difficulty: $difficulty',
-                      style: TextStyle(fontSize: 16),
-                    ),
-                    SizedBox(height: 40.0),
-                  ],
+          return GestureDetector(
+            behavior: HitTestBehavior.opaque, // 捕获所有事件
+            onTapDown: (details) {
+              // 可以处理点击事件，或者留空来阻止事件传递到 map
+              isUiOpen.flag = true;
+              print("BottomSheet onTapDown, set isUiOpen to true");
+            },
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: EdgeInsets.all(16.0),
+                  width: double.infinity, // Ensure full width
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: <Widget>[
+                          Text(
+                            '$type: $name',
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                          GestureDetector(
+                            child: IconButton(
+                              icon: Icon(Icons.close),
+                              onPressed: () async {
+                                // Remove highlighted layer and source when closing
+                                isUiOpen.flag = true;
+                                await mapController!.removeLayer('highlighted-layer');
+                                await mapController!.removeSource('highlighted-feature');
+                                Navigator.pop(context); // Close the BottomSheet
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 8.0),
+                      Text(
+                        'Difficulty: $difficulty',
+                        style: TextStyle(fontSize: 16),
+                      ),
+                      SizedBox(height: 40.0),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           );
         },
       );
+
     }
   }
 
