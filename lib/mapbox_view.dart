@@ -59,6 +59,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
   double liftLineWidth = 3.0;
   // Floating button
   double floatingbuttonopacity = 0.9;
+  double floatingActionButtonScale = 0.8;
 
   // Variable to track whether the map is in 3D mode or not
   bool is3DMode = false;
@@ -641,25 +642,31 @@ class _GeneratorPageState extends State<GeneratorPage> {
           Positioned(
             top: 20,
             right: 20, // 定位在右上角
-            child: FloatingActionButton(
-              backgroundColor: Colors.white.withOpacity(floatingbuttonopacity), // 按钮颜色
-              onPressed: _showFilterDialog,
-              tooltip: 'Filter',
-              child: Icon(Icons.filter_alt), // 使用筛选图标
+            child: Transform.scale(
+              scale: floatingActionButtonScale, // 缩放比例
+              child: FloatingActionButton(
+                backgroundColor: Colors.white.withOpacity(floatingbuttonopacity), // 按钮颜色
+                onPressed: _showFilterDialog,
+                tooltip: 'Filter',
+                child: Icon(Icons.filter_alt), // 使用筛选图标
+              ),
             ),
           ),
           Positioned(
             bottom: 40, // Position at the bottom
             left: 20, // Align to the left
-            child: FloatingActionButton(
-              backgroundColor: Colors.white.withOpacity(floatingbuttonopacity),
-              onPressed: _toggle2D3DView,
-              child: Text(
-                is3DMode ? '2D' : '3D',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: const Color.fromARGB(255, 0, 0, 0),
+            child: Transform.scale(
+              scale: floatingActionButtonScale,
+              child: FloatingActionButton(
+                backgroundColor: Colors.white.withOpacity(floatingbuttonopacity),
+                onPressed: _toggle2D3DView,
+                child: Text(
+                  is3DMode ? '2D' : '3D',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: const Color.fromARGB(255, 0, 0, 0),
+                  ),
                 ),
               ),
             ),
