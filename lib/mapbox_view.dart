@@ -13,6 +13,8 @@ class GeneratorPage extends StatefulWidget {
 
 class _GeneratorPageState extends State<GeneratorPage> {
   // Filter set for pistes and lifts
+  List<String> pisteLayers = [];
+  List<String> liftLayers = [];
   List<String> pisteDifficultyFilters = [
     'novice',
     'easy',
@@ -21,6 +23,15 @@ class _GeneratorPageState extends State<GeneratorPage> {
     'expert', 
     'freeride',
   ];
+
+  Map<String, bool> difficultyFilterMap = {
+    'novice': true,
+    'easy': true,
+    'intermediate': true,
+    'advanced': true,
+    'expert': true,
+    'freeride': true
+  };
 
   // Colors for the map
   Color connection_piste_color = Color.fromARGB(255, 52, 124, 40);
@@ -150,6 +161,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
           ),
         );
         layerIds.add(lineLayerString);
+        liftLayers.add(lineLayerString);
       } else {
         // piste: stroke color is ['get', 'color'], line color is piste_default_color
         // stroke
@@ -164,6 +176,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
             ),
           );
           layerIds.add(strokeLayerString);
+          pisteLayers.add(strokeLayerString);
         }
 
         // line
@@ -175,6 +188,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
             lineWidth: lineWidth, 
           ),
         );
+        pisteLayers.add(lineLayerString);
       }
     }
 
@@ -221,6 +235,11 @@ class _GeneratorPageState extends State<GeneratorPage> {
         ),
         minzoom: minZoomPiste,
       );
+      if (type == 'lift') {
+        liftLayers.add('$type-name-layer');
+      } else {
+        pisteLayers.add('$type-name-layer');
+      }
 
       // Add Arrow Layer
       if (type == 'lift') {
@@ -237,6 +256,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
           ),
           minzoom: minZoomLift,
         );
+        liftLayers.add('$type-arrow-layer');
       } else {
         mapController?.addSymbolLayer(
           '$type-source',
@@ -253,6 +273,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
           ),
           minzoom: minZoomPiste,
         );
+        pisteLayers.add('$type-arrow-layer');
       }
 
     }
@@ -458,11 +479,6 @@ class _GeneratorPageState extends State<GeneratorPage> {
     // Add layers from GeoJSON assets
     await _addLayersFromGeoJsonAssets('assets/3valley/runs.geojson');
     _addLayersFromGeoJsonAssets('assets/3valley/lifts.geojson');
-    mapController?.setFilter("run-layer", 
-    ['==', 
-    ['get', 'difficulty'], 
-    'novice'
-    ]);
   }
 
   // Callback when the Mapbox map is created
@@ -496,6 +512,87 @@ class _GeneratorPageState extends State<GeneratorPage> {
       ));
     }
   }
+
+  void _showFilterDialog() {
+    // 创建 difficultyFilterMap 的副本
+    final Map<String, bool> filterMapCopy = Map.from(difficultyFilterMap);
+
+    // 创建筛选对话框
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setState) {
+            return AlertDialog(
+              title: Text('Filter Pistes'),
+              content: SingleChildScrollView(
+                child: ListBody(
+                  children: filterMapCopy.keys.map((difficulty) {
+                    return CheckboxListTile(
+                      title: Text(difficulty),
+                      value: filterMapCopy[difficulty] ?? false,
+                      onChanged: (bool? newValue) {
+                        setState(() {
+                          // 更新副本中的值
+                          filterMapCopy[difficulty] = newValue ?? false;
+                        });
+                      },
+                    );
+                  }).toList(),
+                ),
+              ),
+              actions: <Widget>[
+                TextButton(
+                  child: Text('Cancel'),
+                  onPressed: () {
+                    // 用户点击取消，不进行任何更改，直接关闭对话框
+                    Navigator.of(context).pop();
+                  },
+                ),
+                TextButton(
+                  child: Text('OK'),
+                  onPressed: () {
+                    // 用户点击确定，将副本的值更新到原始 difficultyFilterMap
+                    difficultyFilterMap = Map.from(filterMapCopy);
+                    // 应用筛选逻辑
+                    _applyFilters();
+                    Navigator.of(context).pop();
+                  },
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _applyFilters() {
+    // 构建 difficultyList，收集被选中的难度值
+    List<String> difficultyList = difficultyFilterMap.entries
+      .where((entry) => entry.value) // 过滤出被选中的 difficulty
+      .map((entry) => "${entry.key}") // 将 difficulty 的名称转换为带引号的字符串
+      .toList();
+
+    pisteLayers.forEach((layerId) {
+      print("setting filter for $layerId with $difficultyList");
+      if (difficultyList.isNotEmpty) {
+        // 如果 difficultyList 不为空，设置过滤器
+        mapController?.setFilter(
+          layerId,
+          [
+            'in', // 使用 'in' 过滤条件，匹配多个难度值
+            ['get', 'difficulty'],
+            ['literal', difficultyList], 
+          ],
+        );
+      } else {
+        // 如果 difficultyList 为空，清除过滤器
+        mapController?.setFilter(layerId, null);
+      }
+    });
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -538,6 +635,17 @@ class _GeneratorPageState extends State<GeneratorPage> {
                   contentPadding: EdgeInsets.symmetric(horizontal: 15, vertical: 10),
                 ),
               ),
+            ),
+          ),
+          // 筛选按钮
+          Positioned(
+            top: 20,
+            right: 20, // 定位在右上角
+            child: FloatingActionButton(
+              backgroundColor: Colors.white.withOpacity(floatingbuttonopacity), // 按钮颜色
+              onPressed: _showFilterDialog,
+              tooltip: 'Filter',
+              child: Icon(Icons.filter_alt), // 使用筛选图标
             ),
           ),
           Positioned(
