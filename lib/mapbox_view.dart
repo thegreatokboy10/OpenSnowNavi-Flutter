@@ -515,6 +515,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
   }
 
   void _toggle2D3DView() {
+    isUiOpen.flag = true;
     if (mapController != null) {
       setState(() {
         is3DMode = !is3DMode;
@@ -536,6 +537,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
   }
 
   void _showFilterDialog() {
+    isUiOpen.flag = true;
     // 创建 difficultyFilterMap 的副本
     final Map<String, bool> filterMapCopy = Map.from(difficultyFilterMap);
 
@@ -545,43 +547,53 @@ class _GeneratorPageState extends State<GeneratorPage> {
       builder: (BuildContext context) {
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setState) {
-            return AlertDialog(
-              title: Text('Filter Pistes'),
-              content: SingleChildScrollView(
-                child: ListBody(
-                  children: filterMapCopy.keys.map((difficulty) {
-                    return CheckboxListTile(
-                      title: Text(difficulty),
-                      value: filterMapCopy[difficulty] ?? false,
-                      onChanged: (bool? newValue) {
-                        setState(() {
-                          // 更新副本中的值
-                          filterMapCopy[difficulty] = newValue ?? false;
-                        });
-                      },
-                    );
-                  }).toList(),
+            return GestureDetector(
+              onTapDown: (details) {
+                isUiOpen.flag = true;
+                print("FilterDialog onTapDown, set isUiOpen to true");
+              },
+              child: AlertDialog(
+                title: Text('Filter Pistes'),
+                content: SingleChildScrollView(
+                  child: ListBody(
+                    children: filterMapCopy.keys.map((difficulty) {
+                      return CheckboxListTile(
+                        title: Text(difficulty),
+                        value: filterMapCopy[difficulty] ?? false,
+                        onChanged: (bool? newValue) {
+                          isUiOpen.flag = true;
+                          print("FilterDialog inside checkbox onTapDown, set isUiOpen to true");
+                          setState(() {
+                            // 更新副本中的值
+                            filterMapCopy[difficulty] = newValue ?? false;
+                          });
+                        },
+                      );
+                    }).toList(),
+                  ),
                 ),
+                actions: <Widget>[
+                  TextButton(
+                    child: Text('Cancel'),
+                    onPressed: () {
+                      // 用户点击取消，不进行任何更改，直接关闭对话框
+                      isUiOpen.flag = true;
+                      Navigator.of(context).pop();
+                    },
+                  ),
+                  TextButton(
+                    child: Text('OK'),
+                    onPressed: () {
+                      // 用户点击确定，将副本的值更新到原始 difficultyFilterMap
+                      isUiOpen.flag = true;
+                      difficultyFilterMap = Map.from(filterMapCopy);
+                      // 应用筛选逻辑
+                      _applyFilters();
+                      Navigator.of(context).pop();
+                    },
+                  ),
+                ],
               ),
-              actions: <Widget>[
-                TextButton(
-                  child: Text('Cancel'),
-                  onPressed: () {
-                    // 用户点击取消，不进行任何更改，直接关闭对话框
-                    Navigator.of(context).pop();
-                  },
-                ),
-                TextButton(
-                  child: Text('OK'),
-                  onPressed: () {
-                    // 用户点击确定，将副本的值更新到原始 difficultyFilterMap
-                    difficultyFilterMap = Map.from(filterMapCopy);
-                    // 应用筛选逻辑
-                    _applyFilters();
-                    Navigator.of(context).pop();
-                  },
-                ),
-              ],
             );
           },
         );
