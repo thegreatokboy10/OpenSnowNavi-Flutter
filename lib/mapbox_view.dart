@@ -760,8 +760,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
           ),
           // 筛选按钮
           Positioned(
-            top: 20,
-            right: 20, // 定位在右上角
+            bottom: 38,
+            left: 200, 
             child: Transform.scale(
               scale: floatingActionButtonScale, // 缩放比例
               child: FloatingActionButton(
@@ -773,8 +773,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
             ),
           ),
           Positioned(
-            bottom: 40, // Position at the bottom
-            left: 20, // Align to the left
+            top: 20,
+            right: 20, 
             child: Transform.scale(
               scale: floatingActionButtonScale,
               child: FloatingActionButton(
@@ -793,8 +793,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
           ),
           // Dropdown for selecting ski resort
           Positioned(
-            top: 100,
-            left: 20,
+            bottom: 40, // Position at the bottom
+            left: 20, // Align to the left
             child: Container(
               padding: EdgeInsets.symmetric(horizontal: 10),
               decoration: BoxDecoration(
