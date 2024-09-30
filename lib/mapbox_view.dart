@@ -330,6 +330,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
 
     await _addLayersFromGeoJsonAssets(pisteFilePath);
     _addLayersFromGeoJsonAssets(liftFilePath);
+    _applyFilters();
   }
 
   Future<void> _addLayersFromGeoJsonAssets(String filepath) async {
