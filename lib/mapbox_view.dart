@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'dart:math';
 import 'timer_flag.dart';
+import 'global_constants.dart';
 
 class GeneratorPage extends StatefulWidget {
   @override
@@ -13,8 +14,12 @@ class GeneratorPage extends StatefulWidget {
 }
 
 class _GeneratorPageState extends State<GeneratorPage> {
+  // Resort
+  String selectedResortKey = '3valley'; // Default selection for 3 Valleys
   // Filter set for pistes and lifts
+  List<String> pisteSources = [];
   List<String> pisteLayers = [];
+  List<String> liftSources = [];
   List<String> liftLayers = [];
   List<String> pisteDifficultyFilters = [
     'novice',
@@ -214,8 +219,10 @@ class _GeneratorPageState extends State<GeneratorPage> {
       if (type == 'lift') {
         // only line, no stroke
         _lineWidth = liftLineWidth;
+        liftSources.add('$type-source');
       } else {
         // piste: line and stroke
+        pisteSources.add('$type-source');
         _lineWidth = pisteLineWidth;
         _strokeSourceString = '$type-source';
         _strokeLayerString = '$type-stroke-layer';
@@ -284,6 +291,45 @@ class _GeneratorPageState extends State<GeneratorPage> {
     }
 
     print('Layers for $type added successfully');
+  }
+
+  void _clearLayers(List<String> layerIds) async {
+    if (mapController != null) {
+      for (String layerId in layerIds) {
+        try {
+          await mapController!.removeLayer(layerId);
+        } catch (e) {
+          // Handle the case where the layer or source does not exist
+          print("Layer $layerId not found: $e");
+        }
+      }
+    }
+  }
+
+  void _clearSources(List<String> sourceIds) async {
+    if (mapController != null) {
+      for (String sourceId in sourceIds) {
+        try {
+          await mapController!.removeSource(sourceId);
+        } catch (e) {
+          // Handle the case where the layer or source does not exist
+          print("Source $sourceId not found: $e");
+        }
+      }
+    }
+  }
+
+  Future<void> _loadSkiResortData() async {
+    _clearLayers(pisteLayers);
+    _clearSources(pisteSources);
+    _clearLayers(liftLayers);
+    _clearSources(liftSources);
+
+    final pisteFilePath = 'assets/$selectedResortKey/runs.geojson';
+    final liftFilePath = 'assets/$selectedResortKey/lifts.geojson';
+
+    await _addLayersFromGeoJsonAssets(pisteFilePath);
+    _addLayersFromGeoJsonAssets(liftFilePath);
   }
 
   Future<void> _addLayersFromGeoJsonAssets(String filepath) async {
@@ -499,8 +545,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
     );
 
     // Add layers from GeoJSON assets
-    await _addLayersFromGeoJsonAssets('assets/3valley/runs.geojson');
-    _addLayersFromGeoJsonAssets('assets/3valley/lifts.geojson');
+    _loadSkiResortData();
   }
 
   // Callback when the Mapbox map is created
@@ -627,6 +672,51 @@ class _GeneratorPageState extends State<GeneratorPage> {
     });
   }
 
+  // Function to convert country to emoji flag
+  String _getFlagEmoji(String country) {
+    // Map from country name to ISO country code (for a limited set of countries)
+    Map<String, String> countryCodeMap = {
+      'France': 'FR',
+      // Add other countries and their codes here as needed
+    };
+
+    // Get the country code
+    String? countryCode = countryCodeMap[country];
+    if (countryCode == null) return '';
+
+    // Convert to emoji flag
+    return countryCode.toUpperCase().codeUnits.map((unit) {
+      return String.fromCharCode(unit + 0x1F1E6 - 65);
+    }).join();
+  }
+
+  void _moveToSelectedResort() {
+    final selectedResort = GlobalConstants.skiResortList[selectedResortKey];
+    _loadSkiResortData();
+    final lat = selectedResort?['coordinate']['lat'];
+    final lng = selectedResort?['coordinate']['lng'];
+    final zoom = selectedResort?['zoom'] ?? 13.0; // Default zoom if not provided
+    if (lat != null && lng != null && mapController != null) {
+      mapController!.animateCamera(
+        CameraUpdate.newCameraPosition(
+          CameraPosition(target: LatLng(lat, lng), zoom: zoom),
+        ),
+      );
+    }
+  }
+
+  // Get initial camera position based on the default selected resort
+  CameraPosition _getInitialCameraPosition() {
+    final selectedResort = GlobalConstants.skiResortList[selectedResortKey];
+    final lat = selectedResort?['coordinate']['lat'] ?? 0.0;
+    final lng = selectedResort?['coordinate']['lng'] ?? 0.0;
+    final zoom = selectedResort?['zoom'] ?? 13.0;
+    
+    return CameraPosition(
+      target: LatLng(lat, lng),
+      zoom: zoom,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -639,10 +729,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
             onMapCreated: _onMapCreated,
             onCameraIdle: _onCameraIdle,
             onStyleLoadedCallback: _onStyleLoadedCallback,
-            initialCameraPosition: CameraPosition(
-              target: LatLng(45.318460699999996, 6.578992100000002), // Coordinates for 3 valleys
-              zoom: 13,  // Adjust the zoom level if necessary
-            ),
+            initialCameraPosition: _getInitialCameraPosition(),
             styleString: 'mapbox://styles/okboy2008/clx1zai3s01ck01rb5zsv600u', // Your custom Mapbox style
             compassEnabled: true, // Disable the compass button
             compassViewPosition: CompassViewPosition.BottomRight,
@@ -701,6 +788,43 @@ class _GeneratorPageState extends State<GeneratorPage> {
                     color: const Color.fromARGB(255, 0, 0, 0),
                   ),
                 ),
+              ),
+            ),
+          ),
+          // Dropdown for selecting ski resort
+          Positioned(
+            top: 100,
+            left: 20,
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 10),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.9),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: DropdownButton<String>(
+                value: selectedResortKey,
+                items: GlobalConstants.skiResortList.keys.map((String key) {
+                  final resort = GlobalConstants.skiResortList[key];
+                  final country = resort?['country'] ?? '';
+                  final flagEmoji = _getFlagEmoji(country);
+                  return DropdownMenuItem<String>(
+                    value: key,
+                    child: Text(
+                      '$flagEmoji ${resort?['name']['en'] ?? 'Unknown Resort'}',
+                      style: TextStyle(fontSize: 16),
+                    ),
+                  );
+                }).toList(),
+                onChanged: (newValue) {
+                  if (newValue != null && newValue != selectedResortKey) {
+                    setState(() {
+                      selectedResortKey = newValue;
+                      _moveToSelectedResort(); // Move map to the selected resort with zoom
+                    });
+                  }
+                },
+                underline: Container(), // Remove default underline
+                icon: Icon(Icons.arrow_drop_down),
               ),
             ),
           ),
