@@ -774,7 +774,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
             ),
           ),
           Positioned(
-            top: 20,
+            top: 18,
             right: 20, 
             child: Transform.scale(
               scale: floatingActionButtonScale,
@@ -816,7 +816,11 @@ class _GeneratorPageState extends State<GeneratorPage> {
                     ),
                   );
                 }).toList(),
+                onTap: () {
+                  isUiOpen.flag = true;
+                },
                 onChanged: (newValue) {
+                  isUiOpen.flag = true;
                   if (newValue != null && newValue != selectedResortKey) {
                     setState(() {
                       selectedResortKey = newValue;
