@@ -678,6 +678,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
     // Map from country name to ISO country code (for a limited set of countries)
     Map<String, String> countryCodeMap = {
       'France': 'FR',
+      'China': 'CN',
       // Add other countries and their codes here as needed
     };
 

@@ -1,0 +1,3 @@
+{"type": "FeatureCollection", "features":[
+{"type":"Feature","geometry":{"type":"Point","coordinates":[126.62167801999996,43.412978700000004]},"properties":{"id":"f47d9f479607f0a5b3d0c701695d06d753927f55","name":"Beidahu Ski Resort, 北大湖滑雪度假区","status":"operating","downhillDistance":47,"nordicDistance":3,"maxElevation":null,"vertical":null,"has_downhill":true,"has_nordic":true}}
+]}

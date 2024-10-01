@@ -16,6 +16,19 @@ class GlobalConstants {
       'country': 'France',
       'zoom': 12.0,
     },
+    'beidahu': { // assets文件夹名称
+      'name': { // 雪场名
+        'en': 'Beidahu',
+        'fr': 'Beidahu',
+        'cn': '北大湖',
+      },
+      'coordinate': { // 雪场坐标
+        'lat': 43.4141444,
+        'lng': 126.6177757,
+      },
+      'country': 'China',
+      'zoom': 13.0,
+    },
     // 可以继续添加其他雪场
   };
 }

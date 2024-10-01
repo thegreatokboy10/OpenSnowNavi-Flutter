@@ -1,0 +1,672 @@
+{
+  "version": 0.6,
+  "generator": "Overpass API 0.7.62.1 084b4234",
+  "osm3s": {
+    "timestamp_osm_base": "2024-10-01T05:10:08Z",
+    "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL."
+  },
+  "elements": [
+
+{
+  "type": "node",
+  "id": 3947659232,
+  "lat": 43.3995261,
+  "lon": 126.6047673
+},
+{
+  "type": "node",
+  "id": 3952866496,
+  "lat": 43.4174975,
+  "lon": 126.6146483
+},
+{
+  "type": "node",
+  "id": 8519085758,
+  "lat": 43.4172203,
+  "lon": 126.6131231
+},
+{
+  "type": "node",
+  "id": 8519085794,
+  "lat": 43.4138925,
+  "lon": 126.6263625
+},
+{
+  "type": "node",
+  "id": 8519085804,
+  "lat": 43.4122633,
+  "lon": 126.6185143
+},
+{
+  "type": "node",
+  "id": 8519085805,
+  "lat": 43.4086596,
+  "lon": 126.6419331
+},
+{
+  "type": "node",
+  "id": 8519094199,
+  "lat": 43.4173138,
+  "lon": 126.6143945
+},
+{
+  "type": "node",
+  "id": 8519094200,
+  "lat": 43.4112115,
+  "lon": 126.6156712
+},
+{
+  "type": "node",
+  "id": 8519094258,
+  "lat": 43.4189347,
+  "lon": 126.6084399
+},
+{
+  "type": "node",
+  "id": 8519094259,
+  "lat": 43.4108667,
+  "lon": 126.5993480
+},
+{
+  "type": "node",
+  "id": 8519094267,
+  "lat": 43.4213628,
+  "lon": 126.6065953
+},
+{
+  "type": "node",
+  "id": 8519132815,
+  "lat": 43.4088767,
+  "lon": 126.6441330
+},
+{
+  "type": "node",
+  "id": 8519132816,
+  "lat": 43.4113084,
+  "lon": 126.6548404
+},
+{
+  "type": "node",
+  "id": 8892677844,
+  "lat": 43.4172748,
+  "lon": 126.6153750,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8892677845,
+  "lat": 43.4169514,
+  "lon": 126.6164256,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8892677846,
+  "lat": 43.4165427,
+  "lon": 126.6177535,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8892677847,
+  "lat": 43.4161228,
+  "lon": 126.6191175,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8892677848,
+  "lat": 43.4155831,
+  "lon": 126.6208705,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8892677849,
+  "lat": 43.4149221,
+  "lon": 126.6230180,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8892677850,
+  "lat": 43.4144291,
+  "lon": 126.6246194,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8892677851,
+  "lat": 43.4141451,
+  "lon": 126.6255418,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8892677852,
+  "lat": 43.4162989,
+  "lon": 126.6126879,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8892677853,
+  "lat": 43.4124637,
+  "lon": 126.6108766,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8892677854,
+  "lat": 43.4106368,
+  "lon": 126.6100138,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8892677855,
+  "lat": 43.4085536,
+  "lon": 126.6090301,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8892677856,
+  "lat": 43.4077653,
+  "lon": 126.6086578,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8892677857,
+  "lat": 43.4066981,
+  "lon": 126.6081538,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8892677858,
+  "lat": 43.4053697,
+  "lon": 126.6075265,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8892677859,
+  "lat": 43.4037030,
+  "lon": 126.6067395,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8892677860,
+  "lat": 43.4022157,
+  "lon": 126.6060372,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8892677861,
+  "lat": 43.4005580,
+  "lon": 126.6052545,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 10277021118,
+  "lat": 43.4173938,
+  "lon": 126.6130922
+},
+{
+  "type": "node",
+  "id": 10277021119,
+  "lat": 43.4173015,
+  "lon": 126.6134073
+},
+{
+  "type": "node",
+  "id": 10277021120,
+  "lat": 43.4172187,
+  "lon": 126.6133756
+},
+{
+  "type": "node",
+  "id": 10277021121,
+  "lat": 43.4172288,
+  "lon": 126.6133353
+},
+{
+  "type": "node",
+  "id": 10277021122,
+  "lat": 43.4171037,
+  "lon": 126.6132755
+},
+{
+  "type": "node",
+  "id": 10277021123,
+  "lat": 43.4171366,
+  "lon": 126.6131577
+},
+{
+  "type": "node",
+  "id": 10277021124,
+  "lat": 43.4170585,
+  "lon": 126.6131048
+},
+{
+  "type": "node",
+  "id": 10277021125,
+  "lat": 43.4171122,
+  "lon": 126.6129642
+},
+{
+  "type": "node",
+  "id": 10656753828,
+  "lat": 43.4169696,
+  "lon": 126.6148287
+},
+{
+  "type": "node",
+  "id": 10656753829,
+  "lat": 43.4035448,
+  "lon": 126.6203424,
+  "tags": {
+    "aerialway": "station",
+    "aerialway:access": "both",
+    "public_transport": "station"
+  }
+},
+{
+  "type": "node",
+  "id": 10656762858,
+  "lat": 43.4036233,
+  "lon": 126.6010538
+},
+{
+  "type": "node",
+  "id": 11538600277,
+  "lat": 43.4109938,
+  "lon": 126.5990346
+},
+{
+  "type": "node",
+  "id": 11538600278,
+  "lat": 43.4235936,
+  "lon": 126.6018729
+},
+{
+  "type": "node",
+  "id": 11538600279,
+  "lat": 43.4167521,
+  "lon": 126.5877787
+},
+{
+  "type": "node",
+  "id": 11538600280,
+  "lat": 43.4081805,
+  "lon": 126.6204548
+},
+{
+  "type": "node",
+  "id": 11538600281,
+  "lat": 43.3991887,
+  "lon": 126.6096198
+},
+{
+  "type": "node",
+  "id": 11538600282,
+  "lat": 43.4105792,
+  "lon": 126.5808230
+},
+{
+  "type": "node",
+  "id": 11538600283,
+  "lat": 43.3994466,
+  "lon": 126.6037486
+},
+{
+  "type": "node",
+  "id": 11538600284,
+  "lat": 43.4101115,
+  "lon": 126.5800934
+},
+{
+  "type": "node",
+  "id": 11538600285,
+  "lat": 43.3983726,
+  "lon": 126.5714889
+},
+{
+  "type": "node",
+  "id": 11578275227,
+  "lat": 43.4000169,
+  "lon": 126.6040550
+},
+{
+  "type": "node",
+  "id": 11578275342,
+  "lat": 43.4072210,
+  "lon": 126.6083996,
+  "tags": {
+    "aerialway": "yes",
+    "name": "G索中站",
+    "public_transport": "stop_position"
+  }
+},
+{
+  "type": "node",
+  "id": 11974587480,
+  "lat": 43.4241145,
+  "lon": 126.6333382
+},
+{
+  "type": "node",
+  "id": 11974587481,
+  "lat": 43.4242115,
+  "lon": 126.6364063
+},
+{
+  "type": "node",
+  "id": 12014408346,
+  "lat": 43.4217285,
+  "lon": 126.6014527
+},
+{
+  "type": "node",
+  "id": 12154558584,
+  "lat": 43.4171414,
+  "lon": 126.6136245
+},
+{
+  "type": "node",
+  "id": 12154558585,
+  "lat": 43.3994636,
+  "lon": 126.6050056
+},
+{
+  "type": "node",
+  "id": 12162965792,
+  "lat": 43.4143447,
+  "lon": 126.6117650,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "way",
+  "id": 917201337,
+  "nodes": [
+    8519085758,
+    8892677852,
+    12162965792,
+    8892677853,
+    8892677854,
+    8892677855,
+    8892677856,
+    11578275342,
+    8892677857,
+    8892677858,
+    8892677859,
+    8892677860,
+    8892677861,
+    3947659232
+  ],
+  "tags": {
+    "aerialway": "gondola",
+    "aerialway:occupancy": "6",
+    "name": "G"
+  }
+},
+{
+  "type": "way",
+  "id": 917201340,
+  "nodes": [
+    3952866496,
+    8892677844,
+    8892677845,
+    8892677846,
+    8892677847,
+    8892677848,
+    8892677849,
+    8892677850,
+    8892677851,
+    8519085794
+  ],
+  "tags": {
+    "aerialway": "chair_lift",
+    "aerialway:occupancy": "4",
+    "name": "C"
+  }
+},
+{
+  "type": "way",
+  "id": 917201342,
+  "nodes": [
+    8519085804,
+    8519085805
+  ],
+  "tags": {
+    "aerialway": "gondola",
+    "aerialway:occupancy": "8",
+    "name": "D"
+  }
+},
+{
+  "type": "way",
+  "id": 917201357,
+  "nodes": [
+    8519094199,
+    8519094200
+  ],
+  "tags": {
+    "aerialway": "chair_lift",
+    "aerialway:occupancy": "4",
+    "name": "UU"
+  }
+},
+{
+  "type": "way",
+  "id": 917201366,
+  "nodes": [
+    8519094258,
+    8519094259
+  ],
+  "tags": {
+    "aerialway": "chair_lift",
+    "aerialway:occupancy": "6",
+    "name": "H"
+  }
+},
+{
+  "type": "way",
+  "id": 917201368,
+  "nodes": [
+    10656762858,
+    8519094267
+  ],
+  "tags": {
+    "aerialway": "gondola",
+    "aerialway:occupancy": "8",
+    "name": "K",
+    "proposed:aerialway": "chair_lift"
+  }
+},
+{
+  "type": "way",
+  "id": 917204617,
+  "nodes": [
+    8519132815,
+    8519132816
+  ],
+  "tags": {
+    "aerialway": "chair_lift",
+    "aerialway:occupancy": "6",
+    "name": "B"
+  }
+},
+{
+  "type": "way",
+  "id": 1123777279,
+  "nodes": [
+    10277021118,
+    10277021119,
+    10277021120,
+    10277021121,
+    10277021122,
+    10277021123,
+    10277021124,
+    10277021125,
+    10277021118
+  ],
+  "tags": {
+    "aerialway": "station",
+    "name": "G索",
+    "public_transport": "station"
+  }
+},
+{
+  "type": "way",
+  "id": 1145016961,
+  "nodes": [
+    10656753828,
+    10656753829
+  ],
+  "tags": {
+    "aerialway": "gondola",
+    "aerialway:occupancy": "8",
+    "name": "E",
+    "oneway": "no"
+  }
+},
+{
+  "type": "way",
+  "id": 1241796718,
+  "nodes": [
+    11538600277,
+    12014408346,
+    11538600278
+  ],
+  "tags": {
+    "aerialway": "gondola",
+    "aerialway:occupancy": "8",
+    "name": "J"
+  }
+},
+{
+  "type": "way",
+  "id": 1241796719,
+  "nodes": [
+    11578275227,
+    11538600279
+  ],
+  "tags": {
+    "aerialway": "gondola",
+    "aerialway:duration": "10",
+    "aerialway:heating": "no",
+    "aerialway:occupancy": "8",
+    "name": "M"
+  }
+},
+{
+  "type": "way",
+  "id": 1241796720,
+  "nodes": [
+    11538600280,
+    11538600281
+  ],
+  "tags": {
+    "aerialway": "chair_lift",
+    "name": "5"
+  }
+},
+{
+  "type": "way",
+  "id": 1241796721,
+  "nodes": [
+    11538600282,
+    11538600283
+  ],
+  "tags": {
+    "aerialway": "gondola",
+    "aerialway:occupancy": "8",
+    "name": "O",
+    "proposed:aerialway": "gondola"
+  }
+},
+{
+  "type": "way",
+  "id": 1241796722,
+  "nodes": [
+    11538600284,
+    11538600285
+  ],
+  "tags": {
+    "proposed:aerialway": "chair_lift"
+  }
+},
+{
+  "type": "way",
+  "id": 1291642886,
+  "nodes": [
+    11974587480,
+    11974587481
+  ],
+  "tags": {
+    "aerialway": "chair_lift",
+    "baby": "no",
+    "capacity": "2",
+    "note": "训练队内部使用。不对外"
+  }
+},
+{
+  "type": "way",
+  "id": 1313129891,
+  "nodes": [
+    12154558584,
+    12154558585
+  ],
+  "tags": {
+    "aerialway": "gondola",
+    "aerialway:occupancy": "8",
+    "name": "F"
+  }
+}
+
+  ]
+}
