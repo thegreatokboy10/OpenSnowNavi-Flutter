@@ -293,11 +293,19 @@ class _GeneratorPageState extends State<GeneratorPage> {
     print('Layers for $type added successfully');
   }
 
-  void _clearLayers(List<String> layerIds) async {
+  void _resetLayersAndSources() {
+    pisteLayers.clear();
+    liftLayers.clear();
+    layerIds.clear();
+    pisteSources.clear();
+    liftSources.clear();
+  }
+
+  void _clearLayers(List<String> layerIds) {
     if (mapController != null) {
       for (String layerId in layerIds) {
         try {
-          await mapController!.removeLayer(layerId);
+          mapController!.removeLayer(layerId);
         } catch (e) {
           // Handle the case where the layer or source does not exist
           print("Layer $layerId not found: $e");
@@ -306,11 +314,11 @@ class _GeneratorPageState extends State<GeneratorPage> {
     }
   }
 
-  void _clearSources(List<String> sourceIds) async {
+  void _clearSources(List<String> sourceIds) {
     if (mapController != null) {
       for (String sourceId in sourceIds) {
         try {
-          await mapController!.removeSource(sourceId);
+          mapController!.removeSource(sourceId);
         } catch (e) {
           // Handle the case where the layer or source does not exist
           print("Source $sourceId not found: $e");
@@ -324,6 +332,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
     _clearSources(pisteSources);
     _clearLayers(liftLayers);
     _clearSources(liftSources);
+    _resetLayersAndSources();
 
     final pisteFilePath = 'assets/$selectedResortKey/runs.geojson';
     final liftFilePath = 'assets/$selectedResortKey/lifts.geojson';
