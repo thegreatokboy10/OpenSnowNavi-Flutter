@@ -391,12 +391,22 @@ class _GeneratorPageState extends State<GeneratorPage> {
           );
         }
 
+        // First, get the current camera position to preserve bearing
+        double currentBearing = mapController!.cameraPosition!.bearing;
+
         // Create the LatLngBounds object
         LatLngBounds bounds = LatLngBounds(southwest: southwest, northeast: northeast);
 
         // Change camera to focus on the LineString bounds
         await mapController!.animateCamera(
           CameraUpdate.newLatLngBounds(bounds, top: 50.0, bottom: 3 * 50.0, left: 50.0, right: 50.0), // 50 is padding
+        );
+
+        await Future.delayed(Duration(milliseconds: 100));
+
+        // Apply the stored bearing after zooming into bounds
+        await mapController!.animateCamera(
+          CameraUpdate.bearingTo(currentBearing),
         );
       }
 
