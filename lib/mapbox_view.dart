@@ -701,9 +701,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
     }).join();
   }
 
-  void _moveToSelectedResort() {
+  void _moveToSelectedResort() async {
     final selectedResort = GlobalConstants.skiResortList[selectedResortKey];
-    _loadSkiResortData();
     final lat = selectedResort?['coordinate']['lat'];
     final lng = selectedResort?['coordinate']['lng'];
     final zoom = selectedResort?['zoom'] ?? 13.0; // Default zoom if not provided
@@ -713,6 +712,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
           CameraPosition(target: LatLng(lat, lng), zoom: zoom),
         ),
       );
+      print("Moving camera to $lat, $lng and load ski resort data");
+      _loadSkiResortData();
     }
   }
 
