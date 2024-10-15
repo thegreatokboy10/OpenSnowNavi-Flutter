@@ -7,6 +7,8 @@ import 'dart:ui' as ui;
 import 'dart:math';
 import 'timer_flag.dart';
 import 'global_constants.dart';
+import 'package:http/http.dart' as http;
+import 'package:polyline_codec/polyline_codec.dart';
 
 class GeneratorPage extends StatefulWidget {
   @override
@@ -74,6 +76,10 @@ class _GeneratorPageState extends State<GeneratorPage> {
   TimerFlag isUiOpen = TimerFlag(); // Initialize flag
 
   var layerIds = <String>[];
+
+  // Layer ID for the route polyline
+  final String routeLayerId = "route-layer";
+  final String routeSourceId = "route-source";
 
   MapboxMapController? mapController;
   // Function to create a Flutter icon as an image (in memory) that takes the icon as a parameter
@@ -740,6 +746,104 @@ class _GeneratorPageState extends State<GeneratorPage> {
     );
   }
 
+  // Extract route points from all legs and steps
+  List<List<num>> _extractRouteFromLegs(Map<String, dynamic> json) {
+    List<List<num>> decodedCoords = [];
+
+    try {
+      List<dynamic> legs = json['routes'][0]['legs'];
+
+      // Loop through all legs
+      for (var leg in legs) {
+        List<dynamic> steps = leg['steps'];
+
+        // Loop through all steps within each leg
+        for (var step in steps) {
+          String geometry = step['geometry'];
+          decodedCoords.addAll(PolylineCodec.decode(geometry, precision: 5));
+        }
+      }
+    } catch (e) {
+      print('Error extracting route points: $e');
+    }
+
+    return decodedCoords;
+  }
+
+  Future<void> _removeExistingRoute() async {
+    try {
+      await mapController?.removeLayer(routeLayerId);
+      await mapController?.removeSource(routeSourceId);
+    } catch (e) {
+      print('No existing route layer to remove: $e');
+    }
+  }
+
+  void _generateDemoRoute() async {
+    // Send request to the specified URL
+    String url =
+        'https://snownavi.ski/route/v1/6.557550,45.364449;6.560555,45.264497?alternatives=false&overview=false&steps=true';
+
+    try {
+      // Await the response from the server
+      final response = await http.get(Uri.parse(url));
+
+      if (response.statusCode == 200) {
+        final jsonResponse = jsonDecode(response.body);
+        print('Response: $jsonResponse');
+
+        // Decode the polyline into a list of LatLng points using polyline_codec
+        final decodedPoints = _extractRouteFromLegs(jsonResponse);
+
+        print('Decoded points: $decodedPoints');
+
+        // Remove existing route layer and source if they exist
+        await _removeExistingRoute();
+
+        // Add the route as a new source
+        await mapController?.addSource(
+          routeSourceId,
+          GeojsonSourceProperties(
+            data: {
+              "type": "FeatureCollection",
+              "features": [
+                {
+                  "type": "Feature",
+                  "geometry": {
+                    "type": "LineString",
+                    "coordinates": decodedPoints
+                        .map((point) => [point[1], point[0]]) // GeoJSON uses [lng, lat]
+                        .toList(),
+                  },
+                },
+              ],
+            },
+          ),
+        );
+
+        // Add the route layer on top
+        await mapController?.addLineLayer(
+          routeSourceId,
+          routeLayerId,
+          LineLayerProperties(
+            lineColor: "#03045e", // route line
+            lineWidth: 10.0,
+            lineOpacity: 0.8,
+          ),
+        );
+      } else {
+        print('Request failed with status: ${response.statusCode}.');
+      }
+    } catch (e) {
+      print('Error making request: $e');
+    }
+  }
+  void _onMapLongClick(Point<double> point, LatLng coordinates) async {
+    print('Long-click at: ${coordinates.latitude}, ${coordinates.longitude}');
+
+    _generateDemoRoute();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -750,6 +854,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
                 'pk.eyJ1Ijoib2tib3kyMDA4IiwiYSI6ImNsdGE1dzd6OTAxbHQyanA0aWM1MjU5c24ifQ.vbbY3gzL8nnUFctmDv9UBQ',
             onMapCreated: _onMapCreated,
             onCameraIdle: _onCameraIdle,
+            onMapClick: _onMapLongClick,
             onStyleLoadedCallback: _onStyleLoadedCallback,
             initialCameraPosition: _getInitialCameraPosition(),
             styleString: 'mapbox://styles/okboy2008/clx1zai3s01ck01rb5zsv600u', // Your custom Mapbox style
