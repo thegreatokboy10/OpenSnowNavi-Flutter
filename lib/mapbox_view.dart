@@ -63,7 +63,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
   double fontSize = 13;
   double nameOffset = 0.6;
   // Line size
-  double pisteLineWidth = 2.0;
+  double pisteLineWidth = 3.5;
   double liftLineWidth = 3.0;
   // Floating button
   double floatingbuttonopacity = 0.9;
@@ -139,7 +139,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
 
   void _addSourceAndLayer(String? geojsonData) {
     if (geojsonData == null) {
-      print("GeoJSON data is null in _addLiftSourceAndLayer");
+      print("GeoJSON data is null in _addSourceAndLayer");
       return;
     }
 
@@ -175,7 +175,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
           lineLayerString,
           LineLayerProperties(
             lineColor: ['get', 'color'], // Use 'color' property from GeoJSON
-            lineWidth: lineWidth, 
+            lineWidth: lineWidth,
+            lineCap: 'round', 
           ),
         );
         layerIds.add(lineLayerString);
@@ -191,6 +192,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
               lineColor: ['get', 'color'], // Use 'color' property from GeoJSON
               lineOpacity: strokeOpacity,
               lineWidth: strokeWidth,
+              lineCap: 'round',
             ),
           );
           layerIds.add(strokeLayerString);
@@ -204,6 +206,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
           LineLayerProperties(
             lineColor: piste_default_color.toHexStringRGB(), // Use piste_default_color
             lineWidth: lineWidth, 
+            lineCap: 'round',
           ),
         );
         pisteLayers.add(lineLayerString);
