@@ -80,6 +80,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
   // Layer ID for the route polyline
   final String routeLayerId = "route-layer";
   final String routeSourceId = "route-source";
+  List<String> routeLayers = [];
+  List<String> routeSources = [];
 
   MapboxMapController? mapController;
   // Function to create a Flutter icon as an image (in memory) that takes the icon as a parameter
@@ -305,6 +307,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
     layerIds.clear();
     pisteSources.clear();
     liftSources.clear();
+    routeLayers.clear();
+    routeSources.clear();
   }
 
   void _clearLayers(List<String> layerIds) {
@@ -338,6 +342,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
     _clearSources(pisteSources);
     _clearLayers(liftLayers);
     _clearSources(liftSources);
+    _clearLayers(routeLayers);
+    _clearSources(routeSources);
     _resetLayersAndSources();
 
     final pisteFilePath = 'assets/$selectedResortKey/runs.geojson';
@@ -774,8 +780,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
 
   Future<void> _removeExistingRoute() async {
     try {
-      await mapController?.removeLayer(routeLayerId);
-      await mapController?.removeSource(routeSourceId);
+      _clearLayers(routeLayers);
+      _clearSources(routeSources);
     } catch (e) {
       print('No existing route layer to remove: $e');
     }
@@ -833,6 +839,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
             lineOpacity: 0.8,
           ),
         );
+        routeSources.add(routeSourceId);
+        routeLayers.add(routeLayerId);
       } else {
         print('Request failed with status: ${response.statusCode}.');
       }
