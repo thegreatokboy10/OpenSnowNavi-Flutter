@@ -5,7 +5,7 @@ class GlobalConstants {
   static final Map<String, Map<String, dynamic>> skiResortList = {
     '3valley': { // assets文件夹名称
       'name': { // 雪场名
-        'en': 'The 3 Valleys',
+        'en': 'The Three Valleys',
         'fr': 'Les Trois Vallées',
         'cn': '三峡谷',
       },

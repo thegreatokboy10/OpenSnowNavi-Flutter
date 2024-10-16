@@ -944,11 +944,16 @@ class _GeneratorPageState extends State<GeneratorPage> {
                   final resort = GlobalConstants.skiResortList[key];
                   final country = resort?['country'] ?? '';
                   final flagEmoji = _getFlagEmoji(country);
+                  // print('Flag emoji for $country: $flagEmoji');
                   return DropdownMenuItem<String>(
                     value: key,
                     child: Text(
                       '$flagEmoji ${resort?['name']['en'] ?? 'Unknown Resort'}',
-                      style: TextStyle(fontSize: 16),
+                      style: TextStyle(
+                        fontFamily: 'NotoEmoji',  // Specify Noto Emoji font family
+                        fontSize: 12,
+                      ),
+                      textAlign: TextAlign.left, // Align text to the left
                     ),
                   );
                 }).toList(),

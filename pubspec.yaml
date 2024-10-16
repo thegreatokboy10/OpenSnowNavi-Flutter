@@ -25,6 +25,10 @@ dev_dependencies:
   flutter_lints: ^2.0.0
 
 flutter:
+  fonts:
+      - family: NotoEmoji
+        fonts:
+          - asset: assets/fonts/NotoEmoji.ttf
   uses-material-design: true
   assets:
     - assets/3valley/lifts.geojson
