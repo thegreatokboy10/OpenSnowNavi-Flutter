@@ -156,7 +156,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
           // piste "run"
           final uses = feature['properties']['uses'];
           final geometry = feature['geometry']['type'];
-          print("uses: $uses");
+          // print("uses: $uses");
           return geometry == 'LineString' &&
           (uses.contains('downhill') || uses.contains('connection'));
         }
@@ -728,6 +728,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
           CameraPosition(target: LatLng(lat, lng), zoom: zoom),
         ),
       );
+      // Wait for the camera to move
+      await Future.delayed(Duration(milliseconds: 100));
       print("Moving camera to $lat, $lng and load ski resort data");
       _loadSkiResortData();
     }
