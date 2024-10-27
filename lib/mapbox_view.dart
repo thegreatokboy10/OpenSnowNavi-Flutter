@@ -963,30 +963,30 @@ class _GeneratorPageState extends State<GeneratorPage> {
             compassEnabled: true, // Disable the compass button
             compassViewPosition: CompassViewPosition.BottomRight,
           ),
-          Positioned(
-            top: 20,
-            left: 20,
-            child: Container(
-              width: 250,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.6),  // Set opacity to 0.6
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: TextField(
-                decoration: InputDecoration(
-                  hintText: 'Search location',
-                  prefixIcon: Icon(Icons.search),
-                  filled: true,
-                  fillColor: Colors.white.withOpacity(0.6),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 15, vertical: 10),
-                ),
-              ),
-            ),
-          ),
+          // Positioned(
+          //   top: 20,
+          //   left: 20,
+          //   child: Container(
+          //     width: 250,
+          //     decoration: BoxDecoration(
+          //       color: Colors.white.withOpacity(0.6),  // Set opacity to 0.6
+          //       borderRadius: BorderRadius.circular(10),
+          //     ),
+          //     child: TextField(
+          //       decoration: InputDecoration(
+          //         hintText: 'Search location',
+          //         prefixIcon: Icon(Icons.search),
+          //         filled: true,
+          //         fillColor: Colors.white.withOpacity(0.6),
+          //         border: OutlineInputBorder(
+          //           borderRadius: BorderRadius.circular(10),
+          //           borderSide: BorderSide.none,
+          //         ),
+          //         contentPadding: EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+          //       ),
+          //     ),
+          //   ),
+          // ),
           // 筛选按钮
           Positioned(
             bottom: 38,
