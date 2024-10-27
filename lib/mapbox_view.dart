@@ -78,6 +78,9 @@ class _GeneratorPageState extends State<GeneratorPage> {
   var layerIds = <String>[];
 
   // Layer ID for the route polyline
+  LatLng? startCoordinate;
+  LatLng? endCoordinate;
+
   final String routeLayerId = "route-layer";
   final String routeSourceId = "route-source";
   List<String> routeLayers = [];
@@ -369,6 +372,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
       isUiOpen.flag = false;
       return;
     }
+
+    // Piste and Lift features
     List features = await mapController!.queryRenderedFeatures(point, layerIds, null);
     
     if (features.isNotEmpty) {
@@ -539,6 +544,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
       );
 
     }
+
+    // POI features
   }
 
   void _onStyleLoadedCallback() async {
@@ -851,10 +858,91 @@ class _GeneratorPageState extends State<GeneratorPage> {
       print('Error making request: $e');
     }
   }
+  
+  void _generateRoute(LatLng startCoordinate, LatLng endCoordinate) async {
+    // 构建请求 URL，使用提供的起点和终点坐标
+    String start = '${startCoordinate.longitude},${startCoordinate.latitude}';
+    String end = '${endCoordinate.longitude},${endCoordinate.latitude}';
+    String url = 'https://snownavi.ski/route/v1/$start;$end?alternatives=false&overview=false&steps=true';
+
+    try {
+      // 等待服务器的响应
+      final response = await http.get(Uri.parse(url));
+
+      if (response.statusCode == 200) {
+        final jsonResponse = jsonDecode(response.body);
+        print('Response: $jsonResponse');
+
+        // 使用 polyline_codec 将 polyline 解码为一组 LatLng 点
+        final decodedPoints = _extractRouteFromLegs(jsonResponse);
+
+        print('Decoded points: $decodedPoints');
+
+        // 如果存在，则移除现有的路线图层和源
+        await _removeExistingRoute();
+
+        // 将路线添加为新源
+        await mapController?.addSource(
+          routeSourceId,
+          GeojsonSourceProperties(
+            data: {
+              "type": "FeatureCollection",
+              "features": [
+                {
+                  "type": "Feature",
+                  "geometry": {
+                    "type": "LineString",
+                    "coordinates": decodedPoints
+                        .map((point) => [point[1], point[0]]) // GeoJSON 使用 [lng, lat]
+                        .toList(),
+                  },
+                },
+              ],
+            },
+          ),
+        );
+
+        // 在顶部添加路线图层
+        await mapController?.addLineLayer(
+          routeSourceId,
+          routeLayerId,
+          LineLayerProperties(
+            lineColor: "#03045e", // 路线颜色
+            lineWidth: 10.0,
+            lineOpacity: 0.8,
+          ),
+        );
+        routeSources.add(routeSourceId);
+        routeLayers.add(routeLayerId);
+      } else {
+        print('Request failed with status: ${response.statusCode}.');
+      }
+    } catch (e) {
+      print('Error making request: $e');
+    }
+  }
+  
+  void _onMapClick(Point<double> point, LatLng coordinates) async {
+    print('map-click to generate demo route');
+
+    // _generateDemoRoute();
+  }
+
+  // web does not support long click, it maps double click to long click
   void _onMapLongClick(Point<double> point, LatLng coordinates) async {
     print('Long-click at: ${coordinates.latitude}, ${coordinates.longitude}');
-
-    _generateDemoRoute();
+    if (startCoordinate != null && endCoordinate != null) {
+      print("clear and set startCoordinate: $coordinates");
+      startCoordinate = coordinates;
+      endCoordinate = null;
+    } else if (startCoordinate != null && endCoordinate == null) {
+      print("set endCoordinate: $endCoordinate and start generate route");
+      endCoordinate = coordinates;
+      _generateRoute(startCoordinate!, endCoordinate!);
+    } else {
+      print("set startCoordinate: $startCoordinate");
+      startCoordinate = coordinates;
+    }
   }
 
   @override
@@ -867,7 +955,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
                 'pk.eyJ1Ijoib2tib3kyMDA4IiwiYSI6ImNsdGE1dzd6OTAxbHQyanA0aWM1MjU5c24ifQ.vbbY3gzL8nnUFctmDv9UBQ',
             onMapCreated: _onMapCreated,
             onCameraIdle: _onCameraIdle,
-            onMapClick: _onMapLongClick,
+            onMapClick: _onMapClick,
+            onMapLongClick: _onMapLongClick,
             onStyleLoadedCallback: _onStyleLoadedCallback,
             initialCameraPosition: _getInitialCameraPosition(),
             styleString: 'mapbox://styles/okboy2008/clx1zai3s01ck01rb5zsv600u', // Your custom Mapbox style
