@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mapbox_gl/mapbox_gl.dart';
 import 'package:flutter/services.dart' show rootBundle;
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
@@ -88,6 +89,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
   // POI search
   List<Map<String, dynamic>> poiResults = [];
   late TextEditingController _searchController;
+  bool hasSearched = false; // Tracks if a search has been performed
+  Timer? _debounce;
 
   final String routeLayerId = "route-layer";
   final String routeSourceId = "route-source";
@@ -108,26 +111,30 @@ class _GeneratorPageState extends State<GeneratorPage> {
     super.dispose();
   }
 
-  void _onSearchChanged(String query) async {
-    if (query.length > 3) {
-      LatLng center = resortCoordinate!;
-      double radiusKm = 15.0;
+  void _onSearchChanged(String query) {
+    if (_debounce?.isActive ?? false) _debounce!.cancel(); // Cancel any active timer
 
-      // Fetch POIs using the NominatimSearchService
-      List<Map<String, dynamic>> results =
-          await SearchService.searchPOI(query, center, radiusKm);
-      setState(() {
-        poiResults = results;
-      });
-    } else {
-      setState(() {
-        poiResults = [];
-      });
-    }
+    _debounce = Timer(const Duration(milliseconds: 300), () async {
+      if (query.length >= 3) {
+        hasSearched = true; // Set to true when a search is triggered
+        LatLng center = resortCoordinate!;
+        double radiusKm = 15.0;
+        List<Map<String, dynamic>> results = await SearchService.searchPOI(query, center, radiusKm);
+        setState(() {
+          poiResults = results;
+        });
+      } else {
+        setState(() {
+          hasSearched = false; // Reset if query is cleared
+          poiResults = [];
+        });
+      }
+    });
   }
 
   void _onSearchSubmitted(String query) async {
     if (query.isNotEmpty) {
+      hasSearched = true;
       LatLng center = resortCoordinate!;
       double radiusKm = 15.0;
 
@@ -139,6 +146,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
       });
     } else {
       setState(() {
+        hasSearched = false;
         poiResults = [];
       });
     }
@@ -1176,7 +1184,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: ListView.builder(
-                      itemCount: poiResults.length > 3 ? 3 : poiResults.length, // Limit to max 3 results
+                      itemCount: poiResults.length,
                       itemBuilder: (context, index) {
                         final poi = poiResults[index];
                         return ListTile(
@@ -1195,12 +1203,32 @@ class _GeneratorPageState extends State<GeneratorPage> {
                               ),
                             );
                             setState(() {
+                              hasSearched = false;
                               poiResults = [];
                               _searchController.clear();
                             });
                           },
                         );
                       },
+                    ),
+                  )
+                else if (hasSearched)
+                  Container(
+                    width: 250,
+                    height: 50,
+                    margin: EdgeInsets.only(top: 10),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      'No results found',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w400,
+                        color: Colors.grey,
+                      ),
                     ),
                   ),
               ],
