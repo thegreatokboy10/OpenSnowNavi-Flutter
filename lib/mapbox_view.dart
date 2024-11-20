@@ -467,7 +467,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
           'highlighted-layer',
           LineLayerProperties(
             lineColor: color,
-            lineWidth: pisteLineWidth * 10,
+            lineWidth: pisteLineWidth * 5,
             lineOpacity: strokeOpacity,
             lineCap: 'round',
           ),
@@ -914,12 +914,41 @@ class _GeneratorPageState extends State<GeneratorPage> {
         );
         routeSources.add(routeSourceId);
         routeLayers.add(routeLayerId);
+
+        // Adjust camera to fit the entire route
+        if (decodedPoints.isNotEmpty) {
+          _fitCameraToRoute(decodedPoints.map((point) => [point[0].toDouble(), point[1].toDouble()]).toList(), // Convert to double);
+          );
+        }
       } else {
         print('Request failed with status: ${response.statusCode}.');
       }
     } catch (e) {
       print('Error making request: $e');
     }
+  }
+
+  void _fitCameraToRoute(List<List<double>> decodedPoints) {
+    // Extract bounds from decoded points
+    final latitudes = decodedPoints.map((point) => point[0]).toList();
+    final longitudes = decodedPoints.map((point) => point[1]).toList();
+
+    // Compute the southwest and northeast corners of the bounding box
+    final southWest = LatLng(
+      latitudes.reduce((a, b) => a < b ? a : b), // Minimum latitude
+      longitudes.reduce((a, b) => a < b ? a : b), // Minimum longitude
+    );
+    final northEast = LatLng(
+      latitudes.reduce((a, b) => a > b ? a : b), // Maximum latitude
+      longitudes.reduce((a, b) => a > b ? a : b), // Maximum longitude
+    );
+
+    // Use mapController to fit the bounds
+    mapController?.animateCamera(
+      CameraUpdate.newLatLngBounds(
+        LatLngBounds(southwest: southWest, northeast: northEast),
+      ),
+    );
   }
   
   void _onMapClick(Point<double> point, LatLng coordinates) async {
@@ -931,19 +960,76 @@ class _GeneratorPageState extends State<GeneratorPage> {
   // web does not support long click, it maps double click to long click
   void _onMapLongClick(Point<double> point, LatLng coordinates) async {
     print('Long-click at: ${coordinates.latitude}, ${coordinates.longitude}');
+    
     if (startCoordinate != null && endCoordinate != null) {
-      print("clear and set startCoordinate: $coordinates");
+      // Case: Both coordinates are already set. Clear all and reset startCoordinate
+      print("clear all and set startCoordinate: $coordinates");
+      _clearAllCircles(); // Clear existing circles
+      // Remove existing route layer and source if they exist
+        await _removeExistingRoute();
       startCoordinate = coordinates;
       endCoordinate = null;
+      _addCircleWithText(
+        coordinates,
+        circleColor: "#00FF00", // Green circle for start
+        text: "A",
+      );
     } else if (startCoordinate != null && endCoordinate == null) {
-      print("set endCoordinate: $endCoordinate and start generate route");
+      // Case: Start is set, set endCoordinate
+      print("set endCoordinate: $coordinates and start generating route");
       endCoordinate = coordinates;
+      _addCircleWithText(
+        coordinates,
+        circleColor: "#0000FF", // Blue circle for end
+        text: "B",
+      );
       _generateRoute(startCoordinate!, endCoordinate!);
     } else {
-      print("set startCoordinate: $startCoordinate");
+      // Case: Neither is set, set startCoordinate
+      print("set startCoordinate: $coordinates");
       startCoordinate = coordinates;
+      _addCircleWithText(
+        coordinates,
+        circleColor: "#00FF00", // Green circle for start
+        text: "A",
+      );
     }
   }
+
+  void _addCircleWithText(
+    LatLng coordinates, {
+    required String circleColor,
+    required String text,
+    String textColor = "#FFFFFF", // Default text color is white
+  }) {
+    mapController?.addCircle(
+      CircleOptions(
+        geometry: coordinates,
+        circleRadius: 15,         // Radius in pixels
+        circleColor: circleColor, // Configurable circle color
+        circleOpacity: 0.6,       // Adjust opacity as needed
+      ),
+    );
+
+    mapController?.addSymbol(
+      SymbolOptions(
+        geometry: coordinates,
+        textField: text,          // Configurable text
+        textSize: 12,
+        textColor: textColor,     // Configurable text color, defaults to white
+        textHaloColor: "#000000", // Optional: black outline for better visibility
+        textHaloWidth: 1.5,
+        textAnchor: "center",     // Center the text in the circle
+      ),
+    );
+  }
+
+  void _clearAllCircles() {
+    // Clear all circles and symbols from the map
+    mapController?.clearCircles(); // Clear circles
+    mapController?.clearSymbols(); // Clear symbols
+  }
+
 
   @override
   Widget build(BuildContext context) {
