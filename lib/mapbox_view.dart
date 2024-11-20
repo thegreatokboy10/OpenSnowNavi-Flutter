@@ -85,12 +85,65 @@ class _GeneratorPageState extends State<GeneratorPage> {
   // Coordinate for ski resort center
   LatLng? resortCoordinate;
 
+  // POI search
+  List<Map<String, dynamic>> poiResults = [];
+  late TextEditingController _searchController;
+
   final String routeLayerId = "route-layer";
   final String routeSourceId = "route-source";
   List<String> routeLayers = [];
   List<String> routeSources = [];
 
   MapboxMapController? mapController;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged(String query) async {
+    if (query.length > 3) {
+      LatLng center = resortCoordinate!;
+      double radiusKm = 15.0;
+
+      // Fetch POIs using the NominatimSearchService
+      List<Map<String, dynamic>> results =
+          await SearchService.searchPOI(query, center, radiusKm);
+      setState(() {
+        poiResults = results;
+      });
+    } else {
+      setState(() {
+        poiResults = [];
+      });
+    }
+  }
+
+  void _onSearchSubmitted(String query) async {
+    if (query.isNotEmpty) {
+      LatLng center = resortCoordinate!;
+      double radiusKm = 15.0;
+
+      // Fetch POIs using the NominatimSearchService
+      List<Map<String, dynamic>> results =
+          await SearchService.searchPOI(query, center, radiusKm);
+      setState(() {
+        poiResults = results;
+      });
+    } else {
+      setState(() {
+        poiResults = [];
+      });
+    }
+  }
+
   // Function to create a Flutter icon as an image (in memory) that takes the icon as a parameter
   Future<Uint8List> _createFlutterIconAsImage(IconData iconData, Color color, double size) async {
     final recorder = ui.PictureRecorder();
@@ -1058,28 +1111,99 @@ class _GeneratorPageState extends State<GeneratorPage> {
             compassEnabled: true, // Disable the compass button
             compassViewPosition: CompassViewPosition.BottomRight,
           ),
+          // Positioned(
+          //   top: 20,
+          //   left: 20,
+          //   child: Container(
+          //     width: 250,
+          //     decoration: BoxDecoration(
+          //       color: Colors.white.withOpacity(0.6),  // Set opacity to 0.6
+          //       borderRadius: BorderRadius.circular(10),
+          //     ),
+          //     child: TextField(
+          //       decoration: InputDecoration(
+          //         hintText: 'Search location',
+          //         prefixIcon: Icon(Icons.search),
+          //         filled: true,
+          //         fillColor: Colors.white.withOpacity(0.6),
+          //         border: OutlineInputBorder(
+          //           borderRadius: BorderRadius.circular(10),
+          //           borderSide: BorderSide.none,
+          //         ),
+          //         contentPadding: EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+          //       ),
+          //     ),
+          //   ),
+          // ),
           Positioned(
             top: 20,
             left: 20,
-            child: Container(
-              width: 250,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.6),  // Set opacity to 0.6
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: TextField(
-                decoration: InputDecoration(
-                  hintText: 'Search location',
-                  prefixIcon: Icon(Icons.search),
-                  filled: true,
-                  fillColor: Colors.white.withOpacity(0.6),
-                  border: OutlineInputBorder(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Search Bar
+                Container(
+                  width: 250,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.6),
                     borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide.none,
                   ),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: _onSearchChanged,
+                    onSubmitted: _onSearchSubmitted,
+                    decoration: InputDecoration(
+                      hintText: 'Search POI',
+                      prefixIcon: Icon(Icons.search),
+                      filled: true,
+                      fillColor: Colors.white.withOpacity(0.6),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: EdgeInsets.symmetric(
+                          horizontal: 15, vertical: 10),
+                    ),
+                  ),
                 ),
-              ),
+                if (poiResults.isNotEmpty)
+                  Container(
+                    width: 250,
+                    height: 600,
+                    margin: EdgeInsets.only(top: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: ListView.builder(
+                      itemCount: poiResults.length > 3 ? 3 : poiResults.length, // Limit to max 3 results
+                      itemBuilder: (context, index) {
+                        final poi = poiResults[index];
+                        return ListTile(
+                          title: Text(poi['name']),
+                          subtitle: Text(
+                            '${poi['distance'].toStringAsFixed(2)} km',
+                            style: TextStyle(height: 1.5), // Adjust line spacing for readability
+                          ),
+                          isThreeLine: true, // Allows multiple lines in the subtitle
+                          onTap: () {
+                            LatLng coord = LatLng(poi['lat'], poi['lng']);
+                            _onMapLongClick(Point(0,0), coord);
+                            mapController?.animateCamera(
+                              CameraUpdate.newLatLng(
+                                coord,
+                              ),
+                            );
+                            setState(() {
+                              poiResults = [];
+                              _searchController.clear();
+                            });
+                          },
+                        );
+                      },
+                    ),
+                  ),
+              ],
             ),
           ),
           // 筛选按钮

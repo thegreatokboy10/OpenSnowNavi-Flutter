@@ -7,6 +7,20 @@ class SearchService {
   static const String baseUrl = 'https://nominatim.openstreetmap.org/search';
   static const double earthRadius = 6371.0; // Earth's radius in kilometers
 
+  /// Calculate the Haversine distance between two points
+  static double _calculateDistance(
+    double lat1, double lon1, double lat2, double lon2) {
+    double dLat = (lat2 - lat1) * pi / 180;
+    double dLon = (lon2 - lon1) * pi / 180;
+
+    double a = sin(dLat / 2) * sin(dLat / 2) +
+        cos(lat1 * pi / 180) * cos(lat2 * pi / 180) *
+            sin(dLon / 2) * sin(dLon / 2);
+    double c = 2 * atan2(sqrt(a), sqrt(1 - a));
+
+    return earthRadius * c; // Distance in kilometers
+  }
+
   /// Search for POIs within a given radius from a central coordinate
   static Future<List<Map<String, dynamic>>> searchPOI(
       String query, LatLng center, double radiusKm) async {
@@ -37,13 +51,23 @@ class SearchService {
       if (response.statusCode == 200) {
         final List<dynamic> jsonResponse = jsonDecode(response.body);
         print("search result: $jsonResponse");
-        return jsonResponse.map((result) {
+        // Map and rank results by distance
+        List<Map<String, dynamic>> results = jsonResponse.map((result) {
+          double lat = double.parse(result['lat']);
+          double lon = double.parse(result['lon']);
+          double distance = _calculateDistance(center.latitude, center.longitude, lat, lon);
           return {
             'name': result['display_name'] ?? 'Unknown',
-            'lat': double.parse(result['lat']),
-            'lng': double.parse(result['lon']),
+            'lat': lat,
+            'lng': lon,
+            'distance': distance,
           };
         }).toList();
+
+        // Sort results by distance
+        results.sort((a, b) => a['distance'].compareTo(b['distance']));
+
+        return results;
       } else {
         print('Failed to fetch POIs: ${response.statusCode}');
         return [];
