@@ -17,6 +17,7 @@ dependencies:
   provider: ^6.0.0
   http: ^1.0.0
   polyline_codec: ^0.1.6
+  url_launcher: ^6.0.20
 
 dev_dependencies:
   flutter_test:
