@@ -11,6 +11,7 @@ import 'global_constants.dart';
 import 'search_service.dart';
 import 'package:http/http.dart' as http;
 import 'package:polyline_codec/polyline_codec.dart';
+import 'package:url_launcher/url_launcher.dart'; // Add this for opening URLs
 
 class GeneratorPage extends StatefulWidget {
   @override
@@ -1100,6 +1101,11 @@ class _GeneratorPageState extends State<GeneratorPage> {
     mapController?.clearSymbols(); // Clear symbols
   }
 
+  Future<void> _launchUrl(String _url) async {
+    if (!await launchUrl(Uri.parse(_url))) {
+      throw Exception('Could not launch $_url');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1119,30 +1125,31 @@ class _GeneratorPageState extends State<GeneratorPage> {
             compassEnabled: true, // Disable the compass button
             compassViewPosition: CompassViewPosition.BottomRight,
           ),
-          // Positioned(
-          //   top: 20,
-          //   left: 20,
-          //   child: Container(
-          //     width: 250,
-          //     decoration: BoxDecoration(
-          //       color: Colors.white.withOpacity(0.6),  // Set opacity to 0.6
-          //       borderRadius: BorderRadius.circular(10),
-          //     ),
-          //     child: TextField(
-          //       decoration: InputDecoration(
-          //         hintText: 'Search location',
-          //         prefixIcon: Icon(Icons.search),
-          //         filled: true,
-          //         fillColor: Colors.white.withOpacity(0.6),
-          //         border: OutlineInputBorder(
-          //           borderRadius: BorderRadius.circular(10),
-          //           borderSide: BorderSide.none,
-          //         ),
-          //         contentPadding: EdgeInsets.symmetric(horizontal: 15, vertical: 10),
-          //       ),
-          //     ),
-          //   ),
-          // ),
+          // Attribution
+          Positioned(
+            bottom: 5,
+            left: 100,
+            child: GestureDetector(
+              onTap: () {
+                _launchUrl('https://www.xiaohongshu.com/user/profile/5ffeddbb000000000100388d');
+              },
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color.fromARGB(255, 255, 255, 255).withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+                child: Text(
+                  'Follow me on 小红书 @了不起的okboy',
+                  style: TextStyle(
+                    color: const Color.fromARGB(255, 209, 6, 6),
+                    fontSize: 12,
+                    decoration: TextDecoration.none, // Add underline for link effect
+                  ),
+                ),
+              ),
+            ),
+          ),
           Positioned(
             top: 20,
             left: 20,
