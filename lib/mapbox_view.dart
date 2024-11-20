@@ -7,6 +7,7 @@ import 'dart:ui' as ui;
 import 'dart:math';
 import 'timer_flag.dart';
 import 'global_constants.dart';
+import 'search_service.dart';
 import 'package:http/http.dart' as http;
 import 'package:polyline_codec/polyline_codec.dart';
 
@@ -80,6 +81,9 @@ class _GeneratorPageState extends State<GeneratorPage> {
   // Layer ID for the route polyline
   LatLng? startCoordinate;
   LatLng? endCoordinate;
+
+  // Coordinate for ski resort center
+  LatLng? resortCoordinate;
 
   final String routeLayerId = "route-layer";
   final String routeSourceId = "route-source";
@@ -737,6 +741,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
     final selectedResort = GlobalConstants.skiResortList[selectedResortKey];
     final lat = selectedResort?['coordinate']['lat'];
     final lng = selectedResort?['coordinate']['lng'];
+    resortCoordinate = LatLng(lat, lng);
     final zoom = selectedResort?['zoom'] ?? 13.0; // Default zoom if not provided
     if (lat != null && lng != null && mapController != null) {
       mapController!.animateCamera(
@@ -756,6 +761,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
     final selectedResort = GlobalConstants.skiResortList[selectedResortKey];
     final lat = selectedResort?['coordinate']['lat'] ?? 0.0;
     final lng = selectedResort?['coordinate']['lng'] ?? 0.0;
+    resortCoordinate = LatLng(lat, lng);
     final zoom = selectedResort?['zoom'] ?? 13.0;
     
     return CameraPosition(
@@ -994,6 +1000,9 @@ class _GeneratorPageState extends State<GeneratorPage> {
         text: "A",
       );
     }
+
+    List<Map<String, dynamic>> results =
+        await SearchService.searchPOI("ucpa", resortCoordinate!, 5);
   }
 
   void _addCircleWithText(
@@ -1049,30 +1058,30 @@ class _GeneratorPageState extends State<GeneratorPage> {
             compassEnabled: true, // Disable the compass button
             compassViewPosition: CompassViewPosition.BottomRight,
           ),
-          // Positioned(
-          //   top: 20,
-          //   left: 20,
-          //   child: Container(
-          //     width: 250,
-          //     decoration: BoxDecoration(
-          //       color: Colors.white.withOpacity(0.6),  // Set opacity to 0.6
-          //       borderRadius: BorderRadius.circular(10),
-          //     ),
-          //     child: TextField(
-          //       decoration: InputDecoration(
-          //         hintText: 'Search location',
-          //         prefixIcon: Icon(Icons.search),
-          //         filled: true,
-          //         fillColor: Colors.white.withOpacity(0.6),
-          //         border: OutlineInputBorder(
-          //           borderRadius: BorderRadius.circular(10),
-          //           borderSide: BorderSide.none,
-          //         ),
-          //         contentPadding: EdgeInsets.symmetric(horizontal: 15, vertical: 10),
-          //       ),
-          //     ),
-          //   ),
-          // ),
+          Positioned(
+            top: 20,
+            left: 20,
+            child: Container(
+              width: 250,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.6),  // Set opacity to 0.6
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: TextField(
+                decoration: InputDecoration(
+                  hintText: 'Search location',
+                  prefixIcon: Icon(Icons.search),
+                  filled: true,
+                  fillColor: Colors.white.withOpacity(0.6),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+                ),
+              ),
+            ),
+          ),
           // 筛选按钮
           Positioned(
             bottom: 38,
