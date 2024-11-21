@@ -662,7 +662,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
   void _onMapCreated(MapboxMapController controller) {
     mapController = controller;
     mapController?.onFeatureTapped.add(onFeatureTap);
-  }
+      }
 
   void _onCameraIdle() async {
     // Get the current zoom level and print it
@@ -1114,10 +1114,12 @@ class _GeneratorPageState extends State<GeneratorPage> {
       final location = await _locationService.getCurrentLocation();
       LatLng currentLocation = LatLng(location['latitude'], location['longitude']);
       print("current location: $currentLocation");
-      resortCoordinate = currentLocation;
-
+      setState(() {
+        resortCoordinate = currentLocation;
+      });
+      
       // Animate the map to the current location
-      mapController?.animateCamera(CameraUpdate.newLatLngZoom(currentLocation, 14));
+            mapController?.animateCamera(CameraUpdate.newLatLngZoom(currentLocation, 14));
     } catch (error) {
       print('Error: $error');
     }

@@ -7,15 +7,6 @@ class LocationService {
   Future<Map<String, dynamic>> getCurrentLocation() async {
     try {
       print("get current location now");
-      // Check if location services are enabled
-      bool serviceEnabled = await _location.serviceEnabled();
-      if (!serviceEnabled) {
-        serviceEnabled = await _location.requestService();
-        if (!serviceEnabled) {
-          print("Location services are disabled");
-          throw Exception('Location services are disabled.');
-        }
-      }
 
       // Check and request location permissions
       PermissionStatus permissionGranted = await _location.hasPermission();
@@ -24,11 +15,15 @@ class LocationService {
         if (permissionGranted != PermissionStatus.granted) {
           print("Location permissions are denied");
           throw Exception('Location permissions are denied.');
+        } else {
+          print("Location permissions are granted");
         }
       }
 
       // Get the current location
+      print("get location demo...");
       final locationData = await _location.getLocation();
+
       return {
         'latitude': locationData.latitude,
         'longitude': locationData.longitude,
