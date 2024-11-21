@@ -1097,6 +1097,21 @@ class _GeneratorPageState extends State<GeneratorPage> {
     );
   }
 
+  void _addCurrentLocation(
+    LatLng coordinates) {
+    mapController?.addCircle(
+      CircleOptions(
+        geometry: coordinates,
+        circleRadius: 8,         // Radius in pixels
+        circleColor: Colors.lightBlue.toHexStringRGB(), // Configurable circle color
+        circleOpacity: 0.9,       // Adjust opacity as needed
+        circleStrokeColor: const Color.fromARGB(255, 188, 179, 179).toHexStringRGB(),
+        circleStrokeWidth: 3,
+        circleBlur: 0.1,
+      ),
+    );
+  }
+
   void _clearAllCircles() {
     // Clear all circles and symbols from the map
     mapController?.clearCircles(); // Clear circles
@@ -1119,9 +1134,51 @@ class _GeneratorPageState extends State<GeneratorPage> {
       });
       
       // Animate the map to the current location
-            mapController?.animateCamera(CameraUpdate.newLatLngZoom(currentLocation, 14));
+      mapController?.animateCamera(CameraUpdate.newLatLngZoom(currentLocation, 14));
+      // Draw the blue icon on the map
+      _addCurrentLocation(
+        currentLocation
+      );
     } catch (error) {
       print('Error: $error');
+    }
+  }
+
+  /// Draw a blue icon at the user's current location
+  Future<void> _drawCurrentLocationIcon(LatLng currentLocation) async {
+    try {
+      // Add the GeoJSON source for the current location
+      await mapController?.addSource(
+        "current_location_source",
+        GeojsonSourceProperties(data: {
+          "type": "FeatureCollection",
+          "features": [
+            {
+              "type": "Feature",
+              "geometry": {
+                "type": "Point",
+                "coordinates": [currentLocation.longitude, currentLocation.latitude],
+              },
+            }
+          ],
+        }),
+      );
+
+      // Add the symbol layer with a blue icon
+      await mapController?.addSymbolLayer(
+        "current_location_source",
+        "current_location_layer",
+        SymbolLayerProperties(
+          iconImage: "marker-15", // Default Mapbox marker
+          iconColor: "#007AFF",   // Blue color for the icon
+          iconSize: 1.5,          // Adjust icon size
+          iconAnchor: "center",   // Center the icon
+        ),
+      );
+
+      print("Blue icon added at $currentLocation");
+    } catch (error) {
+      print("Error drawing current location icon: $error");
     }
   }
 
