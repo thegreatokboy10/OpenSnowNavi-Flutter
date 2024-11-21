@@ -9,6 +9,7 @@ import 'dart:math';
 import 'timer_flag.dart';
 import 'global_constants.dart';
 import 'search_service.dart';
+import 'location_service.dart';
 import 'package:http/http.dart' as http;
 import 'package:polyline_codec/polyline_codec.dart';
 import 'package:url_launcher/url_launcher.dart'; // Add this for opening URLs
@@ -86,6 +87,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
 
   // Coordinate for ski resort center
   LatLng? resortCoordinate;
+  final LocationService _locationService = LocationService();
 
   // POI search
   List<Map<String, dynamic>> poiResults = [];
@@ -1107,6 +1109,21 @@ class _GeneratorPageState extends State<GeneratorPage> {
     }
   }
 
+  void _locateCurrentPosition() async {
+    print("get current location clicked");
+    try {
+      final location = await _locationService.getCurrentLocation();
+      LatLng currentLocation = LatLng(location['latitude'], location['longitude']);
+      print("current location: $currentLocation");
+      resortCoordinate = currentLocation;
+
+      // Animate the map to the current location
+      mapController?.animateCamera(CameraUpdate.newLatLngZoom(currentLocation, 14));
+    } catch (error) {
+      print('Error: $error');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -1157,29 +1174,40 @@ class _GeneratorPageState extends State<GeneratorPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Search Bar
-                Container(
-                  width: 250,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.6),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: TextField(
-                    controller: _searchController,
-                    onChanged: _onSearchChanged,
-                    onSubmitted: _onSearchSubmitted,
-                    decoration: InputDecoration(
-                      hintText: 'Search POI',
-                      prefixIcon: Icon(Icons.search),
-                      filled: true,
-                      fillColor: Colors.white.withOpacity(0.6),
-                      border: OutlineInputBorder(
+                Row(
+                  children: [
+                    Container(
+                      width: 250,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.6),
                         borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide.none,
                       ),
-                      contentPadding: EdgeInsets.symmetric(
-                          horizontal: 15, vertical: 10),
+                      child: TextField(
+                        controller: _searchController,
+                        onChanged: _onSearchChanged,
+                        onSubmitted: _onSearchSubmitted,
+                        decoration: InputDecoration(
+                          hintText: 'Search POI',
+                          prefixIcon: Icon(Icons.search),
+                          filled: true,
+                          fillColor: Colors.white.withOpacity(0.6),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide.none,
+                          ),
+                          contentPadding: EdgeInsets.symmetric(
+                              horizontal: 15, vertical: 10),
+                        ),
+                      ),
                     ),
-                  ),
+                    SizedBox(width: 10),
+                    // Locate Button
+                    IconButton(
+                      icon: Icon(Icons.my_location, color: Colors.blue),
+                      onPressed: _locateCurrentPosition,
+                      tooltip: 'Locate Me',
+                    ),
+                  ],
                 ),
                 if (poiResults.isNotEmpty)
                   Container(
