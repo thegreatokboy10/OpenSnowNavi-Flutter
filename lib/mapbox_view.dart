@@ -1110,7 +1110,6 @@ class _GeneratorPageState extends State<GeneratorPage> {
   }
 
   void _locateCurrentPosition() async {
-    print("get current location clicked");
     try {
       final location = await _locationService.getCurrentLocation();
       LatLng currentLocation = LatLng(location['latitude'], location['longitude']);
@@ -1199,13 +1198,6 @@ class _GeneratorPageState extends State<GeneratorPage> {
                               horizontal: 15, vertical: 10),
                         ),
                       ),
-                    ),
-                    SizedBox(width: 10),
-                    // Locate Button
-                    IconButton(
-                      icon: Icon(Icons.my_location, color: Colors.blue),
-                      onPressed: _locateCurrentPosition,
-                      tooltip: 'Locate Me',
                     ),
                   ],
                 ),
@@ -1299,6 +1291,19 @@ class _GeneratorPageState extends State<GeneratorPage> {
                     color: const Color.fromARGB(255, 0, 0, 0),
                   ),
                 ),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 68,
+            right: 20, 
+            child: Transform.scale(
+              scale: floatingActionButtonScale,
+              child: FloatingActionButton(
+                backgroundColor: Colors.white.withOpacity(floatingbuttonopacity),
+                onPressed: _locateCurrentPosition,
+                tooltip: 'Locate Me',
+                child: Icon(Icons.my_location),
               ),
             ),
           ),

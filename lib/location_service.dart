@@ -6,6 +6,7 @@ class LocationService {
   /// Request permission and get the current location
   Future<Map<String, dynamic>> getCurrentLocation() async {
     try {
+      print("get current location now");
       // Check if location services are enabled
       bool serviceEnabled = await _location.serviceEnabled();
       if (!serviceEnabled) {
