@@ -34,4 +34,8 @@ class LocationService {
       throw Exception('Error obtaining location: $e');
     }
   }
+
+  void enableBackgroundMode(bool enable) {
+    _location.enableBackgroundMode(enable: enable);
+  }
 }

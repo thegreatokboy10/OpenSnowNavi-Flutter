@@ -662,7 +662,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
   void _onMapCreated(MapboxMapController controller) {
     mapController = controller;
     mapController?.onFeatureTapped.add(onFeatureTap);
-      }
+    _locationService.enableBackgroundMode(true);
+  }
 
   void _onCameraIdle() async {
     // Get the current zoom level and print it
@@ -1196,6 +1197,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
             onMapLongClick: _onMapLongClick,
             onStyleLoadedCallback: _onStyleLoadedCallback,
             initialCameraPosition: _getInitialCameraPosition(),
+            doubleClickZoomEnabled: false,
             styleString: 'mapbox://styles/okboy2008/clx1zai3s01ck01rb5zsv600u', // Your custom Mapbox style
             compassEnabled: true, // Disable the compass button
             compassViewPosition: CompassViewPosition.BottomRight,
