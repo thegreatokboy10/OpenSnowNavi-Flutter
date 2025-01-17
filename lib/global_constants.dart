@@ -16,6 +16,19 @@ class GlobalConstants {
       'country': 'France',
       'zoom': 12.0,
     },
+    'morzine': { // assets文件夹名称
+      'name': { // 雪场名
+        'en': 'Morzine - Portes du Soleil',
+        'fr': 'Morzine - Portes du Soleil',
+        'cn': 'Morzine - 太阳门',
+      },
+      'coordinate': { // 雪场坐标
+        'lat': 46.18151,
+        'lng': 6.704120,
+      },
+      'country': 'France',
+      'zoom': 12.0,
+    },
     'beidahu': { // assets文件夹名称
       'name': { // 雪场名
         'en': 'Beidahu',

@@ -935,6 +935,10 @@ class _GeneratorPageState extends State<GeneratorPage> {
     String start = '${startCoordinate.longitude},${startCoordinate.latitude}';
     String end = '${endCoordinate.longitude},${endCoordinate.latitude}';
     String url = 'https://snownavi.ski/route/v1/$start;$end?alternatives=false&overview=false&steps=true';
+    if (selectedResortKey == 'morzine') {
+      url = 'https://snownavi.ski/route/morzine/v1/$start;$end?alternatives=false&overview=false&steps=true';
+    }
+    
 
     try {
       // 等待服务器的响应

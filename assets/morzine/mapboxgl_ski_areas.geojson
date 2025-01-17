@@ -1,0 +1,21 @@
+{"type": "FeatureCollection", "features":[
+{"type":"Feature","geometry":{"coordinates":[6.590637252852345,46.14555352567118],"type":"Point"},"properties":{"id":"17a2aed27cfa6b593c5df9770900555623db6adf","name":"Praz de Lys Sommand","status":"operating","downhillDistance":13,"nordicDistance":9,"maxElevation":null,"vertical":null,"has_downhill":true,"has_nordic":true}}
+,
+{"type":"Feature","geometry":{"coordinates":[6.72754923508998,46.377204113881774],"type":"Point"},"properties":{"id":"d3c7b897d3dac0b590961eb352677d3070e52fe1","name":"Thollon-les-Mémises","status":"operating","downhillDistance":10,"nordicDistance":8,"maxElevation":null,"vertical":null,"has_downhill":true,"has_nordic":true}}
+,
+{"type":"Feature","geometry":{"coordinates":[6.832894065684521,46.253749380487314],"type":"Point"},"properties":{"id":"cd9575d80e0c47ed91caa814eae2093f13bc9e67","name":"Châtel","status":"operating","downhillDistance":17,"nordicDistance":null,"maxElevation":null,"vertical":null,"has_downhill":true}}
+,
+{"type":"Feature","geometry":{"coordinates":[6.703359082496436,46.35078111726396],"type":"Point"},"properties":{"id":"19b6e308caa6766b21cb00e4fb40a82c4ee1f95b","name":"Bernex","status":"operating","downhillDistance":16,"nordicDistance":null,"maxElevation":null,"vertical":null,"has_downhill":true}}
+,
+{"type":"Feature","geometry":{"coordinates":[6.727824028307756,46.28270121642976],"type":"Point"},"properties":{"id":"d3d69f021189f84fe11396cd2078f905ebd0beb9","name":"Abondance","status":"operating","downhillDistance":10,"nordicDistance":null,"maxElevation":null,"vertical":null,"has_downhill":true,"has_nordic":true}}
+,
+{"type":"Feature","geometry":{"coordinates":[6.791624848587316,46.290569091804414],"type":"Point"},"properties":{"id":"8ab6f8a4372774042033a0721b21c2fbb8df2c9c","name":"La Chapelle d'Abondance","status":"operating","downhillDistance":20,"nordicDistance":null,"maxElevation":null,"vertical":null,"has_downhill":true,"has_nordic":true}}
+,
+{"type":"Feature","geometry":{"coordinates":[6.606972411803362,46.21018333713275],"type":"Point"},"properties":{"id":"8f52a4cffc57a788e69b889d7b5c12197a606047","name":"Roc d'Enfer","status":"operating","downhillDistance":30,"nordicDistance":1,"maxElevation":null,"vertical":null,"has_downhill":true,"has_nordic":true}}
+,
+{"type":"Feature","geometry":{"type":"Point","coordinates":[6.953556600000001,46.21760381]},"properties":{"id":"8f07b9ac021ebed390c958a9f1f17fc7c119b682","name":"Les Giettes","status":"operating","downhillDistance":1,"nordicDistance":null,"maxElevation":null,"vertical":null,"has_downhill":true}}
+,
+{"type":"Feature","geometry":{"type":"Point","coordinates":[6.775996461240307,46.213018202325586]},"properties":{"id":"047f22907bcc1888d7c1836c647ea56b013f99db","name":"Portes du Soleil","status":"operating","downhillDistance":356,"nordicDistance":14,"maxElevation":null,"vertical":null,"has_downhill":true,"has_nordic":true}}
+,
+{"type":"Feature","geometry":{"coordinates":[6.649835968017666,46.28530820578725],"type":"Point"},"properties":{"id":"311a9a46ab4f52c89ec5d37896d3b2b1a95aa44c","name":"Drouzin-le-Mont","status":"abandoned","downhillDistance":0,"nordicDistance":null,"maxElevation":null,"vertical":null,"has_downhill":true}}
+]}
