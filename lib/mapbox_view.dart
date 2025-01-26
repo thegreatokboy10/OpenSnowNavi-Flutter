@@ -71,8 +71,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
   double fontSize = 13;
   double nameOffset = 0.6;
   // Line size
-  double pisteLineWidth = 3.5;
-  double liftLineWidth = 3.0;
+  double pisteLineWidth = 1.5;
+  double liftLineWidth = 4.0;
   // Floating button
   double floatingbuttonopacity = 0.9;
   double floatingActionButtonScale = 0.8;

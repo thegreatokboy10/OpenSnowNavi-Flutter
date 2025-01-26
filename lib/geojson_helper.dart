@@ -72,6 +72,7 @@ class GeoJsonHelper {
         LineLayerProperties(
           lineColor: ['get', colorProperty], // Use color property from GeoJSON
           lineWidth: lineWidth,
+          lineOpacity: 0.8,
           lineCap: 'round',
         ),
       );
