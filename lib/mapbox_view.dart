@@ -6,8 +6,12 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'dart:math';
+import 'geojson_helper.dart';
+import 'lift.dart';
+import 'piste.dart';
 import 'timer_flag.dart';
 import 'global_constants.dart';
+import 'global_data.dart';
 import 'search_service.dart';
 import 'location_service.dart';
 import 'package:http/http.dart' as http;
@@ -216,163 +220,57 @@ class _GeneratorPageState extends State<GeneratorPage> {
 
     final parsedGeoJson = json.decode(geojsonData);
 
-    String type = '';
+    // Iterate over features and create Lift or Piste objects
+    for (var feature in parsedGeoJson['features']) {
+      final type = feature['properties']['type'];
 
-    // Separate features
-    final features = {
-      "type": "FeatureCollection",
-      "features": (parsedGeoJson['features'] as List).where((feature) {
-        type = feature['properties']['type'];
-        if (type == 'lift') {
-          return feature['properties'].containsKey('type') && type == 'lift';
-        } else {
-          // piste "run"
-          final uses = feature['properties']['uses'];
-          final geometry = feature['geometry']['type'];
-          // print("uses: $uses");
-          return geometry == 'LineString' &&
-          (uses.contains('downhill') || uses.contains('connection'));
-        }
-      }).toList(),
-    };
-
-    // line layer helper function
-    void _addLineWithStroke(String lineSourceString, String lineLayerString, double lineWidth, String? strokeSourceString, String? strokeLayerString, double? strokeWidth, double? strokeOpacity) {
       if (type == 'lift') {
-        // lift: no stroke, line color is ['get', 'color']
-        // line
-        mapController?.addLineLayer(
-          lineSourceString,
-          lineLayerString,
-          LineLayerProperties(
-            lineColor: ['get', 'color'], // Use 'color' property from GeoJSON
-            lineWidth: lineWidth,
-            lineCap: 'round', 
-          ),
-        );
-        layerIds.add(lineLayerString);
-        liftLayers.add(lineLayerString);
-      } else {
-        // piste: stroke color is ['get', 'color'], line color is piste_default_color
-        // stroke
-        if (strokeSourceString != null && strokeLayerString != null && strokeWidth != null && strokeOpacity != null) {
-          mapController?.addLineLayer(
-            strokeSourceString,
-            strokeLayerString,
-            LineLayerProperties(
-              lineColor: ['get', 'color'], // Use 'color' property from GeoJSON
-              lineOpacity: strokeOpacity,
-              lineWidth: strokeWidth,
-              lineCap: 'round',
-            ),
-          );
-          layerIds.add(strokeLayerString);
-          pisteLayers.add(strokeLayerString);
+        try {
+          // Create a Lift object and add it to GlobalData
+          var lift = Lift.fromGeoJson(feature);
+          lift.lineWidth = liftLineWidth;
+          GlobalData.lifts.add(lift);
+        } catch (e) {
+          print("Error parsing lift feature: $e");
         }
-
-        // line
-        mapController?.addLineLayer(
-          lineSourceString,
-          lineLayerString,
-          LineLayerProperties(
-            lineColor: piste_default_color.toHexStringRGB(), // Use piste_default_color
-            lineWidth: lineWidth, 
-            lineCap: 'round',
-          ),
-        );
-        pisteLayers.add(lineLayerString);
+      } else if (type == 'run') {
+        try {
+          // Create a Piste object and add it to GlobalData
+          var piste = Piste.fromGeoJson(feature);
+          piste.lineWidth = pisteLineWidth;
+          piste.secondColor = piste_default_color;
+          GlobalData.pistes.add(piste);
+        } catch (e) {
+          print("Error parsing piste feature: $e");
+        }
+      } else {
+        print("Unsupported feature type: $type");
       }
     }
 
-    if (type != '') {
-      // Add Layer Data Source
-      mapController?.addSource(
-        '$type-source',
-        GeojsonSourceProperties(data: features),
-      );
+    // Add layers for lifts
+    GeoJsonHelper.addAggregateSourceAndLayer(
+      mapController: mapController!,
+      items: GlobalData.lifts, // Pass the list of Lift objects
+      sourceId: 'lifts-source',
+      layerId: 'lifts-layer',
+      lineWidth: liftLineWidth,
+      sourceList: liftSources,
+      layerList: liftLayers,
+    );
 
-      // Decide line properties based on type
-      var _lineWidth = 0.0;
-      var _strokeSourceString = null;
-      var _strokeLayerString = null;
-      var _strokeWidth = null;
-      var _strokeOpacity = null;
+    // Add layers for pistes
+    GeoJsonHelper.addAggregateSourceAndLayer(
+      mapController: mapController!,
+      items: GlobalData.pistes, // Pass the list of Piste objects
+      sourceId: 'pistes-source',
+      layerId: 'pistes-layer',
+      lineWidth: pisteLineWidth,
+      sourceList: pisteSources,
+      layerList: pisteLayers,
+    );
 
-      if (type == 'lift') {
-        // only line, no stroke
-        _lineWidth = liftLineWidth;
-        liftSources.add('$type-source');
-      } else {
-        // piste: line and stroke
-        pisteSources.add('$type-source');
-        _lineWidth = pisteLineWidth;
-        _strokeSourceString = '$type-source';
-        _strokeLayerString = '$type-stroke-layer';
-        _strokeWidth = pisteLineWidth * 3;
-        _strokeOpacity = strokeOpacity;
-      }
-      // Add Line Layer
-      _addLineWithStroke('$type-source', '$type-layer', _lineWidth, _strokeSourceString, _strokeLayerString, _strokeWidth, _strokeOpacity);
-
-      // Add Name Layer
-      mapController?.addSymbolLayer(
-        '$type-source',
-        '$type-name-layer',
-        SymbolLayerProperties(
-          textField: ['get', 'name'],  // Use 'name' property from GeoJSON
-          textSize: fontSize,
-          symbolPlacement: 'line',  // Place labels along the line
-          textAnchor: 'center',  // Anchor the text in the center
-          textAllowOverlap: false,  // Prevent overlapping text
-          textOffset: [0, nameOffset],  // Adjust text position slightly
-          textColor: ['get', 'color'] // Use 'color' property from GeoJSON
-        ),
-        minzoom: minZoomPiste,
-      );
-      if (type == 'lift') {
-        liftLayers.add('$type-name-layer');
-      } else {
-        pisteLayers.add('$type-name-layer');
-      }
-
-      // Add Arrow Layer
-      if (type == 'lift') {
-        mapController?.addSymbolLayer(
-          '$type-source',
-          '$type-arrow-layer',
-          SymbolLayerProperties(
-            iconImage: 'lift-arrow',
-            symbolPlacement: 'line-center', // Place along the line
-            symbolSpacing: 5000000, // Ensures only one arrow is placed on the line
-            iconAllowOverlap: false,
-            iconRotate: ['get', 'bearing'], // Rotate arrow based on line bearing
-            iconRotationAlignment: 'map',
-          ),
-          minzoom: minZoomLift,
-        );
-        liftLayers.add('$type-arrow-layer');
-      } else {
-        mapController?.addSymbolLayer(
-          '$type-source',
-          '$type-arrow-layer',
-          SymbolLayerProperties(
-            iconImage:[
-              'concat', ['get', 'difficulty'], '-piste-arrow'
-            ],
-            symbolPlacement: 'line-center', // Place along the line
-            symbolSpacing: 5000000, // Ensures only one arrow is placed on the line
-            iconAllowOverlap: false,
-            iconRotate: ['get', 'bearing'], // Rotate arrow based on line bearing
-            iconRotationAlignment: 'map',
-          ),
-          minzoom: minZoomPiste,
-        );
-        pisteLayers.add('$type-arrow-layer');
-      }
-
-    }
-
-    print('Layers for $type added successfully');
+    print('Layers for lifts and pistes added successfully');
   }
 
   void _resetLayersAndSources() {
@@ -419,6 +317,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
     _clearLayers(routeLayers);
     _clearSources(routeSources);
     _resetLayersAndSources();
+    GlobalData.lifts.clear();
+    GlobalData.pistes.clear();
 
     final pisteFilePath = 'assets/$selectedResortKey/runs.geojson';
     final liftFilePath = 'assets/$selectedResortKey/lifts.geojson';
@@ -761,7 +661,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
     // 构建 difficultyList，收集被选中的难度值
     List<String> difficultyList = difficultyFilterMap.entries
       .where((entry) => entry.value) // 过滤出被选中的 difficulty
-      .map((entry) => "${entry.key}") // 将 difficulty 的名称转换为带引号的字符串
+      .map((entry) => entry.key) // 将 difficulty 的名称转换为带引号的字符串
       .toList();
 
     pisteLayers.forEach((layerId) {
