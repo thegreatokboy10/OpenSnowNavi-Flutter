@@ -7,7 +7,7 @@ class Piste {
   final String difficulty;
   final String color;
   final List<List<double>> coordinates;
-  final String uses;
+  final List<String> uses;
   double lineWidth;
   Color secondColor;
   bool visible; // Flag to control visibility
@@ -30,13 +30,18 @@ class Piste {
     final properties = feature['properties'];
     final geometry = feature['geometry'];
 
+    // Check if the geometry type is LineString
+    if (geometry['type'] != 'LineString') {
+      throw Exception('Unsupported geometry type: ${geometry['type']}');
+    }
+
     return Piste(
       id: properties['id'] ?? 'Unknown',
-      name: properties['name'] ?? 'Unknown',
+      name: properties['name'] ?? 'Cat Track',
       difficulty: properties['difficulty'] ?? 'unknown',
       color: properties['color'] ?? 'gray',
       coordinates: GeoJsonHelper.parseCoordinates(geometry), // Use helper to parse coordinates
-      uses: properties['uses'][0] ?? 'Unknown',
+      uses: (properties['uses'] ?? []).toList().cast<String>(), // Safely cast uses to List<String>
     );
   }
 

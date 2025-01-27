@@ -237,7 +237,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
         try {
           // Create a Piste object and add it to GlobalData
           var piste = Piste.fromGeoJson(feature);
-          if (piste.uses != "downhill" && piste.uses != "connection") {
+          if (!piste.uses.contains("downhill") && !piste.uses.contains("connection")) {
             continue;
           }
           piste.lineWidth = pisteLineWidth;
@@ -354,11 +354,15 @@ class _GeneratorPageState extends State<GeneratorPage> {
       type ??= features[0]["properties"]["uses"];
       type ??= "N/A";
       dynamic name = features[0]["properties"]["name"] ?? "No name";
+      dynamic ref = features[0]["properties"]["ref"];
+      if (ref != null && ref.isNotEmpty) {
+        name = "$ref $name";
+      }
       dynamic difficulty = features[0]["properties"]["difficulty"];
       difficulty ??= "N/A";
       dynamic color = features[0]["properties"]["color"] ?? "#FF0000"; // Default color if not specified
 
-      print(features[0]["properties"]["name"]);
+      print("$ref $name of $type is clicked");
 
       // Get the geometry and calculate bounds
       var geometry = features[0]["geometry"];

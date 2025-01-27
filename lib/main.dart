@@ -48,24 +48,24 @@ class _MyHomePageState extends State<MyHomePage> {
                 FavoritePage(),  // Overlay the FavoritePage
             ],
           ),
-          bottomNavigationBar: BottomNavigationBar(
-            currentIndex: selectedIndex,
-            items: const [
-              BottomNavigationBarItem(
-                icon: Icon(Icons.home),
-                label: 'Home',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.favorite),
-                label: 'Favorites',
-              ),
-            ],
-            onTap: (index) {
-              setState(() {
-                selectedIndex = index;  // Change the index to show/hide FavoritePage
-              });
-            },
-          ),
+          // bottomNavigationBar: BottomNavigationBar(
+          //   currentIndex: selectedIndex,
+          //   items: const [
+          //     BottomNavigationBarItem(
+          //       icon: Icon(Icons.home),
+          //       label: 'Home',
+          //     ),
+          //     BottomNavigationBarItem(
+          //       icon: Icon(Icons.favorite),
+          //       label: 'Favorites',
+          //     ),
+          //   ],
+          //   onTap: (index) {
+          //     setState(() {
+          //       selectedIndex = index;  // Change the index to show/hide FavoritePage
+          //     });
+          //   },
+          // ),
         );
       }
     );

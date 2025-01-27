@@ -5,6 +5,7 @@ class Lift {
   final String name;
   final String color;
   final String type;
+  final String ref;
   final List<List<double>> coordinates;
   final String bearing;
   double lineWidth;
@@ -16,6 +17,7 @@ class Lift {
     required this.name,
     required this.color,
     required this.type,
+    required this.ref,
     required this.coordinates,
     required this.bearing,
     this.visible = true, // Default to visible
@@ -31,7 +33,8 @@ class Lift {
       id: properties['id'] ?? 'Unknown',
       name: properties['name'] ?? 'Unknown',
       color: properties['color'] ?? 'gray',
-      type: properties['liftType'] ?? 'Unknown',
+      type: properties['liftType'] ?? 'Lift',
+      ref: properties['ref'] ?? '',
       coordinates: GeoJsonHelper.parseCoordinates(geometry), // Use helper to parse coordinates
       bearing: properties['bearing']?.toString() ?? '0', // Handle null bearings
     );
@@ -50,6 +53,7 @@ class Lift {
         "name": name,
         "type": type,
         "id": id,
+        "ref": ref,
       },
     };
   }
