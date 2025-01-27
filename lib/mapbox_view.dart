@@ -490,37 +490,37 @@ class _GeneratorPageState extends State<GeneratorPage> {
 
   void _onStyleLoadedCallback() async {
     _addFlutterIconToMap(
-      icon: Icons.arrow_right,
+      icon: GlobalConstants.liftArrowIcon,
       color: GlobalConstants.lift_color,
       size: GlobalConstants.iconSize,
       imageName: 'lift-arrow',
     );
     _addFlutterIconToMap(
-      icon: Icons.arrow_right,
+      icon: GlobalConstants.arrowIcon,
       color: GlobalConstants.novice_piste_color,
       size: GlobalConstants.arrowIconSize,
       imageName: 'novice-piste-arrow',
     );
     _addFlutterIconToMap(
-      icon: Icons.arrow_right,
+      icon: GlobalConstants.arrowIcon,
       color: GlobalConstants.easy_piste_color,
       size: GlobalConstants.arrowIconSize,
       imageName: 'easy-piste-arrow',
     );
     _addFlutterIconToMap(
-      icon: Icons.arrow_right,
+      icon: GlobalConstants.arrowIcon,
       color: GlobalConstants.intermediate_piste_color,
       size: GlobalConstants.arrowIconSize,
       imageName: 'intermediate-piste-arrow',
     );
     _addFlutterIconToMap(
-      icon: Icons.arrow_right,
+      icon: GlobalConstants.arrowIcon,
       color: GlobalConstants.advanced_piste_color,
       size: GlobalConstants.arrowIconSize,
       imageName: 'advanced-piste-arrow',
     );
     _addFlutterIconToMap(
-      icon: Icons.arrow_right,
+      icon: GlobalConstants.arrowIcon,
       color: GlobalConstants.expert_piste_color,
       size: GlobalConstants.arrowIconSize,
       imageName: 'expert-piste-arrow',

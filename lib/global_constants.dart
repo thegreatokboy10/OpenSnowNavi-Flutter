@@ -1,6 +1,6 @@
 // global_constants.dart
-// todo: check what's the best way to store multi-language
-import 'dart:ui';
+// TODO: check what's the best way to store multi-language
+import 'package:flutter/material.dart';
 
 class GlobalConstants {
   // 定义一个static和final的Map来存储多语言滑雪胜地的key-value对
@@ -63,8 +63,10 @@ class GlobalConstants {
   static double minZoomPiste = 14.0;
   static double minZoomLift = 12.0;
   // Icon size
+  static IconData arrowIcon = Icons.arrow_forward_ios_rounded;
+  static IconData liftArrowIcon = Icons.arrow_right;
   static double iconSize = 40;
-  static double arrowIconSize = 30;
+  static double arrowIconSize = 16;
   // Piste/Lift name
   static double fontSize = 13;
   static double nameOffset = 0.6;
