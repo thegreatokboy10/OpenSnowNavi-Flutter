@@ -210,9 +210,6 @@ class _GeneratorPageState extends State<GeneratorPage> {
         try {
           // Create a Piste object and add it to GlobalData
           var piste = Piste.fromGeoJson(feature);
-          if (!piste.uses.contains("downhill") && !piste.uses.contains("connection")) {
-            continue;
-          }
           piste.lineWidth = GlobalConstants.pisteLineWidth;
           piste.secondColor = GlobalConstants.piste_default_color;
           piste.highlightOpacity = GlobalConstants.strokeOpacity;

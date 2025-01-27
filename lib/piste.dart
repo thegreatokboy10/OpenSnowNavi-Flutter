@@ -37,6 +37,11 @@ class Piste {
       throw Exception('Unsupported geometry type: ${geometry['type']}');
     }
 
+    // Only allow "downhill" and "connection" runs
+    if (!(properties['uses'].contains('downhill') ) && !(properties['uses'].contains('connection'))) {
+      throw Exception('Unsupported uses: ${properties['uses']}');
+    }
+
     return Piste(
       id: properties['id'] ?? 'Unknown',
       name: properties['name'] ?? 'Cat Track',
