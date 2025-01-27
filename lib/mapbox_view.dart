@@ -233,6 +233,14 @@ class _GeneratorPageState extends State<GeneratorPage> {
       layerList: liftLayers,
     );
     layerIds.add('lift-layer');
+    GeoJsonHelper.addArrowLayer(
+      mapController: mapController!,
+      sourceId: 'lift-source',
+      layerId: 'lift-arrow-layer',
+      iconImage: 'lift-arrow',
+      minZoom: GlobalConstants.minZoomLift,
+    );
+    liftLayers.add('lift-arrow-layer');
 
     // Add layers for pistes
     GeoJsonHelper.addAggregateSourceAndLayer(
@@ -245,6 +253,19 @@ class _GeneratorPageState extends State<GeneratorPage> {
       layerList: pisteLayers,
     );
     layerIds.add('run-layer');
+    GeoJsonHelper.addArrowLayer(
+      mapController: mapController!,
+      sourceId: 'run-source',
+      layerId: 'run-arrow-layer',
+      iconImage: 'default-piste-arrow', // Fallback icon if no dynamic expression is provided
+      minZoom: GlobalConstants.minZoomPiste,
+      iconImageExpression: [
+        'concat',
+        ['get', 'difficulty'],
+        '-piste-arrow',
+      ], // Dynamic icon expression for pistes
+    );
+    pisteLayers.add('run-arrow-layer');
 
     print('Layers for lifts and pistes added successfully');
   }

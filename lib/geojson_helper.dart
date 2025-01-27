@@ -60,6 +60,35 @@ class GeoJsonHelper {
     }
   }
 
+  // Method to add an arrow layer
+  static void addArrowLayer({
+    required MapboxMapController mapController,
+    required String sourceId, // Source ID to reference
+    required String layerId, // Layer ID for the arrow layer
+    required String iconImage, // Icon image for the arrow
+    required double minZoom, // Minimum zoom level for the layer
+    List<dynamic>? iconImageExpression, // Optional dynamic icon image expression
+  }) {
+    try {
+      mapController.addSymbolLayer(
+        sourceId,
+        layerId,
+        SymbolLayerProperties(
+          iconImage: iconImageExpression ?? iconImage,
+          symbolPlacement: 'line-center', // Place along the line
+          symbolSpacing: 5000000, // Ensures only one arrow is placed on the line
+          iconAllowOverlap: false,
+          iconRotate: ['get', 'bearing'], // Rotate arrow based on line bearing
+          iconRotationAlignment: 'map',
+        ),
+        minzoom: minZoom,
+      );
+      print('Arrow layer added: $layerId (source: $sourceId)');
+    } catch (e) {
+      print('Error adding arrow layer $layerId: $e');
+    }
+  }
+
   // Helper function to parse coordinates for LineString geometry
   static List<List<double>> parseCoordinates(dynamic geometry) {
     if (geometry['type'] == 'LineString') {
