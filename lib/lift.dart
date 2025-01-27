@@ -1,3 +1,5 @@
+import 'package:mapbox_gl/mapbox_gl.dart';
+
 import 'geojson_helper.dart';
 
 class Lift {
@@ -9,8 +11,8 @@ class Lift {
   final List<List<double>> coordinates;
   final String bearing;
   double lineWidth;
+  double highlightOpacity;
   bool visible; // Flag to control visibility
-  static Set<String> addedLayers = {}; // Track added layers
 
   Lift({
     required this.id,
@@ -22,6 +24,7 @@ class Lift {
     required this.bearing,
     this.visible = true, // Default to visible
     this.lineWidth = 2, // Default line width
+    this.highlightOpacity = 0.8, // Default highlight opacity
   });
 
   // Factory constructor to parse the GeoJSON feature into a Lift object
@@ -56,5 +59,33 @@ class Lift {
         "ref": ref,
       },
     };
+  }
+
+  void highlightMe(MapboxMapController mapController) {
+    const highlightedSourceId = 'highlighted-feature';
+    const highlightedLayerId = 'highlighted-layer';
+
+    // Add the highlighted source
+    GeoJsonHelper.addHighlightedFeatureSource(
+      mapController: mapController,
+      sourceId: highlightedSourceId,
+      geometry: {
+        "type": "LineString",
+        "coordinates": coordinates,
+      },
+      color: color, // Use the piste's color for the highlighted feature
+    );
+
+    // Add the highlighted layer
+    GeoJsonHelper.addHighlightedLineLayer(
+      mapController: mapController,
+      sourceId: highlightedSourceId,
+      layerId: highlightedLayerId,
+      color: color, // Use the piste's color for the highlighted line
+      lineWidth: lineWidth * 5, // Make the highlighted line wider
+      lineOpacity: highlightOpacity, // Set a default opacity for highlighting
+    );
+
+    print('Highlighted layer and source added for lift: $name');
   }
 }

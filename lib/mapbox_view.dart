@@ -229,6 +229,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
           // Create a Lift object and add it to GlobalData
           var lift = Lift.fromGeoJson(feature);
           lift.lineWidth = liftLineWidth;
+          lift.highlightOpacity = strokeOpacity;
           GlobalData.lifts.add(lift);
         } catch (e) {
           print("Error parsing lift feature: $e");
@@ -242,6 +243,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
           }
           piste.lineWidth = pisteLineWidth;
           piste.secondColor = piste_default_color;
+          piste.highlightOpacity = strokeOpacity;
           GlobalData.pistes.add(piste);
         } catch (e) {
           print("Error parsing piste feature: $e");
@@ -360,7 +362,6 @@ class _GeneratorPageState extends State<GeneratorPage> {
       }
       dynamic difficulty = features[0]["properties"]["difficulty"];
       difficulty ??= "N/A";
-      dynamic color = features[0]["properties"]["color"] ?? "#FF0000"; // Default color if not specified
 
       print("$ref $name of $type is clicked");
 
@@ -414,50 +415,24 @@ class _GeneratorPageState extends State<GeneratorPage> {
         print("Layer or source not found: $e");
       }
 
-      // Highlight the selected feature
-      mapController!.addSource(
-        'highlighted-feature',
-        GeojsonSourceProperties(
-          data: {
-            "type": "FeatureCollection",
-            "features": [
-              {
-                "type": "Feature",
-                "geometry": geometry,
-                "properties": {
-                  "color": color,
-                },
-              },
-            ],
-          },
-        ),
-      );
-
-      // get feature type
-      dynamic featureType = features[0]["properties"]["difficulty"] != null ? "run" : "lift";
-
-      if (featureType == "run") {
-        mapController!.addLineLayer(
-          'highlighted-feature',
-          'highlighted-layer',
-          LineLayerProperties(
-            lineColor: color,
-            lineWidth: pisteLineWidth * 5,
-            lineOpacity: strokeOpacity,
-            lineCap: 'round',
-          ),
-        );
-      } else if (featureType == "lift") {
-        mapController!.addLineLayer(
-          'highlighted-feature',
-          'highlighted-layer',
-          LineLayerProperties(
-            lineColor: lift_color.toHexStringRGB(),
-            lineWidth: liftLineWidth * 5,
-            lineOpacity: strokeOpacity,
-            lineCap: 'round',
-          ),
-        );
+      // highlight selected feature
+      final id = features[0]["properties"]["id"];
+      var featureFound = false;
+      for (var piste in GlobalData.pistes) {
+        if (piste.id == id) {
+          piste.highlightMe(mapController!);
+          featureFound = true;
+          break;
+        }
+      }
+      if (!featureFound) {
+        for (var lift in GlobalData.lifts) {
+          if (lift.id == id) {
+            lift.highlightMe(mapController!);
+            featureFound = true;
+            break;
+          }
+        }
       }
 
       // Show bottom sheet

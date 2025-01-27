@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mapbox_gl/mapbox_gl.dart';
 import 'geojson_helper.dart';
 
 class Piste {
@@ -9,9 +10,9 @@ class Piste {
   final List<List<double>> coordinates;
   final List<String> uses;
   double lineWidth;
+  double highlightOpacity;
   Color secondColor;
   bool visible; // Flag to control visibility
-  static Set<String> addedLayers = {}; // Track added layers
 
   Piste({
     required this.id,
@@ -22,6 +23,7 @@ class Piste {
     required this.uses, // type of piste
     this.visible = true, // Default to visible
     this.lineWidth = 2, // Default line width
+    this.highlightOpacity = 0.8, // Default highlight opacity
     this.secondColor = Colors.white,
   });
 
@@ -61,5 +63,33 @@ class Piste {
         "uses": uses,
       },
     };
+  }
+
+  void highlightMe(MapboxMapController mapController) {
+    const highlightedSourceId = 'highlighted-feature';
+    const highlightedLayerId = 'highlighted-layer';
+
+    // Add the highlighted source
+    GeoJsonHelper.addHighlightedFeatureSource(
+      mapController: mapController,
+      sourceId: highlightedSourceId,
+      geometry: {
+        "type": "LineString",
+        "coordinates": coordinates,
+      },
+      color: color, // Use the piste's color for the highlighted feature
+    );
+
+    // Add the highlighted layer
+    GeoJsonHelper.addHighlightedLineLayer(
+      mapController: mapController,
+      sourceId: highlightedSourceId,
+      layerId: highlightedLayerId,
+      color: color, // Use the piste's color for the highlighted line
+      lineWidth: lineWidth * 5, // Make the highlighted line wider
+      lineOpacity: highlightOpacity, // Set a default opacity for highlighting
+    );
+
+    print('Highlighted layer and source added for piste: $name');
   }
 }
