@@ -237,6 +237,9 @@ class _GeneratorPageState extends State<GeneratorPage> {
         try {
           // Create a Piste object and add it to GlobalData
           var piste = Piste.fromGeoJson(feature);
+          if (piste.uses != "downhill" && piste.uses != "connection") {
+            continue;
+          }
           piste.lineWidth = pisteLineWidth;
           piste.secondColor = piste_default_color;
           GlobalData.pistes.add(piste);
@@ -252,23 +255,25 @@ class _GeneratorPageState extends State<GeneratorPage> {
     GeoJsonHelper.addAggregateSourceAndLayer(
       mapController: mapController!,
       items: GlobalData.lifts, // Pass the list of Lift objects
-      sourceId: 'lifts-source',
-      layerId: 'lifts-layer',
+      sourceId: 'lift-source',
+      layerId: 'lift-layer',
       lineWidth: liftLineWidth,
       sourceList: liftSources,
       layerList: liftLayers,
     );
+    layerIds.add('lift-layer');
 
     // Add layers for pistes
     GeoJsonHelper.addAggregateSourceAndLayer(
       mapController: mapController!,
       items: GlobalData.pistes, // Pass the list of Piste objects
-      sourceId: 'pistes-source',
-      layerId: 'pistes-layer',
+      sourceId: 'run-source',
+      layerId: 'run-layer',
       lineWidth: pisteLineWidth,
       sourceList: pisteSources,
       layerList: pisteLayers,
     );
+    layerIds.add('run-layer');
 
     print('Layers for lifts and pistes added successfully');
   }
@@ -345,14 +350,11 @@ class _GeneratorPageState extends State<GeneratorPage> {
     List features = await mapController!.queryRenderedFeatures(point, layerIds, null);
     
     if (features.isNotEmpty) {
-      dynamic type = features[0]["properties"]["aerialway"];
-      type ??= features[0]["properties"]["piste:type"];
+      dynamic type = features[0]["properties"]["type"];
       type ??= features[0]["properties"]["uses"];
-      type ??= features[0]["properties"]["liftType"];
       type ??= "N/A";
       dynamic name = features[0]["properties"]["name"] ?? "No name";
-      dynamic difficulty = features[0]["properties"]["piste:difficulty"];
-      difficulty ??= features[0]["properties"]["difficulty"];
+      dynamic difficulty = features[0]["properties"]["difficulty"];
       difficulty ??= "N/A";
       dynamic color = features[0]["properties"]["color"] ?? "#FF0000"; // Default color if not specified
 
@@ -361,6 +363,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
       // Get the geometry and calculate bounds
       var geometry = features[0]["geometry"];
       if (geometry["type"] == "LineString") {
+        print("find geometry for $type");
         final coordinates = geometry["coordinates"];
         
         // Initialize bounds with the first coordinate
@@ -427,7 +430,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
       );
 
       // get feature type
-      dynamic featureType = features[0]["properties"]["type"];
+      dynamic featureType = features[0]["properties"]["difficulty"] != null ? "run" : "lift";
 
       if (featureType == "run") {
         mapController!.addLineLayer(

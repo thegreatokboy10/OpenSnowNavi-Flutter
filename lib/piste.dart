@@ -7,7 +7,7 @@ class Piste {
   final String difficulty;
   final String color;
   final List<List<double>> coordinates;
-  final List<String> uses;
+  final String uses;
   double lineWidth;
   Color secondColor;
   bool visible; // Flag to control visibility
@@ -19,7 +19,7 @@ class Piste {
     required this.difficulty,
     required this.color,
     required this.coordinates,
-    required this.uses,
+    required this.uses, // type of piste
     this.visible = true, // Default to visible
     this.lineWidth = 2, // Default line width
     this.secondColor = Colors.white,
@@ -36,7 +36,25 @@ class Piste {
       difficulty: properties['difficulty'] ?? 'unknown',
       color: properties['color'] ?? 'gray',
       coordinates: GeoJsonHelper.parseCoordinates(geometry), // Use helper to parse coordinates
-      uses: List<String>.from(properties['uses'] ?? []),
+      uses: properties['uses'][0] ?? 'Unknown',
     );
+  }
+
+  // Method to generate GeoJSON feature for this piste
+  Map<String, dynamic> toFeature() {
+    return {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": coordinates,
+      },
+      "properties": {
+        "color": color,
+        "name": name,
+        "difficulty": difficulty,
+        "id": id,
+        "uses": uses,
+      },
+    };
   }
 }

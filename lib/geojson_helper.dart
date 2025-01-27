@@ -33,6 +33,8 @@ class GeoJsonHelper {
           "properties": {
             "color": item.color,
             "name": item.name,
+            "type": item.type,
+            "id": item.id,
           },
         };
       } else if (item is Piste) {
@@ -46,6 +48,8 @@ class GeoJsonHelper {
             "color": item.color,
             "name": item.name,
             "difficulty": item.difficulty,
+            "id": item.id,
+            "uses": item.uses,
           },
         };
       } else {

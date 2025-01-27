@@ -4,6 +4,7 @@ class Lift {
   final String id;
   final String name;
   final String color;
+  final String type;
   final List<List<double>> coordinates;
   final String bearing;
   double lineWidth;
@@ -14,6 +15,7 @@ class Lift {
     required this.id,
     required this.name,
     required this.color,
+    required this.type,
     required this.coordinates,
     required this.bearing,
     this.visible = true, // Default to visible
@@ -29,8 +31,26 @@ class Lift {
       id: properties['id'] ?? 'Unknown',
       name: properties['name'] ?? 'Unknown',
       color: properties['color'] ?? 'gray',
+      type: properties['liftType'] ?? 'Unknown',
       coordinates: GeoJsonHelper.parseCoordinates(geometry), // Use helper to parse coordinates
       bearing: properties['bearing']?.toString() ?? '0', // Handle null bearings
     );
+  }
+
+  // Method to generate GeoJSON feature for this lift
+  Map<String, dynamic> toFeature() {
+    return {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": coordinates,
+      },
+      "properties": {
+        "color": color,
+        "name": name,
+        "type": type,
+        "id": id,
+      },
+    };
   }
 }
