@@ -22,40 +22,12 @@ class GeoJsonHelper {
 
     // Generate GeoJSON features
     List<Map<String, dynamic>> features = items.map((item) {
-      // Check the object type (Lift or Piste) and map properties accordingly
-      if (item is Lift) {
-        return {
-          "type": "Feature",
-          "geometry": {
-            "type": "LineString",
-            "coordinates": item.coordinates,
-          },
-          "properties": {
-            "color": item.color,
-            "name": item.name,
-            "type": item.type,
-            "id": item.id,
-          },
-        };
-      } else if (item is Piste) {
-        return {
-          "type": "Feature",
-          "geometry": {
-            "type": "LineString",
-            "coordinates": item.coordinates,
-          },
-          "properties": {
-            "color": item.color,
-            "name": item.name,
-            "difficulty": item.difficulty,
-            "id": item.id,
-            "uses": item.uses,
-          },
-        };
+      if (item is Lift || item is Piste) {
+        return item.toFeature(); // Call the class-specific method
       } else {
         throw Exception('Unsupported object type: ${item.runtimeType}');
       }
-    }).toList();
+    }).toList().cast<Map<String, dynamic>>();
 
     try {
       // Add GeoJSON source
