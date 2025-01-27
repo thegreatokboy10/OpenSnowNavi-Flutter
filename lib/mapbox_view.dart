@@ -49,34 +49,6 @@ class _GeneratorPageState extends State<GeneratorPage> {
     'freeride': true
   };
 
-  // Colors for the map
-  Color connection_piste_color = Color.fromARGB(255, 52, 124, 40);
-  Color novice_piste_color = Color.fromARGB(255, 52, 124, 40);
-  Color easy_piste_color = Color.fromARGB(255, 63, 162, 246);
-  Color intermediate_piste_color = Color.fromARGB(255, 199, 37, 62);
-  Color advanced_piste_color = Color.fromARGB(200, 27, 27, 27);
-  Color expert_piste_color = Color.fromARGB(255, 255, 136, 91);
-  Color lift_color =  Color.fromRGBO(216, 59, 59, 1); // RGB values from hsl(0, 82%, 42%) and opacity set to 1 (fully opaque)
-  Color lift_stroke_color =  Color.fromRGBO(255, 255, 255, 1); // RGB values from hsl(0, 82%, 42%) and opacity set to 1 (fully opaque)
-  Color piste_default_color = Color.fromARGB(255, 255, 255, 255);
-  double strokeOpacity = 0.5;
-  double liftStrokeOpacity = 0.8;
-  // Min zoom level
-  double minZoomPiste = 14.0;
-  double minZoomLift = 12.0;
-  // Icon size
-  double iconSize = 40;
-  double arrowIconSize = 30;
-  // Piste/Lift name
-  double fontSize = 13;
-  double nameOffset = 0.6;
-  // Line size
-  double pisteLineWidth = 1.5;
-  double liftLineWidth = 4.0;
-  // Floating button
-  double floatingbuttonopacity = 0.9;
-  double floatingActionButtonScale = 0.8;
-
   // Variable to track whether the map is in 3D mode or not
   bool is3DMode = false;
 
@@ -228,8 +200,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
         try {
           // Create a Lift object and add it to GlobalData
           var lift = Lift.fromGeoJson(feature);
-          lift.lineWidth = liftLineWidth;
-          lift.highlightOpacity = strokeOpacity;
+          lift.lineWidth = GlobalConstants.liftLineWidth;
+          lift.highlightOpacity = GlobalConstants.strokeOpacity;
           GlobalData.lifts.add(lift);
         } catch (e) {
           print("Error parsing lift feature: $e");
@@ -241,9 +213,9 @@ class _GeneratorPageState extends State<GeneratorPage> {
           if (!piste.uses.contains("downhill") && !piste.uses.contains("connection")) {
             continue;
           }
-          piste.lineWidth = pisteLineWidth;
-          piste.secondColor = piste_default_color;
-          piste.highlightOpacity = strokeOpacity;
+          piste.lineWidth = GlobalConstants.pisteLineWidth;
+          piste.secondColor = GlobalConstants.piste_default_color;
+          piste.highlightOpacity = GlobalConstants.strokeOpacity;
           GlobalData.pistes.add(piste);
         } catch (e) {
           print("Error parsing piste feature: $e");
@@ -259,7 +231,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
       items: GlobalData.lifts, // Pass the list of Lift objects
       sourceId: 'lift-source',
       layerId: 'lift-layer',
-      lineWidth: liftLineWidth,
+      lineWidth: GlobalConstants.liftLineWidth,
       sourceList: liftSources,
       layerList: liftLayers,
     );
@@ -271,7 +243,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
       items: GlobalData.pistes, // Pass the list of Piste objects
       sourceId: 'run-source',
       layerId: 'run-layer',
-      lineWidth: pisteLineWidth,
+      lineWidth: GlobalConstants.pisteLineWidth,
       sourceList: pisteSources,
       layerList: pisteLayers,
     );
@@ -438,7 +410,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
       // Show bottom sheet
       showBottomSheet(
         context: context,
-        backgroundColor: Colors.white.withOpacity(floatingbuttonopacity),
+        backgroundColor: Colors.white.withOpacity(GlobalConstants.floatingbuttonopacity),
         enableDrag: false,
         builder: (BuildContext context) {
           return GestureDetector(
@@ -501,38 +473,38 @@ class _GeneratorPageState extends State<GeneratorPage> {
   void _onStyleLoadedCallback() async {
     _addFlutterIconToMap(
       icon: Icons.arrow_right,
-      color: lift_color,
-      size: iconSize,
+      color: GlobalConstants.lift_color,
+      size: GlobalConstants.iconSize,
       imageName: 'lift-arrow',
     );
     _addFlutterIconToMap(
       icon: Icons.arrow_right,
-      color: novice_piste_color,
-      size: arrowIconSize,
+      color: GlobalConstants.novice_piste_color,
+      size: GlobalConstants.arrowIconSize,
       imageName: 'novice-piste-arrow',
     );
     _addFlutterIconToMap(
       icon: Icons.arrow_right,
-      color: easy_piste_color,
-      size: arrowIconSize,
+      color: GlobalConstants.easy_piste_color,
+      size: GlobalConstants.arrowIconSize,
       imageName: 'easy-piste-arrow',
     );
     _addFlutterIconToMap(
       icon: Icons.arrow_right,
-      color: intermediate_piste_color,
-      size: arrowIconSize,
+      color: GlobalConstants.intermediate_piste_color,
+      size: GlobalConstants.arrowIconSize,
       imageName: 'intermediate-piste-arrow',
     );
     _addFlutterIconToMap(
       icon: Icons.arrow_right,
-      color: advanced_piste_color,
-      size: arrowIconSize,
+      color: GlobalConstants.advanced_piste_color,
+      size: GlobalConstants.arrowIconSize,
       imageName: 'advanced-piste-arrow',
     );
     _addFlutterIconToMap(
       icon: Icons.arrow_right,
-      color: expert_piste_color,
-      size: arrowIconSize,
+      color: GlobalConstants.expert_piste_color,
+      size: GlobalConstants.arrowIconSize,
       imageName: 'expert-piste-arrow',
     );
 
@@ -1213,9 +1185,9 @@ class _GeneratorPageState extends State<GeneratorPage> {
             bottom: 38,
             left: 20, 
             child: Transform.scale(
-              scale: floatingActionButtonScale, // 缩放比例
+              scale: GlobalConstants.floatingActionButtonScale, // 缩放比例
               child: FloatingActionButton(
-                backgroundColor: Colors.white.withOpacity(floatingbuttonopacity), // 按钮颜色
+                backgroundColor: Colors.white.withOpacity(GlobalConstants.floatingbuttonopacity), // 按钮颜色
                 onPressed: _showFilterDialog,
                 tooltip: 'Filter',
                 child: Icon(Icons.filter_alt), // 使用筛选图标
@@ -1226,9 +1198,9 @@ class _GeneratorPageState extends State<GeneratorPage> {
             top: 18,
             right: 20, 
             child: Transform.scale(
-              scale: floatingActionButtonScale,
+              scale: GlobalConstants.floatingActionButtonScale,
               child: FloatingActionButton(
-                backgroundColor: Colors.white.withOpacity(floatingbuttonopacity),
+                backgroundColor: Colors.white.withOpacity(GlobalConstants.floatingbuttonopacity),
                 onPressed: _toggle2D3DView,
                 child: Text(
                   is3DMode ? '2D' : '3D',
@@ -1245,9 +1217,9 @@ class _GeneratorPageState extends State<GeneratorPage> {
             top: 68,
             right: 20, 
             child: Transform.scale(
-              scale: floatingActionButtonScale,
+              scale: GlobalConstants.floatingActionButtonScale,
               child: FloatingActionButton(
-                backgroundColor: Colors.white.withOpacity(floatingbuttonopacity),
+                backgroundColor: Colors.white.withOpacity(GlobalConstants.floatingbuttonopacity),
                 onPressed: _locateCurrentPosition,
                 tooltip: 'Locate Me',
                 child: Icon(Icons.my_location),
