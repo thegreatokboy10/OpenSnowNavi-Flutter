@@ -80,4 +80,11 @@ class GlobalConstants {
   static String routeLayerId = "route-layer";
   static String routeSourceId = "route-source";
   static double lowlightFeatureOpacity = 0.3;
+  static String routeColor = "#1a5ad0";
+  static double routeLineWidth = 8.0;
+  // Piste/Lift layers
+  static String pisteLayerId = "run-layer";
+  static String pisteSourceId = "run-source";
+  static String liftLayerId = "lift-layer";
+  static String liftSourceId = "lift-source";
 }

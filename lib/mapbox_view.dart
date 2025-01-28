@@ -9,13 +9,12 @@ import 'dart:math';
 import 'geojson_helper.dart';
 import 'lift.dart';
 import 'piste.dart';
+import 'route_engine.dart' as re;
 import 'timer_flag.dart';
 import 'global_constants.dart';
 import 'global_data.dart';
 import 'search_service.dart';
 import 'location_service.dart';
-import 'package:http/http.dart' as http;
-import 'package:polyline_codec/polyline_codec.dart';
 import 'package:url_launcher/url_launcher.dart'; // Add this for opening URLs
 
 class GeneratorPage extends StatefulWidget {
@@ -24,6 +23,9 @@ class GeneratorPage extends StatefulWidget {
 }
 
 class _GeneratorPageState extends State<GeneratorPage> {
+  // Create an instance of RouteEngine
+  final routeEngine = re.RouteEngine();
+  re.Route? route;
   // Resort
   String selectedResortKey = '3valley'; // Default selection for 3 Valleys
   // Filter set for pistes and lifts
@@ -231,17 +233,17 @@ class _GeneratorPageState extends State<GeneratorPage> {
     GeoJsonHelper.addAggregateSourceAndLayer(
       mapController: mapController!,
       items: GlobalData.pistes, // Pass the list of Piste objects
-      sourceId: 'run-source',
-      layerId: 'run-layer',
+      sourceId: GlobalConstants.pisteSourceId,
+      layerId: GlobalConstants.pisteLayerId,
       lineWidth: GlobalConstants.pisteLineWidth,
       lineOpacity: opacity,
       sourceList: pisteSources,
       layerList: pisteLayers,
     );
-    layerIds.add('run-layer');
+    layerIds.add(GlobalConstants.pisteLayerId);
     GeoJsonHelper.addNameLayer(
       mapController: mapController!,
-      sourceId: 'run-source',
+      sourceId: GlobalConstants.pisteSourceId,
       layerId: 'run-name-layer',
       textSize: 10.0, // Adjust font size for lift names
       minZoom: GlobalConstants.minZoomPiste, // Use the predefined minimum zoom for pistes
@@ -251,7 +253,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
     pisteLayers.add('run-name-layer');
     GeoJsonHelper.addArrowLayer(
       mapController: mapController!,
-      sourceId: 'run-source',
+      sourceId: GlobalConstants.pisteSourceId,
       layerId: 'run-arrow-layer',
       iconImage: 'default-piste-arrow', // Fallback icon if no dynamic expression is provided
       iconOpacity: opacity,
@@ -268,17 +270,17 @@ class _GeneratorPageState extends State<GeneratorPage> {
     GeoJsonHelper.addAggregateSourceAndLayer(
       mapController: mapController!,
       items: GlobalData.lifts, // Pass the list of Lift objects
-      sourceId: 'lift-source',
-      layerId: 'lift-layer',
+      sourceId: GlobalConstants.liftSourceId,
+      layerId: GlobalConstants.liftLayerId,
       lineWidth: GlobalConstants.liftLineWidth,
       lineOpacity: opacity,
       sourceList: liftSources,
       layerList: liftLayers,
     );
-    layerIds.add('lift-layer');
+    layerIds.add(GlobalConstants.liftLayerId);
     GeoJsonHelper.addNameLayer(
       mapController: mapController!,
-      sourceId: 'lift-source',
+      sourceId: GlobalConstants.liftSourceId,
       layerId: 'lift-name-layer',
       textSize: 12.0, // Adjust font size for lift names
       minZoom: GlobalConstants.minZoomLift, // Use the predefined minimum zoom for lifts
@@ -288,7 +290,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
     liftLayers.add('lift-name-layer');
     GeoJsonHelper.addArrowLayer(
       mapController: mapController!,
-      sourceId: 'lift-source',
+      sourceId: GlobalConstants.liftSourceId,
       layerId: 'lift-arrow-layer',
       iconImage: 'lift-arrow',
       iconOpacity: opacity,
@@ -736,30 +738,6 @@ class _GeneratorPageState extends State<GeneratorPage> {
     );
   }
 
-  // Extract route points from all legs and steps
-  List<List<num>> _extractRouteFromLegs(Map<String, dynamic> json) {
-    List<List<num>> decodedCoords = [];
-
-    try {
-      List<dynamic> legs = json['routes'][0]['legs'];
-
-      // Loop through all legs
-      for (var leg in legs) {
-        List<dynamic> steps = leg['steps'];
-
-        // Loop through all steps within each leg
-        for (var step in steps) {
-          String geometry = step['geometry'];
-          decodedCoords.addAll(PolylineCodec.decode(geometry, precision: 5));
-        }
-      }
-    } catch (e) {
-      print('Error extracting route points: $e');
-    }
-
-    return decodedCoords;
-  }
-
   Future<void> _removeExistingRoute() async {
     try {
       _clearLayers(routeLayers);
@@ -772,107 +750,35 @@ class _GeneratorPageState extends State<GeneratorPage> {
   }
 
   void _generateRoute(LatLng startCoordinate, LatLng endCoordinate) async {
-    // 构建请求 URL，使用提供的起点和终点坐标
-    String start = '${startCoordinate.longitude},${startCoordinate.latitude}';
-    String end = '${endCoordinate.longitude},${endCoordinate.latitude}';
-    String url = 'https://snownavi.ski/route/v1/$start;$end?alternatives=false&overview=false&steps=true';
-    if (selectedResortKey == 'morzine') {
-      url = 'https://snownavi.ski/route/morzine/v1/$start;$end?alternatives=false&overview=false&steps=true';
-    }
-    
-    try {
-      // 等待服务器的响应
-      final response = await http.get(Uri.parse(url));
+    route = await routeEngine.generateRoute(
+      startCoordinate: startCoordinate,
+      endCoordinate: endCoordinate,
+      selectedResortKey: selectedResortKey,
+    );
 
-      if (response.statusCode == 200) {
-        final jsonResponse = jsonDecode(response.body);
-        print('Response: $jsonResponse');
+    if (route != null) {
+      // 如果存在，则移除现有的路线图层和源
+      await _removeExistingRoute();
 
-        // 使用 polyline_codec 将 polyline 解码为一组 LatLng 点
-        final decodedPoints = _extractRouteFromLegs(jsonResponse);
+      GeoJsonHelper.drawRoute(
+        mapController: mapController!, 
+        route: route!, 
+        routeSourceId: GlobalConstants.routeSourceId, 
+        routeLayerId: GlobalConstants.routeLayerId,
+        routeColor: GlobalConstants.routeColor,
+        routeLineWidth: GlobalConstants.routeLineWidth,
+        beforeLayerId: GlobalConstants.pisteLayerId,
+      );
+      routeSources.add(GlobalConstants.routeSourceId);
+      routeLayers.add(GlobalConstants.routeLayerId);
 
-        print('Decoded points: $decodedPoints');
-
-        // 如果存在，则移除现有的路线图层和源
-        await _removeExistingRoute();
-
-        // 将路线添加为新源
-        await mapController?.addSource(
-          GlobalConstants.routeSourceId,
-          GeojsonSourceProperties(
-            data: {
-              "type": "FeatureCollection",
-              "features": [
-                {
-                  "type": "Feature",
-                  "geometry": {
-                    "type": "LineString",
-                    "coordinates": decodedPoints
-                        .map((point) => [point[1], point[0]]) // GeoJSON 使用 [lng, lat]
-                        .toList(),
-                  },
-                },
-              ],
-            },
-          ),
-        );
-
-        // 在顶部添加路线图层
-        await mapController?.addLineLayer(
-          GlobalConstants.routeSourceId,
-          GlobalConstants.routeLayerId,
-          LineLayerProperties(
-            lineColor: "#1a5ad0", // 路线颜色
-            lineWidth: 8.0,
-            lineOpacity: 1,
-          ),
-        );
-        routeSources.add(GlobalConstants.routeSourceId);
-        routeLayers.add(GlobalConstants.routeLayerId);
-
-        // Adjust camera to fit the entire route
-        if (decodedPoints.isNotEmpty) {
-          _fitCameraToRoute(decodedPoints.map((point) => [point[0].toDouble(), point[1].toDouble()]).toList(), // Convert to double);
-          );
-        }
-
-        // refresh piste and lift layers to apply lowlight opacity
+      // refresh piste and lift layers to apply lowlight opacity
         _refreshPisteAndLiftLayers(opacity: GlobalConstants.lowlightFeatureOpacity);
-      } else {
-        print('Request failed with status: ${response.statusCode}.');
-      }
-    } catch (e) {
-      print('Error making request: $e');
     }
   }
 
-  void _fitCameraToRoute(List<List<double>> decodedPoints) {
-    // Extract bounds from decoded points
-    final latitudes = decodedPoints.map((point) => point[0]).toList();
-    final longitudes = decodedPoints.map((point) => point[1]).toList();
-
-    // Compute the southwest and northeast corners of the bounding box
-    final southWest = LatLng(
-      latitudes.reduce((a, b) => a < b ? a : b), // Minimum latitude
-      longitudes.reduce((a, b) => a < b ? a : b), // Minimum longitude
-    );
-    final northEast = LatLng(
-      latitudes.reduce((a, b) => a > b ? a : b), // Maximum latitude
-      longitudes.reduce((a, b) => a > b ? a : b), // Maximum longitude
-    );
-
-    // Use mapController to fit the bounds
-    mapController?.animateCamera(
-      CameraUpdate.newLatLngBounds(
-        LatLngBounds(southwest: southWest, northeast: northEast),
-      ),
-    );
-  }
-  
   void _onMapClick(Point<double> point, LatLng coordinates) async {
-    print('map-click to generate demo route');
-
-    // _generateDemoRoute();
+    // Handle map click event
   }
 
   // web does not support long click, it maps double click to long click

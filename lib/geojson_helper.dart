@@ -1,6 +1,8 @@
 import 'package:mapbox_gl/mapbox_gl.dart';
+import 'package:polyline_codec/polyline_codec.dart';
 import 'lift.dart';
 import 'piste.dart';
+import 'route_engine.dart';
 
 class GeoJsonHelper {
   // Helper method to generate a source and layer for a list of objects
@@ -192,6 +194,85 @@ class GeoJsonHelper {
       print('Color: $color, Width: $lineWidth, Opacity: $lineOpacity');
     } catch (e) {
       print('Error adding highlighted line layer $layerId: $e');
+    }
+  }
+
+  // Method to draw a Route object on the map
+  static void drawRoute({
+    required MapboxMapController mapController,
+    required Route route,
+    required String routeSourceId,
+    required String routeLayerId,
+    String routeColor = '#FF0000', // Default route color
+    double routeLineWidth = 6.0, // Default route line width
+    String? beforeLayerId, // Optional parameter to specify layer ordering
+  }) {
+    try {
+      // Decode all route steps and build GeoJSON features
+      List<Map<String, dynamic>> features = route.steps.map((step) {
+        return {
+          "type": "Feature",
+          "geometry": {
+            "type": "LineString",
+            "coordinates": PolylineCodec.decode(
+              step.geometry,
+              precision: 5,
+            ).map((coords) => [coords[1], coords[0]]).toList(),
+          },
+          "properties": {
+            "name": step.name,
+          },
+        };
+      }).toList();
+
+      // Decode all points for bounds calculation
+      final allPoints = route.steps
+          .expand((step) => PolylineCodec.decode(step.geometry, precision: 5))
+          .toList();
+
+      // Compute bounds and adjust the camera
+      mapController.animateCamera(
+        CameraUpdate.newLatLngBounds(
+          LatLngBounds(
+            southwest: LatLng(
+              allPoints.map((point) => point[0].toDouble()).reduce((a, b) => a < b ? a : b), // Minimum latitude
+              allPoints.map((point) => point[1].toDouble()).reduce((a, b) => a < b ? a : b), // Minimum longitude
+            ),
+            northeast: LatLng(
+              allPoints.map((point) => point[0].toDouble()).reduce((a, b) => a > b ? a : b), // Maximum latitude
+              allPoints.map((point) => point[1].toDouble()).reduce((a, b) => a > b ? a : b), // Maximum longitude
+            ),
+          ),
+        ),
+      );
+
+      // Add the GeoJSON source for the route
+      mapController.addSource(
+        routeSourceId,
+        GeojsonSourceProperties(
+          data: {
+            "type": "FeatureCollection",
+            "features": features,
+          },
+        ),
+      );
+
+      // Add the route layer to the map
+      mapController.addLineLayer(
+        routeSourceId,
+        routeLayerId,
+        LineLayerProperties(
+          lineColor: routeColor, // Set the route line color
+          lineWidth: routeLineWidth, // Set the route line width
+          lineOpacity: 1, // Set the line opacity
+          lineCap: 'round', // Rounded ends for the line
+        ),
+        belowLayerId: beforeLayerId,
+      );
+
+      print('Route drawn and camera fitted to route bounds. Source ID: $routeSourceId, Layer ID: $routeLayerId');
+    } catch (e) {
+      print('Error drawing route on map: $e');
     }
   }
 }
