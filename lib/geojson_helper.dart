@@ -89,6 +89,36 @@ class GeoJsonHelper {
     }
   }
 
+  // Method to add a name layer
+  static void addNameLayer({
+    required MapboxMapController mapController,
+    required String sourceId, // Source ID to reference
+    required String layerId, // Layer ID for the name layer
+    required double textSize, // Font size for the text
+    required double minZoom, // Minimum zoom level for rendering the text
+    required double textOffset, // Text offset to slightly adjust its position
+  }) {
+    try {
+      mapController.addSymbolLayer(
+        sourceId,
+        layerId,
+        SymbolLayerProperties(
+          textField: ['get', 'name'], // Use 'name' property from GeoJSON
+          textSize: textSize,
+          symbolPlacement: 'line', // Place labels along the line
+          textAnchor: 'center', // Anchor the text in the center
+          textAllowOverlap: false, // Prevent overlapping text
+          textOffset: [0, textOffset], // Adjust text position slightly
+          textColor: ['get', 'color'], // Use 'color' property from GeoJSON
+        ),
+        minzoom: minZoom,
+      );
+      print('Name layer added: $layerId (source: $sourceId)');
+    } catch (e) {
+      print('Error adding name layer $layerId: $e');
+    }
+  }
+  
   // Helper function to parse coordinates for LineString geometry
   static List<List<double>> parseCoordinates(dynamic geometry) {
     if (geometry['type'] == 'LineString') {

@@ -222,26 +222,6 @@ class _GeneratorPageState extends State<GeneratorPage> {
       }
     }
 
-    // Add layers for lifts
-    GeoJsonHelper.addAggregateSourceAndLayer(
-      mapController: mapController!,
-      items: GlobalData.lifts, // Pass the list of Lift objects
-      sourceId: 'lift-source',
-      layerId: 'lift-layer',
-      lineWidth: GlobalConstants.liftLineWidth,
-      sourceList: liftSources,
-      layerList: liftLayers,
-    );
-    layerIds.add('lift-layer');
-    GeoJsonHelper.addArrowLayer(
-      mapController: mapController!,
-      sourceId: 'lift-source',
-      layerId: 'lift-arrow-layer',
-      iconImage: 'lift-arrow',
-      minZoom: GlobalConstants.minZoomLift,
-    );
-    liftLayers.add('lift-arrow-layer');
-
     // Add layers for pistes
     GeoJsonHelper.addAggregateSourceAndLayer(
       mapController: mapController!,
@@ -253,6 +233,15 @@ class _GeneratorPageState extends State<GeneratorPage> {
       layerList: pisteLayers,
     );
     layerIds.add('run-layer');
+    GeoJsonHelper.addNameLayer(
+      mapController: mapController!,
+      sourceId: 'run-source',
+      layerId: 'run-name-layer',
+      textSize: 10.0, // Adjust font size for lift names
+      minZoom: GlobalConstants.minZoomPiste, // Use the predefined minimum zoom for pistes
+      textOffset: 0.5, // Slight vertical adjustment for text
+    );
+    pisteLayers.add('run-name-layer');
     GeoJsonHelper.addArrowLayer(
       mapController: mapController!,
       sourceId: 'run-source',
@@ -266,6 +255,35 @@ class _GeneratorPageState extends State<GeneratorPage> {
       ], // Dynamic icon expression for pistes
     );
     pisteLayers.add('run-arrow-layer');
+
+    // Add layers for lifts
+    GeoJsonHelper.addAggregateSourceAndLayer(
+      mapController: mapController!,
+      items: GlobalData.lifts, // Pass the list of Lift objects
+      sourceId: 'lift-source',
+      layerId: 'lift-layer',
+      lineWidth: GlobalConstants.liftLineWidth,
+      sourceList: liftSources,
+      layerList: liftLayers,
+    );
+    layerIds.add('lift-layer');
+    GeoJsonHelper.addNameLayer(
+      mapController: mapController!,
+      sourceId: 'lift-source',
+      layerId: 'lift-name-layer',
+      textSize: 12.0, // Adjust font size for lift names
+      minZoom: GlobalConstants.minZoomLift, // Use the predefined minimum zoom for lifts
+      textOffset: 0.5, // Slight vertical adjustment for text
+    );
+    liftLayers.add('lift-name-layer');
+    GeoJsonHelper.addArrowLayer(
+      mapController: mapController!,
+      sourceId: 'lift-source',
+      layerId: 'lift-arrow-layer',
+      iconImage: 'lift-arrow',
+      minZoom: GlobalConstants.minZoomLift,
+    );
+    liftLayers.add('lift-arrow-layer');
 
     print('Layers for lifts and pistes added successfully');
   }
