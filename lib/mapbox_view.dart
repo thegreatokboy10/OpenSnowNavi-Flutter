@@ -71,8 +71,6 @@ class _GeneratorPageState extends State<GeneratorPage> {
   bool hasSearched = false; // Tracks if a search has been performed
   Timer? _debounce;
 
-  final String routeLayerId = "route-layer";
-  final String routeSourceId = "route-source";
   List<String> routeLayers = [];
   List<String> routeSources = [];
 
@@ -222,6 +220,13 @@ class _GeneratorPageState extends State<GeneratorPage> {
       }
     }
 
+    _refreshPisteAndLiftLayers();
+  }
+
+  void _refreshPisteAndLiftLayers({double opacity = 0.8}) {
+    _clearLayers(layerIds);
+    _clearLayers(pisteLayers);
+    _clearLayers(liftLayers);
     // Add layers for pistes
     GeoJsonHelper.addAggregateSourceAndLayer(
       mapController: mapController!,
@@ -229,6 +234,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
       sourceId: 'run-source',
       layerId: 'run-layer',
       lineWidth: GlobalConstants.pisteLineWidth,
+      lineOpacity: opacity,
       sourceList: pisteSources,
       layerList: pisteLayers,
     );
@@ -240,6 +246,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
       textSize: 10.0, // Adjust font size for lift names
       minZoom: GlobalConstants.minZoomPiste, // Use the predefined minimum zoom for pistes
       textOffset: 0.5, // Slight vertical adjustment for text
+      textOpacity: opacity,
     );
     pisteLayers.add('run-name-layer');
     GeoJsonHelper.addArrowLayer(
@@ -247,6 +254,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
       sourceId: 'run-source',
       layerId: 'run-arrow-layer',
       iconImage: 'default-piste-arrow', // Fallback icon if no dynamic expression is provided
+      iconOpacity: opacity,
       minZoom: GlobalConstants.minZoomPiste,
       iconImageExpression: [
         'concat',
@@ -263,6 +271,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
       sourceId: 'lift-source',
       layerId: 'lift-layer',
       lineWidth: GlobalConstants.liftLineWidth,
+      lineOpacity: opacity,
       sourceList: liftSources,
       layerList: liftLayers,
     );
@@ -274,6 +283,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
       textSize: 12.0, // Adjust font size for lift names
       minZoom: GlobalConstants.minZoomLift, // Use the predefined minimum zoom for lifts
       textOffset: 0.5, // Slight vertical adjustment for text
+      textOpacity: opacity,
     );
     liftLayers.add('lift-name-layer');
     GeoJsonHelper.addArrowLayer(
@@ -281,6 +291,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
       sourceId: 'lift-source',
       layerId: 'lift-arrow-layer',
       iconImage: 'lift-arrow',
+      iconOpacity: opacity,
       minZoom: GlobalConstants.minZoomLift,
     );
     liftLayers.add('lift-arrow-layer');
@@ -753,73 +764,13 @@ class _GeneratorPageState extends State<GeneratorPage> {
     try {
       _clearLayers(routeLayers);
       _clearSources(routeSources);
+      // restore piste and lift layers
+      _refreshPisteAndLiftLayers();
     } catch (e) {
       print('No existing route layer to remove: $e');
     }
   }
 
-  void _generateDemoRoute() async {
-    // Send request to the specified URL
-    String url =
-        'https://snownavi.ski/route/v1/6.557550,45.364449;6.560555,45.264497?alternatives=false&overview=false&steps=true';
-
-    try {
-      // Await the response from the server
-      final response = await http.get(Uri.parse(url));
-
-      if (response.statusCode == 200) {
-        final jsonResponse = jsonDecode(response.body);
-        print('Response: $jsonResponse');
-
-        // Decode the polyline into a list of LatLng points using polyline_codec
-        final decodedPoints = _extractRouteFromLegs(jsonResponse);
-
-        print('Decoded points: $decodedPoints');
-
-        // Remove existing route layer and source if they exist
-        await _removeExistingRoute();
-
-        // Add the route as a new source
-        await mapController?.addSource(
-          routeSourceId,
-          GeojsonSourceProperties(
-            data: {
-              "type": "FeatureCollection",
-              "features": [
-                {
-                  "type": "Feature",
-                  "geometry": {
-                    "type": "LineString",
-                    "coordinates": decodedPoints
-                        .map((point) => [point[1], point[0]]) // GeoJSON uses [lng, lat]
-                        .toList(),
-                  },
-                },
-              ],
-            },
-          ),
-        );
-
-        // Add the route layer on top
-        await mapController?.addLineLayer(
-          routeSourceId,
-          routeLayerId,
-          LineLayerProperties(
-            lineColor: "#03045e", // route line
-            lineWidth: 10.0,
-            lineOpacity: 0.8,
-          ),
-        );
-        routeSources.add(routeSourceId);
-        routeLayers.add(routeLayerId);
-      } else {
-        print('Request failed with status: ${response.statusCode}.');
-      }
-    } catch (e) {
-      print('Error making request: $e');
-    }
-  }
-  
   void _generateRoute(LatLng startCoordinate, LatLng endCoordinate) async {
     // 构建请求 URL，使用提供的起点和终点坐标
     String start = '${startCoordinate.longitude},${startCoordinate.latitude}';
@@ -829,7 +780,6 @@ class _GeneratorPageState extends State<GeneratorPage> {
       url = 'https://snownavi.ski/route/morzine/v1/$start;$end?alternatives=false&overview=false&steps=true';
     }
     
-
     try {
       // 等待服务器的响应
       final response = await http.get(Uri.parse(url));
@@ -848,7 +798,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
 
         // 将路线添加为新源
         await mapController?.addSource(
-          routeSourceId,
+          GlobalConstants.routeSourceId,
           GeojsonSourceProperties(
             data: {
               "type": "FeatureCollection",
@@ -869,22 +819,25 @@ class _GeneratorPageState extends State<GeneratorPage> {
 
         // 在顶部添加路线图层
         await mapController?.addLineLayer(
-          routeSourceId,
-          routeLayerId,
+          GlobalConstants.routeSourceId,
+          GlobalConstants.routeLayerId,
           LineLayerProperties(
-            lineColor: "#03045e", // 路线颜色
-            lineWidth: 10.0,
-            lineOpacity: 0.8,
+            lineColor: "#1a5ad0", // 路线颜色
+            lineWidth: 8.0,
+            lineOpacity: 1,
           ),
         );
-        routeSources.add(routeSourceId);
-        routeLayers.add(routeLayerId);
+        routeSources.add(GlobalConstants.routeSourceId);
+        routeLayers.add(GlobalConstants.routeLayerId);
 
         // Adjust camera to fit the entire route
         if (decodedPoints.isNotEmpty) {
           _fitCameraToRoute(decodedPoints.map((point) => [point[0].toDouble(), point[1].toDouble()]).toList(), // Convert to double);
           );
         }
+
+        // refresh piste and lift layers to apply lowlight opacity
+        _refreshPisteAndLiftLayers(opacity: GlobalConstants.lowlightFeatureOpacity);
       } else {
         print('Request failed with status: ${response.statusCode}.');
       }
@@ -959,9 +912,6 @@ class _GeneratorPageState extends State<GeneratorPage> {
         text: "A",
       );
     }
-
-    List<Map<String, dynamic>> results =
-        await SearchService.searchPOI("ucpa", resortCoordinate!, 5);
   }
 
   void _addCircleWithText(

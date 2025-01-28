@@ -13,6 +13,7 @@ class GeoJsonHelper {
     required List<String> sourceList, // List to track sources
     required List<String> layerList, // List to track layers
     String colorProperty = 'color',
+    double lineOpacity = 0.8,
   }) {
     // Validate input
     if (items.isEmpty) {
@@ -48,7 +49,7 @@ class GeoJsonHelper {
         LineLayerProperties(
           lineColor: ['get', colorProperty], // Use color property from GeoJSON
           lineWidth: lineWidth,
-          lineOpacity: 0.8,
+          lineOpacity: lineOpacity,
           lineCap: 'round',
         ),
       );
@@ -68,6 +69,7 @@ class GeoJsonHelper {
     required String iconImage, // Icon image for the arrow
     required double minZoom, // Minimum zoom level for the layer
     List<dynamic>? iconImageExpression, // Optional dynamic icon image expression
+    double iconOpacity = 0.8, // Opacity for the arrow
   }) {
     try {
       mapController.addSymbolLayer(
@@ -80,6 +82,7 @@ class GeoJsonHelper {
           iconAllowOverlap: false,
           iconRotate: ['get', 'bearing'], // Rotate arrow based on line bearing
           iconRotationAlignment: 'map',
+          iconOpacity: iconOpacity,
         ),
         minzoom: minZoom,
       );
@@ -97,6 +100,7 @@ class GeoJsonHelper {
     required double textSize, // Font size for the text
     required double minZoom, // Minimum zoom level for rendering the text
     required double textOffset, // Text offset to slightly adjust its position
+    double textOpacity = 0.8, // Text opacity
   }) {
     try {
       mapController.addSymbolLayer(
@@ -110,6 +114,7 @@ class GeoJsonHelper {
           textAllowOverlap: false, // Prevent overlapping text
           textOffset: [0, textOffset], // Adjust text position slightly
           textColor: ['get', 'color'], // Use 'color' property from GeoJSON
+          textOpacity: textOpacity,
         ),
         minzoom: minZoom,
       );

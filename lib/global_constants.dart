@@ -76,4 +76,8 @@ class GlobalConstants {
   // Floating button
   static double floatingbuttonopacity = 0.9;
   static double floatingActionButtonScale = 0.8;
+  // Route
+  static String routeLayerId = "route-layer";
+  static String routeSourceId = "route-source";
+  static double lowlightFeatureOpacity = 0.3;
 }
