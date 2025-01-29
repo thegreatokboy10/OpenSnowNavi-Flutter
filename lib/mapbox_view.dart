@@ -599,16 +599,32 @@ class _GeneratorPageState extends State<GeneratorPage> {
     );
 
     // Add layers from GeoJSON assets
-    _loadSkiResortData();
+    await _loadSkiResortData();
 
     // Restore route
     if (needRestore) {
-      print("restore route $startCoordinate!, $endCoordinate");
-      _onMapLongClick(Point(0,0), startCoordinate!);
-      _onMapLongClick(Point(0,0), endCoordinate!);
-      needRestore = false;
-      _generateRoute(startCoordinate!, endCoordinate!);
+      print("restore route $startCoordinate, $endCoordinate");
+
+      // 安全地处理起点和终点
+      if (startCoordinate != null && endCoordinate != null) {
+        // 设置起点和终点
+        _setRouteCoordinates(startCoordinate!, endCoordinate!);
+        
+        // 生成路线
+        _generateRoute(startCoordinate!, endCoordinate!);
+        
+        // 标记为已恢复
+        needRestore = false;
+      } else {
+        print("Start or end coordinate is null, cannot restore route.");
+      }
     }
+  }
+
+  void _setRouteCoordinates(LatLng start, LatLng end) {
+    _clearAllCircles(); // 清除现有的圆
+    _addCircleWithText(start, circleColor: "#00FF00", text: "A"); // 添加起点圆和文本
+    _addCircleWithText(end, circleColor: "#0000FF", text: "B"); // 添加终点圆和文本
   }
 
   // Callback when the Mapbox map is created
@@ -806,7 +822,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
 
     // Ensure start and end coordinates exist
     if (startCoordinate == null || endCoordinate == null) {
-      return "Error: Start and end coordinates are required.";
+      return currentDomain;
     }
 
     // Collect all coordinates (start → stopovers → end)
@@ -1015,6 +1031,46 @@ class _GeneratorPageState extends State<GeneratorPage> {
     }
   }
 
+  void _showSharePopup() {
+    final String generatedUrl = _generateSkiPlannerUrl(selectedResortKey, startCoordinate, endCoordinate, stopovers);
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text("Share SnowNavi"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SelectableText(
+                generatedUrl,
+                style: TextStyle(fontSize: 14),
+              ),
+              SizedBox(height: 10),
+              ElevatedButton.icon(
+                onPressed: () {
+                  html.window.navigator.clipboard?.writeText(generatedUrl);
+                  Navigator.pop(context); // Close dialog
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text("URL copied to clipboard!")),
+                  );
+                },
+                icon: Icon(Icons.copy),
+                label: Text("Copy URL"),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text("Close"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -1197,6 +1253,19 @@ class _GeneratorPageState extends State<GeneratorPage> {
                 onPressed: _locateCurrentPosition,
                 tooltip: 'Locate Me',
                 child: Icon(Icons.my_location),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 118, // Below "Locate Me" button
+            right: 20,
+            child: Transform.scale(
+              scale: GlobalConstants.floatingActionButtonScale,
+              child: FloatingActionButton(
+                backgroundColor: Colors.white.withOpacity(GlobalConstants.floatingbuttonopacity),
+                onPressed: _showSharePopup, // Show popup with URL
+                tooltip: 'Share SnowNavi',
+                child: Icon(Icons.share),
               ),
             ),
           ),
