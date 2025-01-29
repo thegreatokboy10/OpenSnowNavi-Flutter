@@ -3,6 +3,7 @@ import 'package:mapbox_gl/mapbox_gl.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'dart:async';
 import 'dart:convert';
+import 'dart:html' as html;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'dart:math';
@@ -18,6 +19,11 @@ import 'location_service.dart';
 import 'package:url_launcher/url_launcher.dart'; // Add this for opening URLs
 
 class GeneratorPage extends StatefulWidget {
+  final List<List<double>>? coordinates; // List of lat-lng pairs
+  final String? resortKey; // Resort key for the map
+
+  const GeneratorPage({Key? key, this.coordinates, this.resortKey}) : super(key: key);
+
   @override
   _GeneratorPageState createState() => _GeneratorPageState();
 }
@@ -79,16 +85,50 @@ class _GeneratorPageState extends State<GeneratorPage> {
 
   MapboxMapController? mapController;
 
+  // flag to track if route needs to be restored from url
+  bool needRestore = false;
+
   @override
   void initState() {
     super.initState();
     _searchController = TextEditingController();
+    needRestore = _restoreParameters();
   }
 
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  // Parses coordinates and restores class variables
+  bool _restoreParameters() {
+    bool hasResortKey = widget.resortKey != null && widget.resortKey!.isNotEmpty;
+    bool hasCoordinates = widget.coordinates != null && widget.coordinates!.isNotEmpty;
+
+    if (!hasResortKey || !hasCoordinates) {
+      print("no route needs to restored");
+      return false; // One or both parameters are missing
+    }
+
+    // Assign resortKey only if it's non-empty and non-null
+    selectedResortKey = widget.resortKey!;
+
+    // Assign coordinates only if they exist
+    startCoordinate = LatLng(widget.coordinates!.first[1], widget.coordinates!.first[0]);
+    endCoordinate = LatLng(widget.coordinates!.last[1], widget.coordinates!.last[0]);
+
+    if (widget.coordinates!.length > 2) {
+      stopovers = widget.coordinates!
+          .sublist(1, widget.coordinates!.length - 1)
+          .map((coord) => LatLng(coord[0], coord[1]))
+          .toList();
+    } else {
+      stopovers = [];
+    }
+
+    print("route needs to be restored with $selectedResortKey and $startCoordinate to $endCoordinate via $stopovers");
+    return true; // Both parameters are present
   }
 
   void _onSearchChanged(String query) {
@@ -560,6 +600,15 @@ class _GeneratorPageState extends State<GeneratorPage> {
 
     // Add layers from GeoJSON assets
     _loadSkiResortData();
+
+    // Restore route
+    if (needRestore) {
+      print("restore route $startCoordinate!, $endCoordinate");
+      _onMapLongClick(Point(0,0), startCoordinate!);
+      _onMapLongClick(Point(0,0), endCoordinate!);
+      needRestore = false;
+      _generateRoute(startCoordinate!, endCoordinate!);
+    }
   }
 
   // Callback when the Mapbox map is created
@@ -750,6 +799,36 @@ class _GeneratorPageState extends State<GeneratorPage> {
     }
   }
 
+  
+  String _generateSkiPlannerUrl(String selectedResortKey, LatLng? startCoordinate, LatLng? endCoordinate, List<LatLng>? stopovers) {
+    // Get current domain dynamically
+    final String currentDomain = html.window.location.origin; // Example: http://localhost:60423 or https://yourdomain.com
+
+    // Ensure start and end coordinates exist
+    if (startCoordinate == null || endCoordinate == null) {
+      return "Error: Start and end coordinates are required.";
+    }
+
+    // Collect all coordinates (start → stopovers → end)
+    List<LatLng> allCoordinates = [startCoordinate, if (stopovers != null) ...stopovers, endCoordinate];
+
+    // Convert coordinates to the required format (lng,lat;lng,lat)
+    final String coordsString = allCoordinates
+        .map((coord) => "${coord.longitude},${coord.latitude}") // Ensure correct order
+        .join(';');
+
+    // Build query parameters
+    final Uri uri = Uri.parse(currentDomain).replace(
+      queryParameters: {
+        'coords': coordsString,
+        if (selectedResortKey.isNotEmpty) 'resortKey': selectedResortKey, // Include only if not empty
+      },
+    );
+
+    print("generated route url: ${uri.toString()}");
+    return uri.toString();
+  }
+
   void _generateRoute(LatLng startCoordinate, LatLng endCoordinate, {List<LatLng>? stopovers}) async {
     route = await routeEngine.generateRoute(
       startCoordinate: startCoordinate,
@@ -810,6 +889,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
         text: "B",
       );
       _generateRoute(startCoordinate!, endCoordinate!);
+      _generateSkiPlannerUrl(selectedResortKey, startCoordinate, endCoordinate, stopovers);
     } else {
       // Case: Neither is set, set startCoordinate
       print("set startCoordinate: $coordinates");

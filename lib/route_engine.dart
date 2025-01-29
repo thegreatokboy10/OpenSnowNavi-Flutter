@@ -116,8 +116,6 @@ class RouteEngine {
       url = 'https://snownavi.ski/route/morzine/v1/$coordinates?alternatives=false&overview=false&steps=true';
     }
 
-    print('Requesting route from: $url'); // Debug output
-
     try {
       // Await the server's response
       final response = await http.get(Uri.parse(url));
