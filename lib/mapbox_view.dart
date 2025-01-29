@@ -26,6 +26,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
   // Create an instance of RouteEngine
   final routeEngine = re.RouteEngine();
   re.Route? route;
+  List<LatLng>? stopovers; // TODO: think about how to properly support stopovers
   // Resort
   String selectedResortKey = '3valley'; // Default selection for 3 Valleys
   // Filter set for pistes and lifts
@@ -749,10 +750,11 @@ class _GeneratorPageState extends State<GeneratorPage> {
     }
   }
 
-  void _generateRoute(LatLng startCoordinate, LatLng endCoordinate) async {
+  void _generateRoute(LatLng startCoordinate, LatLng endCoordinate, {List<LatLng>? stopovers}) async {
     route = await routeEngine.generateRoute(
       startCoordinate: startCoordinate,
       endCoordinate: endCoordinate,
+      stopovers: stopovers,
       selectedResortKey: selectedResortKey,
     );
 

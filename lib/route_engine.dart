@@ -98,16 +98,25 @@ class RouteEngine {
   Future<Route?> generateRoute({
     required LatLng startCoordinate,
     required LatLng endCoordinate,
+    List<LatLng>? stopovers, // Optional list of stopovers
     String? selectedResortKey,
   }) async {
-    // Build the request URL
-    String start = '${startCoordinate.longitude},${startCoordinate.latitude}';
-    String end = '${endCoordinate.longitude},${endCoordinate.latitude}';
-    String url = '$baseUrl/$start;$end?alternatives=false&overview=false&steps=true';
+    // Build coordinate string, ensuring all coordinates are separated by ';'
+    String coordinates = [
+      '${startCoordinate.longitude},${startCoordinate.latitude}', // Start point
+      if (stopovers != null && stopovers.isNotEmpty)
+        ...stopovers.map((stop) => '${stop.longitude},${stop.latitude}'), // Stopovers
+      '${endCoordinate.longitude},${endCoordinate.latitude}', // End point
+    ].join(';'); // Ensure correct separator
+
+    // Construct the API URL
+    String url = '$baseUrl/$coordinates?alternatives=false&overview=false&steps=true';
 
     if (selectedResortKey == 'morzine') {
-      url = 'https://snownavi.ski/route/morzine/v1/$start;$end?alternatives=false&overview=false&steps=true';
+      url = 'https://snownavi.ski/route/morzine/v1/$coordinates?alternatives=false&overview=false&steps=true';
     }
+
+    print('Requesting route from: $url'); // Debug output
 
     try {
       // Await the server's response
@@ -150,6 +159,5 @@ class RouteEngine {
       print('Error while fetching route: $e');
       return null;
     }
-  }  
-
+  }
 }
