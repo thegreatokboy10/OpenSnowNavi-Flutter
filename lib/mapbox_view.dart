@@ -603,6 +603,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
       size: GlobalConstants.arrowIconSize,
       imageName: 'expert-piste-arrow',
     );
+    Uint8List markerImage = await GeoJsonHelper.createCircleMarker();
+    mapController!.addImage(GlobalConstants.routeHighlightImageName, markerImage);  
 
     // Add layers from GeoJSON assets
     await _loadSkiResortData();
@@ -1378,6 +1380,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
                 onClose: () => setState(() => route = null),
                 panelWidth: GlobalConstants.searchboxWidth,
                 timerFlag: isUiOpen,
+                mapController: mapController!,
               ),
           ],
         ),

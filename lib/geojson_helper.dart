@@ -1,8 +1,13 @@
+import 'package:flutter/material.dart';
 import 'package:mapbox_gl/mapbox_gl.dart';
 import 'package:polyline_codec/polyline_codec.dart';
+import 'package:snownavi/global_constants.dart';
+import 'dart:typed_data'; 
+import 'dart:ui';
+import 'dart:async';
 import 'lift.dart';
 import 'piste.dart';
-import 'route_engine.dart';
+import 'route_engine.dart' as re;
 
 class GeoJsonHelper {
   // Helper method to generate a source and layer for a list of objects
@@ -200,7 +205,7 @@ class GeoJsonHelper {
   // Method to draw a Route object on the map
   static void drawRoute({
     required MapboxMapController mapController,
-    required Route route,
+    required re.Route route,
     required String routeSourceId,
     required String routeLayerId,
     String routeColor = '#FF0000', // Default route color
@@ -275,4 +280,26 @@ class GeoJsonHelper {
       print('Error drawing route on map: $e');
     }
   }
+
+  static  Future<Uint8List> createCircleMarker() async {
+    final int size = GlobalConstants.routeHighlightCircleSize; // Marker size
+    final recorder = PictureRecorder();
+    final canvas = Canvas(recorder, Rect.fromPoints(Offset(0, 0), Offset(size.toDouble(), size.toDouble())));
+
+    final paint = Paint()
+      ..color = Colors.blue
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = GlobalConstants.routeHighlightCircleStrokeWidth;
+
+    final fillPaint = Paint()..color = Colors.white;
+
+    canvas.drawCircle(Offset(size / 2, size / 2), size / 2.5, fillPaint);
+    canvas.drawCircle(Offset(size / 2, size / 2), size / 2.5, paint);
+
+    final picture = recorder.endRecording();
+    final img = await picture.toImage(size, size);
+    final byteData = await img.toByteData(format: ImageByteFormat.png);
+    return byteData!.buffer.asUint8List();
+  }
+
 }

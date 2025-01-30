@@ -90,4 +90,7 @@ class GlobalConstants {
 
   // UI
   static double searchboxWidth = 250;
+  static int routeHighlightCircleSize = 10;
+  static double routeHighlightCircleStrokeWidth = 1;
+  static String routeHighlightImageName = "custom-highlight-marker";
 }

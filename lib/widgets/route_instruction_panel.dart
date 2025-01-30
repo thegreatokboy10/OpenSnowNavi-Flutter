@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:mapbox_gl/mapbox_gl.dart';
+import 'package:snownavi/global_constants.dart';
 import '../route_engine.dart' as re; // Import your Route and RouteStep models
 import '../timer_flag.dart'; // Import TimerFlag class
 
@@ -106,6 +108,7 @@ class FloatingRouteInstructionPanel extends StatefulWidget {
   final VoidCallback onClose;
   final double panelWidth; // Match search box width
   final TimerFlag timerFlag; // Pass TimerFlag instance
+  final MapboxMapController mapController; // Pass Mapbox controller
 
   const FloatingRouteInstructionPanel({
     Key? key,
@@ -113,6 +116,7 @@ class FloatingRouteInstructionPanel extends StatefulWidget {
     required this.onClose,
     required this.panelWidth,
     required this.timerFlag,
+    required this.mapController,
   }) : super(key: key);
 
   @override
@@ -269,20 +273,47 @@ class _FloatingRouteInstructionPanelState extends State<FloatingRouteInstruction
     }
   }
 
+  void _addStepMarker(List<double> location) {
+    // Add a marker at the step location
+    widget.mapController.addSymbol(
+      SymbolOptions(
+        geometry: LatLng(location[1], location[0]), // Ensure correct lat-lng order
+        iconImage: GlobalConstants.routeHighlightImageName, // Custom marker name
+        iconSize: 1.5, // Adjust size
+      ),
+    );
+
+    print("Added step marker at: ${location[1]}, ${location[0]}");
+  }
+
+  void _removeStepMarker() {
+    // Remove all custom markers (assuming only one is added for hover)
+    widget.mapController.clearSymbols();
+
+    print("Removed step marker");
+  }
 
   /// **Builds each step item**
   Widget _buildStepItem(re.RouteStep step, int index) {
-    return ListTile(
-      onTap: () {
-        widget.timerFlag.flag = true; // Activate TimerFlag when tapping a step
+    return MouseRegion(
+      onEnter: (_) {
+        _addStepMarker(step.maneuver.location); // Add marker on hover
       },
-      leading: CircleAvatar(
-        backgroundColor: Theme.of(context).primaryColor,
-        child: Text((index + 1).toString(), style: TextStyle(color: Colors.white, fontSize: 16)),
+      onExit: (_) {
+        _removeStepMarker(); // Remove marker when exiting
+      },
+      child: ListTile(
+        onTap: () {
+          widget.timerFlag.flag = true; // Activate TimerFlag when tapping a step
+        },
+        leading: CircleAvatar(
+          backgroundColor: Theme.of(context).primaryColor,
+          child: Text((index + 1).toString(), style: TextStyle(color: Colors.white, fontSize: 16)),
+        ),
+        title: Text(step.name.isNotEmpty ? step.name : "Unnamed Piste", style: TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text("${step.distance.toStringAsFixed(0)} m • ${_formatDuration(step.duration)}"),
+        trailing: Icon(_getManeuverIcon(step.maneuver.type, step.maneuver.modifier), color: Theme.of(context).primaryColor),
       ),
-      title: Text(step.name.isNotEmpty ? step.name : "Unnamed Piste", style: TextStyle(fontWeight: FontWeight.bold)),
-      subtitle: Text("${step.distance.toStringAsFixed(0)} m • ${_formatDuration(step.duration)}"),
-      trailing: Icon(_getManeuverIcon(step.maneuver.type, step.maneuver.modifier), color: Theme.of(context).primaryColor),
     );
   }
 }
