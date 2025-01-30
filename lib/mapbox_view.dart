@@ -16,7 +16,9 @@ import 'global_constants.dart';
 import 'global_data.dart';
 import 'search_service.dart';
 import 'location_service.dart';
-import 'package:url_launcher/url_launcher.dart'; // Add this for opening URLs
+import 'package:url_launcher/url_launcher.dart';
+
+import 'widgets/route_instruction_panel.dart'; // Add this for opening URLs
 
 class GeneratorPage extends StatefulWidget {
   final List<List<double>>? coordinates; // List of lat-lng pairs
@@ -29,6 +31,9 @@ class GeneratorPage extends StatefulWidget {
 }
 
 class _GeneratorPageState extends State<GeneratorPage> {
+  bool _zoomGesturesEnabled = true;
+  List<GlobalKey> _childWidgetKeys = []; // Store GlobalKeys of child widgets
+
   // Create an instance of RouteEngine
   final routeEngine = re.RouteEngine();
   re.Route? route;
@@ -93,6 +98,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
     super.initState();
     _searchController = TextEditingController();
     needRestore = _restoreParameters();
+    _childWidgetKeys = List.generate(3, (index) => GlobalKey()); 
   }
 
   @override
@@ -850,16 +856,20 @@ class _GeneratorPageState extends State<GeneratorPage> {
   }
 
   void _generateRoute(LatLng startCoordinate, LatLng endCoordinate, {List<LatLng>? stopovers}) async {
-    route = await routeEngine.generateRoute(
+    re.Route? newRoute = await routeEngine.generateRoute(
       startCoordinate: startCoordinate,
       endCoordinate: endCoordinate,
       stopovers: stopovers,
       selectedResortKey: selectedResortKey,
     );
 
-    if (route != null) {
+    if (newRoute != null) {
       // 如果存在，则移除现有的路线图层和源
       await _removeExistingRoute();
+      
+      setState(() {
+        route = newRoute;
+      });
 
       GeoJsonHelper.drawRoute(
         mapController: mapController!, 
@@ -874,7 +884,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
       routeLayers.add(GlobalConstants.routeLayerId);
 
       // refresh piste and lift layers to apply lowlight opacity
-        _refreshPisteAndLiftLayers(opacity: GlobalConstants.lowlightFeatureOpacity);
+      _refreshPisteAndLiftLayers(opacity: GlobalConstants.lowlightFeatureOpacity);
+      
     }
   }
 
@@ -1075,251 +1086,301 @@ class _GeneratorPageState extends State<GeneratorPage> {
     );
   }
 
+  void _setZoomGestures(bool? flag) {
+    setState(() {
+      if (flag != null) {
+        _zoomGesturesEnabled = flag;
+      } else {
+        _zoomGesturesEnabled = !_zoomGesturesEnabled;
+      }
+      print("setZoomEnabled to $_zoomGesturesEnabled");
+    });
+  }
+  void _toggleZoomGestures() {
+    _setZoomGestures(null);
+  }
+
+  void _checkIfInsideChildWidget(PointerEvent event) {
+    print("checking pointerEvent $event");
+    for (var key in _childWidgetKeys) {
+      final RenderBox? box = key.currentContext?.findRenderObject() as RenderBox?;
+      if (box != null) {
+        final Offset position = box.localToGlobal(Offset.zero); // Top-left position
+        final Size size = box.size;
+
+        // Check if mouse event is inside this widget's bounds
+        if (event.position.dx >= position.dx &&
+            event.position.dx <= position.dx + size.width &&
+            event.position.dy >= position.dy &&
+            event.position.dy <= position.dy + size.height) {
+          _setZoomGestures(false); // Disable zoom if inside
+          return;
+        }
+      }
+    }
+    _setZoomGestures(true); // Enable zoom if outside
+  }
+
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Stack(
-        children: [
-          MapboxMap(
-            accessToken:
-                'pk.eyJ1Ijoib2tib3kyMDA4IiwiYSI6ImNsdGE1dzd6OTAxbHQyanA0aWM1MjU5c24ifQ.vbbY3gzL8nnUFctmDv9UBQ',
-            onMapCreated: _onMapCreated,
-            onCameraIdle: _onCameraIdle,
-            onMapClick: _onMapClick,
-            onMapLongClick: _onMapLongClick,
-            onStyleLoadedCallback: _onStyleLoadedCallback,
-            initialCameraPosition: _getInitialCameraPosition(),
-            doubleClickZoomEnabled: false,
-            styleString: 'mapbox://styles/okboy2008/clx1zai3s01ck01rb5zsv600u', // Your custom Mapbox style
-            compassEnabled: true, // Disable the compass button
-            compassViewPosition: CompassViewPosition.BottomRight,
-          ),
-          // Attribution
-          Positioned(
-            bottom: 5,
-            left: 100,
-            child: GestureDetector(
-              onTap: () {
-                _launchUrl('https://www.xiaohongshu.com/user/profile/5ffeddbb000000000100388d');
-              },
-              child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color.fromARGB(255, 255, 255, 255).withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-                child: Text(
-                  'Follow me on 小红书 @了不起的okboy',
-                  style: TextStyle(
-                    color: const Color.fromARGB(255, 209, 6, 6),
-                    fontSize: 12,
-                    decoration: TextDecoration.none, // Add underline for link effect
+    return MouseRegion(
+      onHover: _checkIfInsideChildWidget, 
+      child: Scaffold(
+        body: Stack(
+          children: [
+            MapboxMap(
+              accessToken:
+                  'pk.eyJ1Ijoib2tib3kyMDA4IiwiYSI6ImNsdGE1dzd6OTAxbHQyanA0aWM1MjU5c24ifQ.vbbY3gzL8nnUFctmDv9UBQ',
+              onMapCreated: _onMapCreated,
+              onCameraIdle: _onCameraIdle,
+              onMapClick: _onMapClick,
+              onMapLongClick: _onMapLongClick,
+              onStyleLoadedCallback: _onStyleLoadedCallback,
+              initialCameraPosition: _getInitialCameraPosition(),
+              doubleClickZoomEnabled: false,
+              scrollGesturesEnabled: true,
+              zoomGesturesEnabled: _zoomGesturesEnabled,
+              styleString: 'mapbox://styles/okboy2008/clx1zai3s01ck01rb5zsv600u', // Your custom Mapbox style
+              compassEnabled: true, // Disable the compass button
+              compassViewPosition: CompassViewPosition.BottomRight,
+            ),
+            // Attribution
+            Positioned(
+              bottom: 5,
+              left: 100,
+              child: GestureDetector(
+                onTap: () {
+                  _launchUrl('https://www.xiaohongshu.com/user/profile/5ffeddbb000000000100388d');
+                },
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color.fromARGB(255, 255, 255, 255).withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                  child: Text(
+                    'Follow me on 小红书 @了不起的okboy',
+                    style: TextStyle(
+                      color: const Color.fromARGB(255, 209, 6, 6),
+                      fontSize: 12,
+                      decoration: TextDecoration.none, // Add underline for link effect
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-          Positioned(
-            top: 20,
-            left: 20,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Search Bar
-                Row(
-                  children: [
+            Positioned(
+              top: 20,
+              left: 20,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Search Bar
+                  Row(
+                    children: [
+                      Container(
+                        width: GlobalConstants.searchboxWidth,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.6),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: TextField(
+                          controller: _searchController,
+                          onChanged: _onSearchChanged,
+                          onSubmitted: _onSearchSubmitted,
+                          decoration: InputDecoration(
+                            hintText: 'Search POI',
+                            prefixIcon: Icon(Icons.search),
+                            filled: true,
+                            fillColor: Colors.white.withOpacity(0.6),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: BorderSide.none,
+                            ),
+                            contentPadding: EdgeInsets.symmetric(
+                                horizontal: 15, vertical: 10),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (poiResults.isNotEmpty)
                     Container(
                       width: 250,
+                      height: 600,
+                      margin: EdgeInsets.only(top: 10),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.6),
+                        color: Colors.white,
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: TextField(
-                        controller: _searchController,
-                        onChanged: _onSearchChanged,
-                        onSubmitted: _onSearchSubmitted,
-                        decoration: InputDecoration(
-                          hintText: 'Search POI',
-                          prefixIcon: Icon(Icons.search),
-                          filled: true,
-                          fillColor: Colors.white.withOpacity(0.6),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide.none,
-                          ),
-                          contentPadding: EdgeInsets.symmetric(
-                              horizontal: 15, vertical: 10),
+                      child: ListView.builder(
+                        itemCount: poiResults.length,
+                        itemBuilder: (context, index) {
+                          final poi = poiResults[index];
+                          return ListTile(
+                            title: Text(poi['name']),
+                            subtitle: Text(
+                              '${poi['distance'].toStringAsFixed(2)} km',
+                              style: TextStyle(height: 1.5), // Adjust line spacing for readability
+                            ),
+                            isThreeLine: true, // Allows multiple lines in the subtitle
+                            onTap: () {
+                              LatLng coord = LatLng(poi['lat'], poi['lng']);
+                              _onMapLongClick(Point(0,0), coord);
+                              mapController?.animateCamera(
+                                CameraUpdate.newLatLng(
+                                  coord,
+                                ),
+                              );
+                              setState(() {
+                                hasSearched = false;
+                                poiResults = [];
+                                _searchController.clear();
+                              });
+                            },
+                          );
+                        },
+                      ),
+                    )
+                  else if (hasSearched)
+                    Container(
+                      width: 250,
+                      height: 50,
+                      margin: EdgeInsets.only(top: 10),
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        'No results found',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w400,
+                          color: Colors.grey,
                         ),
                       ),
                     ),
-                  ],
-                ),
-                if (poiResults.isNotEmpty)
-                  Container(
-                    width: 250,
-                    height: 600,
-                    margin: EdgeInsets.only(top: 10),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: ListView.builder(
-                      itemCount: poiResults.length,
-                      itemBuilder: (context, index) {
-                        final poi = poiResults[index];
-                        return ListTile(
-                          title: Text(poi['name']),
-                          subtitle: Text(
-                            '${poi['distance'].toStringAsFixed(2)} km',
-                            style: TextStyle(height: 1.5), // Adjust line spacing for readability
-                          ),
-                          isThreeLine: true, // Allows multiple lines in the subtitle
-                          onTap: () {
-                            LatLng coord = LatLng(poi['lat'], poi['lng']);
-                            _onMapLongClick(Point(0,0), coord);
-                            mapController?.animateCamera(
-                              CameraUpdate.newLatLng(
-                                coord,
-                              ),
-                            );
-                            setState(() {
-                              hasSearched = false;
-                              poiResults = [];
-                              _searchController.clear();
-                            });
-                          },
-                        );
-                      },
-                    ),
-                  )
-                else if (hasSearched)
-                  Container(
-                    width: 250,
-                    height: 50,
-                    margin: EdgeInsets.only(top: 10),
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      'No results found',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w400,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          // 筛选按钮
-          Positioned(
-            bottom: 38,
-            left: 20, 
-            child: Transform.scale(
-              scale: GlobalConstants.floatingActionButtonScale, // 缩放比例
-              child: FloatingActionButton(
-                backgroundColor: Colors.white.withOpacity(GlobalConstants.floatingbuttonopacity), // 按钮颜色
-                onPressed: _showFilterDialog,
-                tooltip: 'Filter',
-                child: Icon(Icons.filter_alt), // 使用筛选图标
+                ],
               ),
             ),
-          ),
-          Positioned(
-            top: 18,
-            right: 20, 
-            child: Transform.scale(
-              scale: GlobalConstants.floatingActionButtonScale,
-              child: FloatingActionButton(
-                backgroundColor: Colors.white.withOpacity(GlobalConstants.floatingbuttonopacity),
-                onPressed: _toggle2D3DView,
-                child: Text(
-                  is3DMode ? '2D' : '3D',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: const Color.fromARGB(255, 0, 0, 0),
+            // 筛选按钮
+            Positioned(
+              bottom: 38,
+              left: 20, 
+              child: Transform.scale(
+                scale: GlobalConstants.floatingActionButtonScale, // 缩放比例
+                child: FloatingActionButton(
+                  backgroundColor: Colors.white.withOpacity(GlobalConstants.floatingbuttonopacity), // 按钮颜色
+                  onPressed: _showFilterDialog,
+                  tooltip: 'Filter',
+                  child: Icon(Icons.filter_alt), // 使用筛选图标
+                ),
+              ),
+            ),
+            Positioned(
+              top: 18,
+              right: 20, 
+              child: Transform.scale(
+                scale: GlobalConstants.floatingActionButtonScale,
+                child: FloatingActionButton(
+                  backgroundColor: Colors.white.withOpacity(GlobalConstants.floatingbuttonopacity),
+                  onPressed: _toggle2D3DView,
+                  child: Text(
+                    is3DMode ? '2D' : '3D',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: const Color.fromARGB(255, 0, 0, 0),
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-          Positioned(
-            top: 68,
-            right: 20, 
-            child: Transform.scale(
-              scale: GlobalConstants.floatingActionButtonScale,
-              child: FloatingActionButton(
-                backgroundColor: Colors.white.withOpacity(GlobalConstants.floatingbuttonopacity),
-                onPressed: _locateCurrentPosition,
-                tooltip: 'Locate Me',
-                child: Icon(Icons.my_location),
+            Positioned(
+              top: 68,
+              right: 20, 
+              child: Transform.scale(
+                scale: GlobalConstants.floatingActionButtonScale,
+                child: FloatingActionButton(
+                  backgroundColor: Colors.white.withOpacity(GlobalConstants.floatingbuttonopacity),
+                  onPressed: _locateCurrentPosition,
+                  tooltip: 'Locate Me',
+                  child: Icon(Icons.my_location),
+                ),
               ),
             ),
-          ),
-          Positioned(
-            top: 118, // Below "Locate Me" button
-            right: 20,
-            child: Transform.scale(
-              scale: GlobalConstants.floatingActionButtonScale,
-              child: FloatingActionButton(
-                backgroundColor: Colors.white.withOpacity(GlobalConstants.floatingbuttonopacity),
-                onPressed: _showSharePopup, // Show popup with URL
-                tooltip: 'Share SnowNavi',
-                child: Icon(Icons.share),
+            Positioned(
+              top: 118, // Below "Locate Me" button
+              right: 20,
+              child: Transform.scale(
+                scale: GlobalConstants.floatingActionButtonScale,
+                child: FloatingActionButton(
+                  backgroundColor: Colors.white.withOpacity(GlobalConstants.floatingbuttonopacity),
+                  onPressed: _showSharePopup, // Show popup with URL
+                  tooltip: 'Share SnowNavi',
+                  child: Icon(Icons.share),
+                ),
               ),
             ),
-          ),
-          // Dropdown for selecting ski resort
-          Positioned(
-            bottom: 40, // Position at the bottom
-            left: 80, // Align to the left
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 10),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.9),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: DropdownButton<String>(
-                value: selectedResortKey,
-                items: GlobalConstants.skiResortList.keys.map((String key) {
-                  final resort = GlobalConstants.skiResortList[key];
-                  final country = resort?['country'] ?? '';
-                  final flagEmoji = _getFlagEmoji(country);
-                  // print('Flag emoji for $country: $flagEmoji');
-                  return DropdownMenuItem<String>(
-                    value: key,
-                    child: Text(
-                      '$flagEmoji ${resort?['name']['en'] ?? 'Unknown Resort'}',
-                      style: TextStyle(
-                        fontFamily: 'NotoEmoji',  // Specify Noto Emoji font family
-                        fontSize: 12,
+            // Dropdown for selecting ski resort
+            Positioned(
+              bottom: 40, // Position at the bottom
+              left: 80, // Align to the left
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.9),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: DropdownButton<String>(
+                  value: selectedResortKey,
+                  items: GlobalConstants.skiResortList.keys.map((String key) {
+                    final resort = GlobalConstants.skiResortList[key];
+                    final country = resort?['country'] ?? '';
+                    final flagEmoji = _getFlagEmoji(country);
+                    // print('Flag emoji for $country: $flagEmoji');
+                    return DropdownMenuItem<String>(
+                      value: key,
+                      child: Text(
+                        '$flagEmoji ${resort?['name']['en'] ?? 'Unknown Resort'}',
+                        style: TextStyle(
+                          fontFamily: 'NotoEmoji',  // Specify Noto Emoji font family
+                          fontSize: 12,
+                        ),
+                        textAlign: TextAlign.left, // Align text to the left
                       ),
-                      textAlign: TextAlign.left, // Align text to the left
-                    ),
-                  );
-                }).toList(),
-                onTap: () {
-                  isUiOpen.flag = true;
-                },
-                onChanged: (newValue) {
-                  isUiOpen.flag = true;
-                  if (newValue != null && newValue != selectedResortKey) {
-                    setState(() {
-                      selectedResortKey = newValue;
-                      _moveToSelectedResort(); // Move map to the selected resort with zoom
-                    });
-                  }
-                },
-                underline: Container(), // Remove default underline
-                icon: Icon(Icons.arrow_drop_down),
+                    );
+                  }).toList(),
+                  onTap: () {
+                    isUiOpen.flag = true;
+                  },
+                  onChanged: (newValue) {
+                    isUiOpen.flag = true;
+                    if (newValue != null && newValue != selectedResortKey) {
+                      setState(() {
+                        selectedResortKey = newValue;
+                        _moveToSelectedResort(); // Move map to the selected resort with zoom
+                      });
+                    }
+                  },
+                  underline: Container(), // Remove default underline
+                  icon: Icon(Icons.arrow_drop_down),
+                ),
               ),
             ),
-          ),
-        ],
+            // Floating Route Panel (Between Search Box & Filter Button)
+            if (route != null) 
+              FloatingRouteInstructionPanel(
+                key: _childWidgetKeys[0],
+                route: route!,
+                onClose: () => setState(() => route = null),
+                panelWidth: GlobalConstants.searchboxWidth,
+                timerFlag: isUiOpen,
+              ),
+          ],
+        ),
       ),
     );
   }

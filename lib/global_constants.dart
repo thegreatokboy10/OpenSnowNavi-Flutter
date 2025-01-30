@@ -87,4 +87,7 @@ class GlobalConstants {
   static String pisteSourceId = "run-source";
   static String liftLayerId = "lift-layer";
   static String liftSourceId = "lift-source";
+
+  // UI
+  static double searchboxWidth = 250;
 }
