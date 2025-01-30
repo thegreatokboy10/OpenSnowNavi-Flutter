@@ -813,6 +813,9 @@ class _GeneratorPageState extends State<GeneratorPage> {
   }
 
   Future<void> _removeExistingRoute() async {
+    setState(() {
+      route = null;
+    });
     try {
       _clearLayers(routeLayers);
       _clearSources(routeSources);
@@ -1123,6 +1126,12 @@ class _GeneratorPageState extends State<GeneratorPage> {
     _setZoomGestures(true); // Enable zoom if outside
   }
 
+  void _handleRouteClose() {
+    // Additional actions after closing the route
+    _removeExistingRoute();  // Clears the drawn route from the map
+    _clearAllCircles();
+    print("Route panel closed, map layers restored.");
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1377,7 +1386,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
               FloatingRouteInstructionPanel(
                 key: _childWidgetKeys[0],
                 route: route!,
-                onClose: () => setState(() => route = null),
+                onClose: _handleRouteClose,
                 panelWidth: GlobalConstants.searchboxWidth,
                 timerFlag: isUiOpen,
                 mapController: mapController!,
