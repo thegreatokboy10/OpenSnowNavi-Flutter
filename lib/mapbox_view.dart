@@ -817,12 +817,16 @@ class _GeneratorPageState extends State<GeneratorPage> {
 
   
   String _generateSkiPlannerUrl(String selectedResortKey, LatLng? startCoordinate, LatLng? endCoordinate, List<LatLng>? stopovers) {
-    // Get current domain dynamically
-    final String currentDomain = html.window.location.origin; // Example: http://localhost:60423 or https://yourdomain.com
+    // Get the current full URL (including existing parameters)
+    final String currentFullPath = html.window.location.href; // Example: http://localhost:60423/preview/?coords=...
+    final Uri currentUri = Uri.parse(currentFullPath);
 
+    // Remove existing query parameters and keep only domain + path
+    final String baseUrl = "${currentUri.origin}${currentUri.path}";
+    
     // Ensure start and end coordinates exist
     if (startCoordinate == null || endCoordinate == null) {
-      return currentDomain;
+      return baseUrl;
     }
 
     // Collect all coordinates (start → stopovers → end)
@@ -834,7 +838,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
         .join(';');
 
     // Build query parameters
-    final Uri uri = Uri.parse(currentDomain).replace(
+    final Uri uri = Uri.parse(baseUrl).replace(
       queryParameters: {
         'coords': coordsString,
         if (selectedResortKey.isNotEmpty) 'resortKey': selectedResortKey, // Include only if not empty
