@@ -1156,6 +1156,16 @@ class _GeneratorPageState extends State<GeneratorPage> {
               compassEnabled: true, // Disable the compass button
               compassViewPosition: CompassViewPosition.BottomRight,
             ),
+            // Floating Route Panel (Between Search Box & Filter Button)
+            if (route != null) 
+              FloatingRouteInstructionPanel(
+                key: _childWidgetKeys[0],
+                route: route!,
+                onClose: _handleRouteClose,
+                panelWidth: GlobalConstants.searchboxWidth,
+                timerFlag: isUiOpen,
+                mapController: mapController!,
+              ),
             // Attribution
             Positioned(
               bottom: 5,
@@ -1182,6 +1192,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
               ),
             ),
             Positioned(
+              key: _childWidgetKeys[1],
               top: 20,
               left: 20,
               child: Column(
@@ -1381,16 +1392,6 @@ class _GeneratorPageState extends State<GeneratorPage> {
                 ),
               ),
             ),
-            // Floating Route Panel (Between Search Box & Filter Button)
-            if (route != null) 
-              FloatingRouteInstructionPanel(
-                key: _childWidgetKeys[0],
-                route: route!,
-                onClose: _handleRouteClose,
-                panelWidth: GlobalConstants.searchboxWidth,
-                timerFlag: isUiOpen,
-                mapController: mapController!,
-              ),
           ],
         ),
       ),
