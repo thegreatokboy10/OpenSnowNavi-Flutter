@@ -1,0 +1,2585 @@
+{
+  "version": 0.6,
+  "generator": "Overpass API 0.7.62.4 2390de5a",
+  "osm3s": {
+    "timestamp_osm_base": "2025-01-31T21:49:05Z",
+    "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL."
+  },
+  "elements": [
+
+{
+  "type": "node",
+  "id": 323129883,
+  "lat": 42.5472953,
+  "lon": 1.5138582,
+  "tags": {
+    "aerialway": "station",
+    "aerialway:access": "both",
+    "name": "Telecabina La Massana",
+    "name:ca": "Telecabina La Massana",
+    "public_transport": "station"
+  }
+},
+{
+  "type": "node",
+  "id": 323130871,
+  "lat": 42.5726073,
+  "lon": 1.4834414,
+  "tags": {
+    "aerialway": "station",
+    "public_transport": "station"
+  }
+},
+{
+  "type": "node",
+  "id": 323130873,
+  "lat": 42.5731073,
+  "lon": 1.4712125,
+  "tags": {
+    "aerialway": "station",
+    "public_transport": "station"
+  }
+},
+{
+  "type": "node",
+  "id": 521153185,
+  "lat": 42.5732869,
+  "lon": 1.4710011,
+  "tags": {
+    "aerialway": "station",
+    "aerialway:access": "exit",
+    "public_transport": "station",
+    "wheelchair": "no"
+  }
+},
+{
+  "type": "node",
+  "id": 521153188,
+  "lat": 42.5769591,
+  "lon": 1.4799654,
+  "tags": {
+    "aerialway": "station",
+    "aerialway:access": "entry",
+    "public_transport": "station"
+  }
+},
+{
+  "type": "node",
+  "id": 663075945,
+  "lat": 42.5350001,
+  "lon": 1.4888794,
+  "tags": {
+    "aerialway": "station",
+    "aerialway:access": "exit",
+    "public_transport": "station"
+  }
+},
+{
+  "type": "node",
+  "id": 663075946,
+  "lat": 42.5364238,
+  "lon": 1.4902476,
+  "tags": {
+    "aerialway": "station",
+    "aerialway:access": "entry",
+    "public_transport": "station"
+  }
+},
+{
+  "type": "node",
+  "id": 663078912,
+  "lat": 42.5364868,
+  "lon": 1.4898796,
+  "tags": {
+    "aerialway": "station",
+    "aerialway:access": "entry",
+    "name": "LA SERRA",
+    "public_transport": "station"
+  }
+},
+{
+  "type": "node",
+  "id": 663080312,
+  "lat": 42.5348480,
+  "lon": 1.4882139,
+  "tags": {
+    "aerialway": "station",
+    "aerialway:access": "exit",
+    "public_transport": "station"
+  }
+},
+{
+  "type": "node",
+  "id": 663080313,
+  "lat": 42.5375895,
+  "lon": 1.4845831,
+  "tags": {
+    "aerialway": "station",
+    "aerialway:access": "entry",
+    "public_transport": "station"
+  }
+},
+{
+  "type": "node",
+  "id": 663084328,
+  "lat": 42.5374631,
+  "lon": 1.4837975,
+  "tags": {
+    "aerialway": "station",
+    "aerialway:access": "entry",
+    "name": "LA SERRA 2",
+    "public_transport": "station"
+  }
+},
+{
+  "type": "node",
+  "id": 663092389,
+  "lat": 42.5349280,
+  "lon": 1.4529365,
+  "tags": {
+    "aerialway": "station",
+    "aerialway:access": "exit",
+    "public_transport": "station"
+  }
+},
+{
+  "type": "node",
+  "id": 663092390,
+  "lat": 42.5444649,
+  "lon": 1.4524549,
+  "tags": {
+    "aerialway": "station",
+    "aerialway:access": "entry",
+    "public_transport": "station"
+  }
+},
+{
+  "type": "node",
+  "id": 663093429,
+  "lat": 42.5389345,
+  "lon": 1.4521861,
+  "tags": {
+    "aerialway": "station",
+    "aerialway:access": "exit",
+    "public_transport": "station"
+  }
+},
+{
+  "type": "node",
+  "id": 663093430,
+  "lat": 42.5463195,
+  "lon": 1.4456040,
+  "tags": {
+    "aerialway": "station",
+    "aerialway:access": "entry",
+    "public_transport": "station"
+  }
+},
+{
+  "type": "node",
+  "id": 663095052,
+  "lat": 42.5339072,
+  "lon": 1.4688950,
+  "tags": {
+    "aerialway": "station",
+    "aerialway:access": "entry",
+    "name": "EL CUBIL",
+    "public_transport": "station"
+  }
+},
+{
+  "type": "node",
+  "id": 663372539,
+  "lat": 42.5700438,
+  "lon": 1.4510032,
+  "tags": {
+    "aerialway": "station",
+    "aerialway:access": "exit",
+    "public_transport": "station"
+  }
+},
+{
+  "type": "node",
+  "id": 663372540,
+  "lat": 42.5724319,
+  "lon": 1.4709669,
+  "tags": {
+    "aerialway": "station",
+    "aerialway:access": "entry",
+    "public_transport": "station"
+  }
+},
+{
+  "type": "node",
+  "id": 663373401,
+  "lat": 42.5727555,
+  "lon": 1.4658546,
+  "tags": {
+    "aerialway": "station",
+    "aerialway:access": "exit",
+    "public_transport": "station"
+  }
+},
+{
+  "type": "node",
+  "id": 663373402,
+  "lat": 42.5746083,
+  "lon": 1.4703624,
+  "tags": {
+    "aerialway": "station",
+    "aerialway:access": "entry",
+    "public_transport": "station"
+  }
+},
+{
+  "type": "node",
+  "id": 664085283,
+  "lat": 42.5338531,
+  "lon": 1.4700298,
+  "tags": {
+    "aerialway": "station",
+    "aerialway:access": "entry",
+    "name": "La Sierra",
+    "public_transport": "station"
+  }
+},
+{
+  "type": "node",
+  "id": 664085288,
+  "lat": 42.5305625,
+  "lon": 1.4738145,
+  "tags": {
+    "aerialway": "station",
+    "aerialway:access": "exit",
+    "name": "LA SERRA",
+    "public_transport": "station"
+  }
+},
+{
+  "type": "node",
+  "id": 664115752,
+  "lat": 42.5273730,
+  "lon": 1.4554605,
+  "tags": {
+    "aerialway": "station",
+    "aerialway:access": "exit",
+    "public_transport": "station"
+  }
+},
+{
+  "type": "node",
+  "id": 664115755,
+  "lat": 42.5263372,
+  "lon": 1.4567086,
+  "tags": {
+    "aerialway": "station",
+    "aerialway:access": "exit",
+    "public_transport": "station"
+  }
+},
+{
+  "type": "node",
+  "id": 664115810,
+  "lat": 42.5301064,
+  "lon": 1.4601287,
+  "tags": {
+    "aerialway": "station",
+    "aerialway:access": "entry",
+    "public_transport": "station"
+  }
+},
+{
+  "type": "node",
+  "id": 664115932,
+  "lat": 42.5313772,
+  "lon": 1.4680287,
+  "tags": {
+    "aerialway": "station",
+    "aerialway:access": "entry",
+    "public_transport": "station"
+  }
+},
+{
+  "type": "node",
+  "id": 664116091,
+  "lat": 42.5660066,
+  "lon": 1.4444791,
+  "tags": {
+    "aerialway": "station",
+    "aerialway:access": "both",
+    "public_transport": "station"
+  }
+},
+{
+  "type": "node",
+  "id": 664192679,
+  "lat": 42.5543684,
+  "lon": 1.4488574,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 664192680,
+  "lat": 42.5655964,
+  "lon": 1.4446335,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 664192681,
+  "lat": 42.5453115,
+  "lon": 1.4522640,
+  "tags": {
+    "aerialway": "station",
+    "aerialway:access": "both",
+    "public_transport": "station"
+  }
+},
+{
+  "type": "node",
+  "id": 664195007,
+  "lat": 42.5648595,
+  "lon": 1.4488784,
+  "tags": {
+    "aerialway": "station",
+    "aerialway:access": "entry",
+    "public_transport": "station"
+  }
+},
+{
+  "type": "node",
+  "id": 664195008,
+  "lat": 42.5634490,
+  "lon": 1.4533577,
+  "tags": {
+    "aerialway": "station",
+    "aerialway:access": "exit",
+    "public_transport": "station"
+  }
+},
+{
+  "type": "node",
+  "id": 664225476,
+  "lat": 42.5736318,
+  "lon": 1.4718431,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 664225514,
+  "lat": 42.5734366,
+  "lon": 1.4713665,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 664225516,
+  "lat": 42.5746186,
+  "lon": 1.4742519,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 664225519,
+  "lat": 42.5740487,
+  "lon": 1.4728608,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 664225521,
+  "lat": 42.5757294,
+  "lon": 1.4769636,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 664225523,
+  "lat": 42.5752797,
+  "lon": 1.4758657,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 664225525,
+  "lat": 42.5749695,
+  "lon": 1.4751086,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 664225527,
+  "lat": 42.5765231,
+  "lon": 1.4789010,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 664225529,
+  "lat": 42.5762158,
+  "lon": 1.4781508,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 664225531,
+  "lat": 42.5768457,
+  "lon": 1.4796886,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 664236924,
+  "lat": 42.5728500,
+  "lon": 1.4660847,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 664236925,
+  "lat": 42.5732885,
+  "lon": 1.4671514,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 664236926,
+  "lat": 42.5740478,
+  "lon": 1.4689988,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 664236927,
+  "lat": 42.5737605,
+  "lon": 1.4682998,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 664236928,
+  "lat": 42.5743730,
+  "lon": 1.4697899,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 668878457,
+  "lat": 42.5692483,
+  "lon": 1.4508096,
+  "tags": {
+    "aerialway": "station",
+    "aerialway:access": "exit",
+    "public_transport": "station"
+  }
+},
+{
+  "type": "node",
+  "id": 668878558,
+  "lat": 42.5690747,
+  "lon": 1.4591642,
+  "tags": {
+    "aerialway": "station",
+    "aerialway:access": "exit",
+    "public_transport": "station"
+  }
+},
+{
+  "type": "node",
+  "id": 668878595,
+  "lat": 42.5699114,
+  "lon": 1.4563596,
+  "tags": {
+    "aerialway": "station",
+    "aerialway:access": "entry",
+    "public_transport": "station"
+  }
+},
+{
+  "type": "node",
+  "id": 668878850,
+  "lat": 42.5722910,
+  "lon": 1.4709073,
+  "tags": {
+    "aerialway": "station",
+    "aerialway:access": "entry",
+    "public_transport": "station"
+  }
+},
+{
+  "type": "node",
+  "id": 1134180054,
+  "lat": 42.5339623,
+  "lon": 1.4521031,
+  "tags": {
+    "aerialway": "station",
+    "aerialway:access": "exit",
+    "public_transport": "station"
+  }
+},
+{
+  "type": "node",
+  "id": 1134181578,
+  "lat": 42.5356267,
+  "lon": 1.4912025,
+  "tags": {
+    "aerialway": "station",
+    "name": "el Planell I",
+    "name:ca": "el Planell I"
+  }
+},
+{
+  "type": "node",
+  "id": 1134181653,
+  "lat": 42.5310252,
+  "lon": 1.4541658,
+  "tags": {
+    "aerialway": "station",
+    "aerialway:access": "entry",
+    "public_transport": "station"
+  }
+},
+{
+  "type": "node",
+  "id": 1134182416,
+  "lat": 42.5348979,
+  "lon": 1.4897883,
+  "tags": {
+    "aerialway": "station",
+    "name": "el Planell I",
+    "name:ca": "el Planell I"
+  }
+},
+{
+  "type": "node",
+  "id": 2340797296,
+  "lat": 42.5305222,
+  "lon": 1.4743926,
+  "tags": {
+    "aerialway": "station",
+    "aerialway:access": "exit",
+    "name": "LA SERRA 2",
+    "public_transport": "station"
+  }
+},
+{
+  "type": "node",
+  "id": 2340797297,
+  "lat": 42.5305057,
+  "lon": 1.4747465,
+  "tags": {
+    "aerialway": "station",
+    "aerialway:access": "exit",
+    "name": "LA SERRA 1",
+    "public_transport": "station"
+  }
+},
+{
+  "type": "node",
+  "id": 2340797302,
+  "lat": 42.5335222,
+  "lon": 1.4822704
+},
+{
+  "type": "node",
+  "id": 2340901723,
+  "lat": 42.5266947,
+  "lon": 1.4563913,
+  "tags": {
+    "aerialway": "station",
+    "aerialway:access": "exit",
+    "public_transport": "station"
+  }
+},
+{
+  "type": "node",
+  "id": 2340901724,
+  "lat": 42.5372017,
+  "lon": 1.4911408,
+  "tags": {
+    "aerialway": "station",
+    "aerialway:access": "both",
+    "name": "Telecabina La Massana",
+    "name:ca": "Telecabina La Massana",
+    "public_transport": "station"
+  }
+},
+{
+  "type": "node",
+  "id": 2671540906,
+  "lat": 42.5383564,
+  "lon": 1.4911314,
+  "tags": {
+    "aerialway": "station",
+    "name": "Pedres Blanques II"
+  }
+},
+{
+  "type": "node",
+  "id": 2671540907,
+  "lat": 42.5377977,
+  "lon": 1.4907025,
+  "tags": {
+    "aerialway": "station",
+    "name": "Pedres Blanques II"
+  }
+},
+{
+  "type": "node",
+  "id": 2671550831,
+  "lat": 42.5301506,
+  "lon": 1.4741801,
+  "tags": {
+    "aerialway": "station",
+    "name": "Pla de la Cot I",
+    "name:ca": "Pla de la Cot I"
+  }
+},
+{
+  "type": "node",
+  "id": 2671550832,
+  "lat": 42.5298219,
+  "lon": 1.4730052,
+  "tags": {
+    "aerialway": "station"
+  }
+},
+{
+  "type": "node",
+  "id": 2671553323,
+  "lat": 42.5339742,
+  "lon": 1.4522319,
+  "tags": {
+    "aerialway": "station",
+    "aerialway:access": "exit",
+    "public_transport": "station"
+  }
+},
+{
+  "type": "node",
+  "id": 2671553324,
+  "lat": 42.5310549,
+  "lon": 1.4542355,
+  "tags": {
+    "aerialway": "station",
+    "aerialway:access": "entry",
+    "public_transport": "station"
+  }
+},
+{
+  "type": "node",
+  "id": 2671576063,
+  "lat": 42.5737608,
+  "lon": 1.4703931
+},
+{
+  "type": "node",
+  "id": 2671576064,
+  "lat": 42.5735168,
+  "lon": 1.4694886
+},
+{
+  "type": "node",
+  "id": 2671576065,
+  "lat": 42.5737398,
+  "lon": 1.4703992
+},
+{
+  "type": "node",
+  "id": 2671576066,
+  "lat": 42.5735018,
+  "lon": 1.4694967
+},
+{
+  "type": "node",
+  "id": 2967475707,
+  "lat": 42.5468919,
+  "lon": 1.5129537
+},
+{
+  "type": "node",
+  "id": 2967495551,
+  "lat": 42.5467198,
+  "lon": 1.5125662
+},
+{
+  "type": "node",
+  "id": 5782073069,
+  "lat": 42.5458265,
+  "lon": 1.5105583
+},
+{
+  "type": "node",
+  "id": 7274995370,
+  "lat": 42.5324246,
+  "lon": 1.4795327,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 7274995371,
+  "lat": 42.5353070,
+  "lon": 1.4891744,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 7274995372,
+  "lat": 42.5326185,
+  "lon": 1.4800163,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 7274995373,
+  "lat": 42.5360538,
+  "lon": 1.4898920,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 7274995374,
+  "lat": 42.5332422,
+  "lon": 1.4815721,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 7274995375,
+  "lat": 42.5460702,
+  "lon": 1.5111062,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 7274995376,
+  "lat": 42.5336523,
+  "lon": 1.4826044,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 7274995377,
+  "lat": 42.5435817,
+  "lon": 1.5055046,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 7274995378,
+  "lat": 42.5340797,
+  "lon": 1.4837012,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 7274995379,
+  "lat": 42.5414857,
+  "lon": 1.5007856,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 7274995380,
+  "lat": 42.5345647,
+  "lon": 1.4849461,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 7274995381,
+  "lat": 42.5399128,
+  "lon": 1.4972444,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 7274995382,
+  "lat": 42.5349143,
+  "lon": 1.4858436,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 7274995383,
+  "lat": 42.5388249,
+  "lon": 1.4947953,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 7274995384,
+  "lat": 42.5354066,
+  "lon": 1.4871070,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 7275082685,
+  "lat": 42.5378939,
+  "lon": 1.4926992,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 7275082686,
+  "lat": 42.5307111,
+  "lon": 1.4752587,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 7275082687,
+  "lat": 42.5356958,
+  "lon": 1.4878494,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 7275082688,
+  "lat": 42.5311303,
+  "lon": 1.4763043,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 7275082689,
+  "lat": 42.5360729,
+  "lon": 1.4888171,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8662952015,
+  "lat": 42.5372846,
+  "lon": 1.4849869,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8662952016,
+  "lat": 42.5366684,
+  "lon": 1.4858030,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8662986452,
+  "lat": 42.5726302,
+  "lon": 1.4828802,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8662986453,
+  "lat": 42.5727492,
+  "lon": 1.4799705,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8662986454,
+  "lat": 42.5727342,
+  "lon": 1.4803379,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8662986455,
+  "lat": 42.5728731,
+  "lon": 1.4769397,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8662986456,
+  "lat": 42.5728168,
+  "lon": 1.4783174,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8662986457,
+  "lat": 42.5729325,
+  "lon": 1.4754888,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8662986458,
+  "lat": 42.5729476,
+  "lon": 1.4751174,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8662986459,
+  "lat": 42.5730875,
+  "lon": 1.4716959,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8662986460,
+  "lat": 42.5719600,
+  "lon": 1.4696987,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8662986461,
+  "lat": 42.5723326,
+  "lon": 1.4700903,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8662986462,
+  "lat": 42.5721914,
+  "lon": 1.4689127,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8662986463,
+  "lat": 42.5716157,
+  "lon": 1.4684417,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8662986464,
+  "lat": 42.5720767,
+  "lon": 1.4679562,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8662986465,
+  "lat": 42.5719539,
+  "lon": 1.4669317,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8662986466,
+  "lat": 42.5712303,
+  "lon": 1.4670344,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8662986467,
+  "lat": 42.5709857,
+  "lon": 1.4661413,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8662986468,
+  "lat": 42.5718079,
+  "lon": 1.4657140,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8662986469,
+  "lat": 42.5707878,
+  "lon": 1.4654189,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8662986470,
+  "lat": 42.5716269,
+  "lon": 1.4642053,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8662986471,
+  "lat": 42.5714655,
+  "lon": 1.4628586,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8662986472,
+  "lat": 42.5703599,
+  "lon": 1.4638565,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8662986473,
+  "lat": 42.5700251,
+  "lon": 1.4626343,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8662986474,
+  "lat": 42.5712350,
+  "lon": 1.4609365,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8662986475,
+  "lat": 42.5695888,
+  "lon": 1.4610413,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8662986476,
+  "lat": 42.5710634,
+  "lon": 1.4595058,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8662986477,
+  "lat": 42.5693832,
+  "lon": 1.4602907,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8662986478,
+  "lat": 42.5691368,
+  "lon": 1.4593911,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8662986480,
+  "lat": 42.5708617,
+  "lon": 1.4578236,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8662986481,
+  "lat": 42.5707276,
+  "lon": 1.4567059,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8662986482,
+  "lat": 42.5705358,
+  "lon": 1.4551062,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8662986483,
+  "lat": 42.5703906,
+  "lon": 1.4538953,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8662986484,
+  "lat": 42.5701791,
+  "lon": 1.4521312,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8663007517,
+  "lat": 42.5359701,
+  "lon": 1.4867279,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8663007518,
+  "lat": 42.5355425,
+  "lon": 1.4872942,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8663007519,
+  "lat": 42.5349962,
+  "lon": 1.4880176,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8663007520,
+  "lat": 42.5369804,
+  "lon": 1.4831434,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8663007521,
+  "lat": 42.5371831,
+  "lon": 1.4834181,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8663007522,
+  "lat": 42.5359622,
+  "lon": 1.4817637,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8663007523,
+  "lat": 42.5348989,
+  "lon": 1.4803229,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8663007524,
+  "lat": 42.5338867,
+  "lon": 1.4789513,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8663007525,
+  "lat": 42.5331346,
+  "lon": 1.4779323,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8663007526,
+  "lat": 42.5322542,
+  "lon": 1.4767393,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8663007527,
+  "lat": 42.5313623,
+  "lon": 1.4755309,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8663007528,
+  "lat": 42.5309602,
+  "lon": 1.4749860,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8663007529,
+  "lat": 42.5336613,
+  "lon": 1.4684687,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8663007530,
+  "lat": 42.5333272,
+  "lon": 1.4678895,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8663007531,
+  "lat": 42.5327514,
+  "lon": 1.4668912,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8663007532,
+  "lat": 42.5319827,
+  "lon": 1.4655586,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8663007533,
+  "lat": 42.5313087,
+  "lon": 1.4643901,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8663007534,
+  "lat": 42.5305325,
+  "lon": 1.4630443,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8663007535,
+  "lat": 42.5299204,
+  "lon": 1.4619833,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8663007536,
+  "lat": 42.5291331,
+  "lon": 1.4606184,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8663007537,
+  "lat": 42.5283484,
+  "lon": 1.4592581,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8663007538,
+  "lat": 42.5275905,
+  "lon": 1.4579441,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8663007539,
+  "lat": 42.5269047,
+  "lon": 1.4567553,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8690757489,
+  "lat": 42.5441378,
+  "lon": 1.4524714,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8690757490,
+  "lat": 42.5435323,
+  "lon": 1.4525020,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8690757491,
+  "lat": 42.5417705,
+  "lon": 1.4525910,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8690757492,
+  "lat": 42.5403763,
+  "lon": 1.4526614,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8690757493,
+  "lat": 42.5395583,
+  "lon": 1.4527027,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8690757494,
+  "lat": 42.5392228,
+  "lon": 1.4527196,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8690757495,
+  "lat": 42.5388723,
+  "lon": 1.4527373,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8690757496,
+  "lat": 42.5385387,
+  "lon": 1.4527542,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8690757497,
+  "lat": 42.5373136,
+  "lon": 1.4528160,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8690757498,
+  "lat": 42.5358257,
+  "lon": 1.4528912,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8690757499,
+  "lat": 42.5354934,
+  "lon": 1.4529080,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8690757500,
+  "lat": 42.5351735,
+  "lon": 1.4529241,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8690757501,
+  "lat": 42.5393905,
+  "lon": 1.4517797,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8690757502,
+  "lat": 42.5398737,
+  "lon": 1.4513490,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8690757503,
+  "lat": 42.5408647,
+  "lon": 1.4504658,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8690757504,
+  "lat": 42.5417320,
+  "lon": 1.4496929,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8690757505,
+  "lat": 42.5427551,
+  "lon": 1.4487810,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8690757506,
+  "lat": 42.5436933,
+  "lon": 1.4479447,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8690757507,
+  "lat": 42.5455337,
+  "lon": 1.4463044,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 8690757508,
+  "lat": 42.5459266,
+  "lon": 1.4459542,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 10311842715,
+  "lat": 42.5700192,
+  "lon": 1.4509755
+},
+{
+  "type": "node",
+  "id": 10311842716,
+  "lat": 42.5700818,
+  "lon": 1.4509612
+},
+{
+  "type": "node",
+  "id": 10311842717,
+  "lat": 42.5701090,
+  "lon": 1.4511805
+},
+{
+  "type": "node",
+  "id": 10311842718,
+  "lat": 42.5700464,
+  "lon": 1.4511948
+},
+{
+  "type": "node",
+  "id": 10692871901,
+  "lat": 42.5438613,
+  "lon": 1.4524854
+},
+{
+  "type": "node",
+  "id": 11179138117,
+  "lat": 42.5302091,
+  "lon": 1.4742693,
+  "tags": {
+    "aerialway": "station",
+    "name": "Pla de la Cot II",
+    "name:ca": "Pla de la Cot II"
+  }
+},
+{
+  "type": "node",
+  "id": 11179138118,
+  "lat": 42.5304500,
+  "lon": 1.4748116,
+  "tags": {
+    "aerialway": "station",
+    "name": "Pla de la Cot II",
+    "name:ca": "Pla de la Cot II"
+  }
+},
+{
+  "type": "node",
+  "id": 11544798834,
+  "lat": 42.5309714,
+  "lon": 1.4671172,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 11544798835,
+  "lat": 42.5304212,
+  "lon": 1.4658813,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 11544798836,
+  "lat": 42.5290716,
+  "lon": 1.4628501,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 11544798837,
+  "lat": 42.5287361,
+  "lon": 1.4620965,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 11544798838,
+  "lat": 42.5282398,
+  "lon": 1.4609819,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 11544798839,
+  "lat": 42.5279723,
+  "lon": 1.4603811,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 11544798840,
+  "lat": 42.5275304,
+  "lon": 1.4593885,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 11544798841,
+  "lat": 42.5268657,
+  "lon": 1.4578955,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 11544798842,
+  "lat": 42.5265421,
+  "lon": 1.4571687,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 11544798843,
+  "lat": 42.5268051,
+  "lon": 1.4565827,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 11544800846,
+  "lat": 42.5369177,
+  "lon": 1.4909086,
+  "tags": {
+    "aerialway": "station",
+    "name": "Pedres Blanques II"
+  }
+},
+{
+  "type": "node",
+  "id": 11544800847,
+  "lat": 42.5369632,
+  "lon": 1.4901750,
+  "tags": {
+    "aerialway": "station",
+    "name": "Pedres Blanques II"
+  }
+},
+{
+  "type": "node",
+  "id": 11544800848,
+  "lat": 42.5377932,
+  "lon": 1.4907959,
+  "tags": {
+    "aerialway": "station",
+    "name": "Pedres Blanques I"
+  }
+},
+{
+  "type": "node",
+  "id": 11544800849,
+  "lat": 42.5383367,
+  "lon": 1.4912143,
+  "tags": {
+    "aerialway": "station",
+    "name": "Pedres Blanques I"
+  }
+},
+{
+  "type": "node",
+  "id": 11544800850,
+  "lat": 42.5356400,
+  "lon": 1.4911647,
+  "tags": {
+    "aerialway": "station",
+    "name": "el Planell II"
+  }
+},
+{
+  "type": "node",
+  "id": 11544800851,
+  "lat": 42.5353791,
+  "lon": 1.4906430,
+  "tags": {
+    "aerialway": "station",
+    "name": "el Planell II"
+  }
+},
+{
+  "type": "node",
+  "id": 12479038793,
+  "lat": 42.5666631,
+  "lon": 1.4472628,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 12479038794,
+  "lat": 42.5670021,
+  "lon": 1.4484605,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 12479038795,
+  "lat": 42.5674204,
+  "lon": 1.4499382,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 12479038796,
+  "lat": 42.5678502,
+  "lon": 1.4514569,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 12479038797,
+  "lat": 42.5684272,
+  "lon": 1.4534956,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 12479038798,
+  "lat": 42.5689883,
+  "lon": 1.4554781,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 12479038799,
+  "lat": 42.5695644,
+  "lon": 1.4575137,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 12479038800,
+  "lat": 42.5706421,
+  "lon": 1.4613219,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 12479042801,
+  "lat": 42.5701510,
+  "lon": 1.4595864,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 12479042802,
+  "lat": 42.5710032,
+  "lon": 1.4626657,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 12479042803,
+  "lat": 42.5711648,
+  "lon": 1.4632471
+},
+{
+  "type": "node",
+  "id": 12479042804,
+  "lat": 42.5710990,
+  "lon": 1.4632841
+},
+{
+  "type": "node",
+  "id": 12479042805,
+  "lat": 42.5711864,
+  "lon": 1.4635629
+},
+{
+  "type": "node",
+  "id": 12479042806,
+  "lat": 42.5712409,
+  "lon": 1.4635259
+},
+{
+  "type": "node",
+  "id": 12479042807,
+  "lat": 42.5711325,
+  "lon": 1.4631784,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 12479042808,
+  "lat": 42.5712068,
+  "lon": 1.4634919
+},
+{
+  "type": "node",
+  "id": 12479042809,
+  "lat": 42.5662107,
+  "lon": 1.4457243
+},
+{
+  "type": "node",
+  "id": 12479042810,
+  "lat": 42.5662199,
+  "lon": 1.4456697
+},
+{
+  "type": "node",
+  "id": 12479042811,
+  "lat": 42.5661756,
+  "lon": 1.4456959
+},
+{
+  "type": "node",
+  "id": 12479042812,
+  "lat": 42.5662301,
+  "lon": 1.4458993
+},
+{
+  "type": "node",
+  "id": 12479042813,
+  "lat": 42.5662777,
+  "lon": 1.4458700
+},
+{
+  "type": "way",
+  "id": 29376254,
+  "nodes": [
+    323129883,
+    2967475707,
+    2967495551,
+    7274995375,
+    5782073069,
+    7274995377,
+    7274995379,
+    7274995381,
+    7274995383,
+    7275082685,
+    2340901724
+  ],
+  "tags": {
+    "aerialway": "gondola",
+    "aerialway:duration": "8",
+    "aerialway:heating": "no",
+    "aerialway:occupancy": "16",
+    "name": "Telecabina La Massana",
+    "name:ca": "Telecabina La Massana",
+    "name:en": "Cable Car La Massana"
+  }
+},
+{
+  "type": "way",
+  "id": 29376356,
+  "nodes": [
+    323130871,
+    8662986452,
+    8662986454,
+    8662986453,
+    8662986456,
+    8662986455,
+    8662986457,
+    8662986458,
+    8662986459,
+    323130873
+  ],
+  "tags": {
+    "aerialway": "gondola",
+    "name": "els Orriols",
+    "name:ca": "els Orriols"
+  }
+},
+{
+  "type": "way",
+  "id": 42014211,
+  "nodes": [
+    521153188,
+    664225531,
+    664225527,
+    664225529,
+    664225521,
+    664225523,
+    664225525,
+    664225516,
+    664225519,
+    664225476,
+    664225514,
+    521153185
+  ],
+  "tags": {
+    "aerialway": "chair_lift",
+    "aerialway:occupancy": "6",
+    "name": "Arinsal",
+    "name:ca": "Arinsal"
+  }
+},
+{
+  "type": "way",
+  "id": 52008425,
+  "nodes": [
+    663075946,
+    7274995373,
+    7274995371,
+    663075945
+  ],
+  "tags": {
+    "aerialway": "chair_lift",
+    "aerialway:occupancy": "2",
+    "name": "la Caubella"
+  }
+},
+{
+  "type": "way",
+  "id": 52008767,
+  "nodes": [
+    663078912,
+    7275082689,
+    7275082687,
+    7274995384,
+    7274995382,
+    7274995380,
+    7274995378,
+    7274995376,
+    2340797302,
+    7274995374,
+    7274995372,
+    7274995370,
+    7275082688,
+    7275082686,
+    2340797297
+  ],
+  "tags": {
+    "aerialway": "chair_lift",
+    "aerialway:occupancy": "2",
+    "name": "la Serra",
+    "name:ca": "la Serra"
+  }
+},
+{
+  "type": "way",
+  "id": 52009081,
+  "nodes": [
+    663080313,
+    8662952015,
+    8662952016,
+    8663007517,
+    8663007518,
+    8663007519,
+    663080312
+  ],
+  "tags": {
+    "aerialway": "chair_lift",
+    "aerialway:occupancy": "4",
+    "name": "la Carbonera",
+    "name:ca": "la Carbonera"
+  }
+},
+{
+  "type": "way",
+  "id": 52009565,
+  "nodes": [
+    663084328,
+    8663007521,
+    8663007520,
+    8663007522,
+    8663007523,
+    8663007524,
+    8663007525,
+    8663007526,
+    8663007527,
+    8663007528,
+    2340797296
+  ],
+  "tags": {
+    "aerialway": "chair_lift",
+    "aerialway:occupancy": "4",
+    "name": "la Serra 2",
+    "name:ca": "la Serra 2"
+  }
+},
+{
+  "type": "way",
+  "id": 52010630,
+  "nodes": [
+    663092390,
+    8690757489,
+    10692871901,
+    8690757490,
+    8690757491,
+    8690757492,
+    8690757493,
+    8690757494,
+    8690757495,
+    8690757496,
+    8690757497,
+    8690757498,
+    8690757499,
+    8690757500,
+    663092389
+  ],
+  "tags": {
+    "aerialway": "chair_lift",
+    "aerialway:bubble": "no",
+    "aerialway:heating": "yes",
+    "aerialway:occupancy": "4",
+    "name": "la Botella",
+    "name:ca": "la Botella",
+    "oneway": "yes"
+  }
+},
+{
+  "type": "way",
+  "id": 52010729,
+  "nodes": [
+    663093430,
+    8690757508,
+    8690757507,
+    8690757506,
+    8690757505,
+    8690757504,
+    8690757503,
+    8690757502,
+    8690757501,
+    663093429
+  ],
+  "tags": {
+    "aerialway": "chair_lift",
+    "aerialway:occupancy": "4",
+    "name": "Setúria",
+    "name:ca": "Setúria"
+  }
+},
+{
+  "type": "way",
+  "id": 52010876,
+  "nodes": [
+    663095052,
+    8663007529,
+    8663007530,
+    8663007531,
+    8663007532,
+    8663007533,
+    8663007534,
+    8663007535,
+    8663007536,
+    8663007537,
+    8663007538,
+    8663007539,
+    11544798843,
+    2340901723
+  ],
+  "tags": {
+    "aerialway": "chair_lift",
+    "aerialway:occupancy": "6",
+    "name": "El Cubil"
+  }
+},
+{
+  "type": "way",
+  "id": 52038527,
+  "nodes": [
+    663372540,
+    8662986461,
+    8662986462,
+    8662986464,
+    8662986465,
+    8662986468,
+    8662986470,
+    8662986471,
+    8662986474,
+    8662986476,
+    8662986480,
+    8662986481,
+    8662986482,
+    8662986483,
+    8662986484,
+    663372539
+  ],
+  "tags": {
+    "aerialway": "chair_lift",
+    "aerialway:occupancy": "6",
+    "name": "les Fonts",
+    "name:ca": "les Fonts"
+  }
+},
+{
+  "type": "way",
+  "id": 52038627,
+  "nodes": [
+    663373402,
+    664236928,
+    664236926,
+    664236927,
+    664236925,
+    664236924,
+    663373401
+  ],
+  "tags": {
+    "aerialway": "chair_lift",
+    "aerialway:occupancy": "4",
+    "name": "el Cortal",
+    "name:ca": "el Cortal"
+  }
+},
+{
+  "type": "way",
+  "id": 52112646,
+  "nodes": [
+    664085283,
+    664085288
+  ],
+  "tags": {
+    "aerialway": "drag_lift",
+    "name": "la Serra",
+    "name:ca": "la Serra"
+  }
+},
+{
+  "type": "way",
+  "id": 52114939,
+  "nodes": [
+    664115932,
+    11544798834,
+    11544798835,
+    11544798836,
+    11544798837,
+    11544798838,
+    11544798839,
+    11544798840,
+    11544798841,
+    11544798842,
+    664115755
+  ],
+  "tags": {
+    "aerialway": "drag_lift",
+    "name": "el Cubil"
+  }
+},
+{
+  "type": "way",
+  "id": 52114942,
+  "nodes": [
+    664115810,
+    664115752
+  ],
+  "tags": {
+    "aerialway": "drag_lift",
+    "name": "els Coms",
+    "name:ca": "els Coms"
+  }
+},
+{
+  "type": "way",
+  "id": 52114952,
+  "nodes": [
+    664192681,
+    664192679,
+    664192680,
+    664116091
+  ],
+  "tags": {
+    "aerialway": "cable_car",
+    "aerialway:occupancy": "50",
+    "name": "Arinsal-Pal",
+    "name:ca": "Arinsal-Pal"
+  }
+},
+{
+  "type": "way",
+  "id": 52121995,
+  "nodes": [
+    664195007,
+    664195008
+  ],
+  "tags": {
+    "aerialway": "platter",
+    "name": "la Capa",
+    "name:ca": "la Capa"
+  }
+},
+{
+  "type": "way",
+  "id": 52692961,
+  "nodes": [
+    668878850,
+    8662986460,
+    8662986463,
+    8662986466,
+    8662986467,
+    8662986469,
+    8662986472,
+    8662986473,
+    8662986475,
+    8662986477,
+    8662986478,
+    668878558
+  ],
+  "tags": {
+    "aerialway": "chair_lift",
+    "aerialway:occupancy": "4",
+    "name": "la Tossa",
+    "name:ca": "la Tossa"
+  }
+},
+{
+  "type": "way",
+  "id": 52692965,
+  "nodes": [
+    668878595,
+    668878457
+  ],
+  "tags": {
+    "aerialway": "drag_lift",
+    "name": "els Planels"
+  }
+},
+{
+  "type": "way",
+  "id": 98007155,
+  "nodes": [
+    1134181653,
+    1134180054
+  ],
+  "tags": {
+    "aerialway": "drag_lift",
+    "name": "La Tossa I",
+    "name:ca": "La Tossa I"
+  }
+},
+{
+  "type": "way",
+  "id": 98007176,
+  "nodes": [
+    1134181578,
+    1134182416
+  ],
+  "tags": {
+    "aerialway": "magic_carpet",
+    "name": "el Planell I",
+    "name:ca": "el Planell I"
+  }
+},
+{
+  "type": "way",
+  "id": 261555164,
+  "nodes": [
+    2671540906,
+    2671540907
+  ],
+  "tags": {
+    "aerialway": "magic_carpet",
+    "name": "Pedres Blanques II",
+    "name:ca": "Pedres Blanques II"
+  }
+},
+{
+  "type": "way",
+  "id": 261556519,
+  "nodes": [
+    2671550832,
+    2671550831
+  ],
+  "tags": {
+    "aerialway": "magic_carpet",
+    "aerialway:heating": "no",
+    "name": "Pla de la Cot I",
+    "name:ca": "Pla de la Cot I"
+  }
+},
+{
+  "type": "way",
+  "id": 261556791,
+  "nodes": [
+    2671553324,
+    2671553323
+  ],
+  "tags": {
+    "aerialway": "drag_lift",
+    "name": "La Tossa II",
+    "name:ca": "La Tossa II"
+  }
+},
+{
+  "type": "way",
+  "id": 261559361,
+  "nodes": [
+    2671576063,
+    2671576064
+  ],
+  "tags": {
+    "aerialway": "magic_carpet",
+    "name": "l'Escola I",
+    "name:ca": "l'Escola I"
+  }
+},
+{
+  "type": "way",
+  "id": 261559362,
+  "nodes": [
+    2671576065,
+    2671576066
+  ],
+  "tags": {
+    "aerialway": "magic_carpet",
+    "name": "l'Escola II",
+    "name:ca": "l'Escola II"
+  }
+},
+{
+  "type": "way",
+  "id": 1127880457,
+  "nodes": [
+    10311842715,
+    10311842716,
+    10311842717,
+    10311842718,
+    10311842715
+  ],
+  "tags": {
+    "aerialway": "station",
+    "public_transport": "station"
+  }
+},
+{
+  "type": "way",
+  "id": 1206430892,
+  "nodes": [
+    11179138117,
+    11179138118
+  ],
+  "tags": {
+    "aerialway": "magic_carpet",
+    "aerialway:heating": "no",
+    "name": "Pla de la Cot II",
+    "name:ca": "Pla de la Cot II"
+  }
+},
+{
+  "type": "way",
+  "id": 1242378365,
+  "nodes": [
+    11544800847,
+    11544800846
+  ],
+  "tags": {
+    "aerialway": "magic_carpet"
+  }
+},
+{
+  "type": "way",
+  "id": 1242378366,
+  "nodes": [
+    11544800849,
+    11544800848
+  ],
+  "tags": {
+    "aerialway": "magic_carpet",
+    "name": "Pedres Blanques I"
+  }
+},
+{
+  "type": "way",
+  "id": 1242378367,
+  "nodes": [
+    11544800850,
+    11544800851
+  ],
+  "tags": {
+    "aerialway": "magic_carpet",
+    "name": "el Planell II"
+  }
+},
+{
+  "type": "way",
+  "id": 1349056256,
+  "nodes": [
+    12479042808,
+    12479042807,
+    12479042802,
+    12479038800,
+    12479042801,
+    12479038799,
+    12479038798,
+    12479038797,
+    12479038796,
+    12479038795,
+    12479038794,
+    12479038793,
+    12479042809
+  ],
+  "tags": {
+    "aerialway": "chair_lift",
+    "aerialway:occupancy": "4",
+    "name": "Port Negre",
+    "oneway": "yes"
+  }
+},
+{
+  "type": "way",
+  "id": 1349056257,
+  "nodes": [
+    12479042803,
+    12479042804,
+    12479042805,
+    12479042806,
+    12479042803
+  ],
+  "tags": {
+    "aerialway": "station",
+    "aerialway:access": "entry",
+    "public_transport": "station"
+  }
+},
+{
+  "type": "way",
+  "id": 1349056258,
+  "nodes": [
+    12479042810,
+    12479042811,
+    12479042812,
+    12479042813,
+    12479042810
+  ],
+  "tags": {
+    "aerialway": "station",
+    "aerialway:access": "exit",
+    "public_transport": "station"
+  }
+}
+
+  ]
+}

@@ -5,6 +5,19 @@ import 'package:flutter/material.dart';
 class GlobalConstants {
   // 定义一个static和final的Map来存储多语言滑雪胜地的key-value对
   static final Map<String, Map<String, dynamic>> skiResortList = {
+    'palarinsal': { // assets文件夹名称
+      'name': { // 雪场名
+        'en': 'Pal Arinsal',
+        'fr': 'Pal Arinsal',
+        'cn': 'Pal Arinsal',
+      },
+      'coordinate': { // 雪场坐标
+        'lat': 42.563015,
+        'lng': 1.454209,
+      },
+      'country': 'Andorra',
+      'zoom': 13.0,
+    },
     '3valley': { // assets文件夹名称
       'name': { // 雪场名
         'en': 'The Three Valleys',

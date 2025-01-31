@@ -112,9 +112,11 @@ class RouteEngine {
     // Construct the API URL
     String url = '$baseUrl/$coordinates?alternatives=false&overview=false&steps=true';
 
-    if (selectedResortKey == 'morzine') {
-      url = 'https://snownavi.ski/route/morzine/v1/$coordinates?alternatives=false&overview=false&steps=true';
+    if (selectedResortKey != '3valley') {
+      url = 'https://snownavi.ski/route/$selectedResortKey/v1/$coordinates?alternatives=false&overview=false&steps=true';
     }
+
+    // print("get route from $url");
 
     try {
       // Await the server's response

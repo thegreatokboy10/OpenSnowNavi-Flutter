@@ -40,3 +40,5 @@ flutter:
     - assets/beidahu/runs.geojson
     - assets/morzine/lifts.geojson
     - assets/morzine/runs.geojson
+    - assets/palarinsal/lifts.geojson
+    - assets/palarinsal/runs.geojson

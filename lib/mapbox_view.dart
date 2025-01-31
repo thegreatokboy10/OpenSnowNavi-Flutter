@@ -766,6 +766,11 @@ class _GeneratorPageState extends State<GeneratorPage> {
     Map<String, String> countryCodeMap = {
       'France': 'FR',
       'China': 'CN',
+      'Andorra': 'AD',
+      'Switzerland': 'CH',  // 添加瑞士
+      'Austria': 'AT',      // 添加奥地利
+      'Germany': 'DE',      // 添加德国
+      'Italy': 'IT'         // 添加意大利
       // Add other countries and their codes here as needed
     };
 

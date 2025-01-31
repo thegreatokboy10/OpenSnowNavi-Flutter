@@ -1,0 +1,409 @@
+{
+  "version": 0.6,
+  "generator": "Overpass API 0.7.62.4 2390de5a",
+  "osm3s": {
+    "timestamp_osm_base": "2025-01-31T21:49:05Z",
+    "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL."
+  },
+  "elements": [
+
+{
+  "type": "relation",
+  "id": 4638280,
+  "members": [
+    {
+      "type": "way",
+      "ref": 52692964,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 52010630,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 152826460,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 261555164,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 152826458,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 152826457,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 152826454,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 152826456,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 152826455,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 152826453,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 52122469,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 29376254,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 29376356,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 152826452,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 152826451,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 152826450,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 152826449,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 152826448,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 152826442,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 52112651,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 152826447,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 152826444,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 152826445,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 152826443,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 152826440,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 152826441,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 52692955,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 152826439,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 152826437,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 269525356,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 52692959,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 52009565,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 52692957,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 52009081,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 52692956,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 52692960,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 52038627,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 52692961,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 52692962,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 52692963,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 42014211,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 52692965,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 52692966,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 52692967,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1355803598,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 52692969,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 52692970,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 52692971,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 269525360,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 269525359,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 269525358,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 269525357,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 52114942,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 52008767,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 98007176,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 52038527,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 52114939,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 261556519,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 98007155,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 52268017,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 52008425,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 261559362,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 261559361,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 52121995,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 52123917,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 269224751,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 269224750,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 269224749,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 261556791,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 52010876,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 52010729,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 52112646,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 52112648,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 52114952,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 202616749,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1348519493,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1349056256,
+      "role": ""
+    }
+  ],
+  "tags": {
+    "name": "Pal-Arinsal",
+    "name:ca": "Pal-Arinsal",
+    "site": "piste",
+    "type": "site"
+  }
+}
+
+  ]
+}
