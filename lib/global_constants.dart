@@ -95,6 +95,7 @@ class GlobalConstants {
   static double lowlightFeatureOpacity = 0.3;
   static String routeColor = "#1a5ad0";
   static double routeLineWidth = 8.0;
+  static int maxStopovers = 10;
   // Piste/Lift layers
   static String pisteLayerId = "run-layer";
   static String pisteSourceId = "run-source";

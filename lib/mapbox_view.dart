@@ -37,7 +37,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
   // Create an instance of RouteEngine
   final routeEngine = re.RouteEngine();
   re.Route? route;
-  List<LatLng>? stopovers; // TODO: think about how to properly support stopovers
+  List<LatLng> stopovers = []; // TODO: think about how to properly support stopovers
   // Resort
   String selectedResortKey = '3valley'; // Default selection for 3 Valleys
   // Filter set for pistes and lifts
@@ -127,7 +127,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
     if (widget.coordinates!.length > 2) {
       stopovers = widget.coordinates!
           .sublist(1, widget.coordinates!.length - 1)
-          .map((coord) => LatLng(coord[0], coord[1]))
+          .map((coord) => LatLng(coord[1], coord[0]))
           .toList();
     } else {
       stopovers = [];
@@ -616,10 +616,10 @@ class _GeneratorPageState extends State<GeneratorPage> {
       // 安全地处理起点和终点
       if (startCoordinate != null && endCoordinate != null) {
         // 设置起点和终点
-        _setRouteCoordinates(startCoordinate!, endCoordinate!);
+        _setRouteCoordinates(startCoordinate!, endCoordinate!, stopovers: stopovers);
         
         // 生成路线
-        _generateRoute(startCoordinate!, endCoordinate!);
+        _generateRoute(startCoordinate!, endCoordinate!, stopovers: stopovers);
         
         // 标记为已恢复
         needRestore = false;
@@ -629,10 +629,33 @@ class _GeneratorPageState extends State<GeneratorPage> {
     }
   }
 
-  void _setRouteCoordinates(LatLng start, LatLng end) {
-    _clearAllCircles(); // 清除现有的圆
-    _addCircleWithText(start, circleColor: "#00FF00", text: "A"); // 添加起点圆和文本
-    _addCircleWithText(end, circleColor: "#0000FF", text: "B"); // 添加终点圆和文本
+  void _setRouteCoordinates(LatLng start, LatLng end, {List<LatLng>? stopovers}) {
+    _clearAllCircles(); // Clear existing circles
+
+    // Add start point
+    _addCircleWithText(
+      start,
+      circleColor: "#00FF00", // Green for start
+      text: "A",
+    );
+
+    // Add stopovers if they exist
+    if (stopovers != null && stopovers.isNotEmpty) {
+      for (int i = 0; i < stopovers.length; i++) {
+        _addCircleWithText(
+          stopovers[i],
+          circleColor: "#FFA500", // Orange for stopovers
+          text: (i + 1).toString(), // Number each stopover
+        );
+      }
+    }
+
+    // Add end point
+    _addCircleWithText(
+      end,
+      circleColor: "#0000FF", // Blue for destination
+      text: "B",
+    );
   }
 
   // Callback when the Mapbox map is created
@@ -797,7 +820,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
         ),
       );
       // Wait for the camera to move
-      await Future.delayed(Duration(milliseconds: 100));
+      await Future.delayed(Duration(milliseconds: 1000));
       print("Moving camera to $lat, $lng and load ski resort data");
       _loadSkiResortData();
     }
@@ -829,6 +852,14 @@ class _GeneratorPageState extends State<GeneratorPage> {
     } catch (e) {
       print('No existing route layer to remove: $e');
     }
+  }
+
+  void _removeStopOvers() {
+    setState(() {
+      startCoordinate = null;
+      endCoordinate = null;
+      stopovers.clear();
+    });
   }
 
   
@@ -900,47 +931,202 @@ class _GeneratorPageState extends State<GeneratorPage> {
   }
 
   void _onMapClick(Point<double> point, LatLng coordinates) async {
-    // Handle map click event
+    if (isUiOpen.flag) {
+      isUiOpen.flag = false;
+      print("Map clicked, set isUiOpen to false");
+      return;
+    }
+    print('Map clicked at: ${coordinates.latitude}, ${coordinates.longitude}');
+
+    // Show bottom sheet
+    showBottomSheet(
+      context: context,
+      backgroundColor: Colors.white.withOpacity(GlobalConstants.floatingbuttonopacity),
+      enableDrag: false, // Prevent accidental closing
+      builder: (BuildContext context) {
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque, // Capture all events
+          onTapDown: (details) {
+            isUiOpen.flag = true;
+            print("BottomSheet onTapDown, set isUiOpen to true");
+          },
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: EdgeInsets.all(16.0),
+                width: double.infinity, // Ensure full width
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: <Widget>[
+                        Text(
+                          "Selected Location",
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.close),
+                          onPressed: () {
+                            isUiOpen.flag = true;
+                            Navigator.pop(context); // Close bottom sheet
+                          },
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 8.0),
+                    Text(
+                      "Lat: ${coordinates.latitude.toStringAsFixed(6)}, "
+                      "Lng: ${coordinates.longitude.toStringAsFixed(6)}",
+                      style: TextStyle(fontSize: 16, color: Colors.grey[700]),
+                    ),
+                    SizedBox(height: 16.0),
+
+                    // Buttons with GestureDetector
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        // Add as Stopover Button
+                        GestureDetector(
+                          onTapDown: (details) {
+                            isUiOpen.flag = true;
+                            print("Add to Route button tapped, isUiOpen set to true");
+                          },
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              isUiOpen.flag = true;
+                              Navigator.pop(context); // Close bottom sheet
+                              _handleAddToRoute(coordinates);
+                            },
+                            icon: Icon(Icons.add_location_alt),
+                            label: Text("Add to Route"),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue,
+                              foregroundColor: Colors.white,
+                            ),
+                          ),
+                        ),
+
+                        // Go Button (Set as Destination)
+                        GestureDetector(
+                          onTapDown: (details) {
+                            isUiOpen.flag = true;
+                            print("Go button tapped, isUiOpen set to true");
+                          },
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              isUiOpen.flag = true;
+                              Navigator.pop(context); // Close bottom sheet
+                              _handleGoButton(coordinates);
+                            },
+                            icon: Icon(Icons.directions),
+                            label: Text("Go"),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              foregroundColor: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 40.0),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _handleAddToRoute(LatLng coordinates) {
+    if (startCoordinate == null) {
+      // Case: No start point, set this as start
+      print("Setting start coordinate: $coordinates");
+      startCoordinate = coordinates;
+      _addCircleWithText(
+        coordinates,
+        circleColor: "#00FF00", // Green for start
+        text: "A",
+      );
+    } else {
+      // Case: start exists, add this as a stopover
+      print("Adding stopover: $coordinates");
+      stopovers.add(coordinates);
+      _addCircleWithText(
+        coordinates,
+        circleColor: "#FFA500", // Orange for stopovers
+        text: (stopovers.length).toString(),
+      );
+    }
+
+    // If both start and destination exist, start generating route
+    if (startCoordinate != null && endCoordinate != null) {
+      print("Both start and destination exist, generating route...");
+      _generateRoute(startCoordinate!, endCoordinate!, stopovers: stopovers);
+    }
+  }
+
+  void _handleGoButton(LatLng coordinates) {
+    print("Setting destination: $coordinates");
+    endCoordinate = coordinates;
+
+    _addCircleWithText(
+      coordinates,
+      circleColor: "#0000FF", // Blue circle for destination
+      text: "B",
+    );
+
+    // Start route planning only if there's a start point
+    if (startCoordinate != null) {
+      print("Start point exists, generating route...");
+      _generateRoute(startCoordinate!, endCoordinate!, stopovers: stopovers);
+    } else {
+      print("No start point, waiting for further input.");
+    }
   }
 
   // web does not support long click, it maps double click to long click
   void _onMapLongClick(Point<double> point, LatLng coordinates) async {
     print('Long-click at: ${coordinates.latitude}, ${coordinates.longitude}');
     
-    if (startCoordinate != null && endCoordinate != null) {
-      // Case: Both coordinates are already set. Clear all and reset startCoordinate
-      print("clear all and set startCoordinate: $coordinates");
-      _clearAllCircles(); // Clear existing circles
-      // Remove existing route layer and source if they exist
-        await _removeExistingRoute();
-      startCoordinate = coordinates;
-      endCoordinate = null;
-      _addCircleWithText(
-        coordinates,
-        circleColor: "#00FF00", // Green circle for start
-        text: "A",
-      );
-    } else if (startCoordinate != null && endCoordinate == null) {
-      // Case: Start is set, set endCoordinate
-      print("set endCoordinate: $coordinates and start generating route");
-      endCoordinate = coordinates;
-      _addCircleWithText(
-        coordinates,
-        circleColor: "#0000FF", // Blue circle for end
-        text: "B",
-      );
-      _generateRoute(startCoordinate!, endCoordinate!);
-      _generateSkiPlannerUrl(selectedResortKey, startCoordinate, endCoordinate, stopovers);
-    } else {
-      // Case: Neither is set, set startCoordinate
-      print("set startCoordinate: $coordinates");
-      startCoordinate = coordinates;
-      _addCircleWithText(
-        coordinates,
-        circleColor: "#00FF00", // Green circle for start
-        text: "A",
-      );
-    }
+    // if (startCoordinate != null && endCoordinate != null) {
+    //   // Case: Both coordinates are already set. Clear all and reset startCoordinate
+    //   print("clear all and set startCoordinate: $coordinates");
+    //   _clearAllCircles(); // Clear existing circles
+    //   // Remove existing route layer and source if they exist
+    //     await _removeExistingRoute();
+    //   startCoordinate = coordinates;
+    //   endCoordinate = null;
+    //   _addCircleWithText(
+    //     coordinates,
+    //     circleColor: "#00FF00", // Green circle for start
+    //     text: "A",
+    //   );
+    // } else if (startCoordinate != null && endCoordinate == null) {
+    //   // Case: Start is set, set endCoordinate
+    //   print("set endCoordinate: $coordinates and start generating route");
+    //   endCoordinate = coordinates;
+    //   _addCircleWithText(
+    //     coordinates,
+    //     circleColor: "#0000FF", // Blue circle for end
+    //     text: "B",
+    //   );
+    //   _generateRoute(startCoordinate!, endCoordinate!);
+    //   _generateSkiPlannerUrl(selectedResortKey, startCoordinate, endCoordinate, stopovers);
+    // } else {
+    //   // Case: Neither is set, set startCoordinate
+    //   print("set startCoordinate: $coordinates");
+    //   startCoordinate = coordinates;
+    //   _addCircleWithText(
+    //     coordinates,
+    //     circleColor: "#00FF00", // Green circle for start
+    //     text: "A",
+    //   );
+    // }
   }
 
   void _addCircleWithText(
@@ -1134,6 +1320,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
   void _handleRouteClose() {
     // Additional actions after closing the route
     _removeExistingRoute();  // Clears the drawn route from the map
+    _removeStopOvers();
     _clearAllCircles();
     print("Route panel closed, map layers restored.");
   }

@@ -209,7 +209,10 @@ class _FloatingRouteInstructionPanelState extends State<FloatingRouteInstruction
               ),
               IconButton(
                 icon: Icon(Icons.close),
-                onPressed: widget.onClose,
+                onPressed: () {
+                  widget.timerFlag.flag = true;
+                  widget.onClose();
+                }
               ),
             ],
           ),
