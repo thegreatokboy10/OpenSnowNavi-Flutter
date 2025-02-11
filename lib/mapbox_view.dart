@@ -93,6 +93,49 @@ class _GeneratorPageState extends State<GeneratorPage> {
   // flag to track if route needs to be restored from url
   bool needRestore = false;
 
+  Symbol? _redMarker;
+  bool _circleTextSourceExists = false;
+  List<Map<String, dynamic>> _circleTextFeatures = [];
+
+  void _initializeCircleTextSource() {
+    if (mapController == null) return;
+
+    // Create a new GeoJSON source
+    mapController?.addSource(
+      'circle-text-source',
+      GeojsonSourceProperties(
+        data: {"type": "FeatureCollection", "features": []}, // Start with empty features
+      ),
+    );
+
+    // Add a layer to render circles
+    mapController?.addCircleLayer(
+      'circle-text-source',
+      'circle-layer',
+      CircleLayerProperties(
+        circleColor: ['get', 'color'], // Use color from GeoJSON properties
+        circleRadius: 15, // Adjust size as needed
+        circleOpacity: 0.6,
+      ),
+    );
+
+    // Add a layer to render text labels
+    mapController?.addSymbolLayer(
+      'circle-text-source',
+      'circle-text-layer',
+      SymbolLayerProperties(
+        textField: ['get', 'text'], // Fetch text from properties
+        textSize: 12,
+        textColor: ['get', 'textColor'], // Dynamic text color
+        textHaloColor: "#000000", // Black outline for better visibility
+        textHaloWidth: 1.5,
+        textAnchor: "center",
+      ),
+    );
+
+    _circleTextSourceExists = true;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -630,7 +673,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
   }
 
   void _setRouteCoordinates(LatLng start, LatLng end, {List<LatLng>? stopovers}) {
-    _clearAllCircles(); // Clear existing circles
+    _clearAllCirclesWithText(); // Clear existing circles
 
     // Add start point
     _addCircleWithText(
@@ -930,6 +973,28 @@ class _GeneratorPageState extends State<GeneratorPage> {
     }
   }
 
+  /// Adds a red marker at the clicked location using the best available Mapbox icon.
+  void _addRedMarker(LatLng coordinates) async {
+    if (mapController == null) return;
+
+    // Remove existing marker before adding a new one
+    if (_redMarker != null) {
+      await mapController!.removeSymbol(_redMarker!);
+    }
+
+    // Add the new marker using the best Mapbox built-in icon
+    _redMarker = await mapController!.addSymbol(
+      SymbolOptions(
+        geometry: coordinates,
+        iconImage: 'marker', // Use Mapbox's built-in marker
+        iconSize: 2.5, // Adjust size for visibility
+      ),
+    );
+
+    print("Added red marker at: ${coordinates.latitude}, ${coordinates.longitude}");
+  }
+
+
   void _onMapClick(Point<double> point, LatLng coordinates) async {
     if (isUiOpen.flag) {
       isUiOpen.flag = false;
@@ -937,6 +1002,9 @@ class _GeneratorPageState extends State<GeneratorPage> {
       return;
     }
     print('Map clicked at: ${coordinates.latitude}, ${coordinates.longitude}');
+
+    // Add a red marker at the clicked location
+    _addRedMarker(coordinates);
 
     // Show bottom sheet
     showBottomSheet(
@@ -1135,25 +1203,32 @@ class _GeneratorPageState extends State<GeneratorPage> {
     required String text,
     String textColor = "#FFFFFF", // Default text color is white
   }) {
-    mapController?.addCircle(
-      CircleOptions(
-        geometry: coordinates,
-        circleRadius: 15,         // Radius in pixels
-        circleColor: circleColor, // Configurable circle color
-        circleOpacity: 0.6,       // Adjust opacity as needed
-      ),
-    );
+    if (mapController == null) return;
 
-    mapController?.addSymbol(
-      SymbolOptions(
-        geometry: coordinates,
-        textField: text,          // Configurable text
-        textSize: 12,
-        textColor: textColor,     // Configurable text color, defaults to white
-        textHaloColor: "#000000", // Optional: black outline for better visibility
-        textHaloWidth: 1.5,
-        textAnchor: "center",     // Center the text in the circle
-      ),
+    // Initialize source if not exists
+    if (!_circleTextSourceExists) {
+      _initializeCircleTextSource();
+    }
+
+    // Define new feature for the circle and text
+    Map<String, dynamic> newFeature = {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [coordinates.longitude, coordinates.latitude],
+      },
+      "properties": {
+        "color": circleColor, // Circle color
+        "text": text,         // Text label
+        "textColor": textColor, // Text color
+      },
+    };
+
+    // Update the GeoJSON source with the new feature
+    _circleTextFeatures.add(newFeature);
+    mapController?.setGeoJsonSource(
+      'circle-text-source',
+      {"type": "FeatureCollection", "features": _circleTextFeatures},
     );
   }
 
@@ -1172,11 +1247,21 @@ class _GeneratorPageState extends State<GeneratorPage> {
     );
   }
 
-  void _clearAllCircles() {
-    // Clear all circles and symbols from the map
-    mapController?.clearCircles(); // Clear circles
-    mapController?.clearSymbols(); // Clear symbols
+  void _clearAllCirclesWithText() {
+    if (mapController == null) return;
+
+    // Remove the GeoJSON source if it exists
+    mapController?.removeSource('circle-text-source');
+
+    // Remove the layer that displays the circles & text
+    mapController?.removeLayer('circle-text-layer');
+    mapController?.removeLayer('circle-layer');
+    _circleTextFeatures.clear();
+    _circleTextSourceExists = false;
+
+    print("Cleared all circles with text.");
   }
+
 
   Future<void> _launchUrl(String _url) async {
     if (!await launchUrl(Uri.parse(_url))) {
@@ -1201,44 +1286,6 @@ class _GeneratorPageState extends State<GeneratorPage> {
       );
     } catch (error) {
       print('Error: $error');
-    }
-  }
-
-  /// Draw a blue icon at the user's current location
-  Future<void> _drawCurrentLocationIcon(LatLng currentLocation) async {
-    try {
-      // Add the GeoJSON source for the current location
-      await mapController?.addSource(
-        "current_location_source",
-        GeojsonSourceProperties(data: {
-          "type": "FeatureCollection",
-          "features": [
-            {
-              "type": "Feature",
-              "geometry": {
-                "type": "Point",
-                "coordinates": [currentLocation.longitude, currentLocation.latitude],
-              },
-            }
-          ],
-        }),
-      );
-
-      // Add the symbol layer with a blue icon
-      await mapController?.addSymbolLayer(
-        "current_location_source",
-        "current_location_layer",
-        SymbolLayerProperties(
-          iconImage: "marker-15", // Default Mapbox marker
-          iconColor: "#007AFF",   // Blue color for the icon
-          iconSize: 1.5,          // Adjust icon size
-          iconAnchor: "center",   // Center the icon
-        ),
-      );
-
-      print("Blue icon added at $currentLocation");
-    } catch (error) {
-      print("Error drawing current location icon: $error");
     }
   }
 
@@ -1321,7 +1368,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
     // Additional actions after closing the route
     _removeExistingRoute();  // Clears the drawn route from the map
     _removeStopOvers();
-    _clearAllCircles();
+    _clearAllCirclesWithText();
     print("Route panel closed, map layers restored.");
   }
 
@@ -1441,7 +1488,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
                             isThreeLine: true, // Allows multiple lines in the subtitle
                             onTap: () {
                               LatLng coord = LatLng(poi['lat'], poi['lng']);
-                              _onMapLongClick(Point(0,0), coord);
+                              _onMapClick(Point(0,0), coord);
+                              isUiOpen.flag = true;
                               mapController?.animateCamera(
                                 CameraUpdate.newLatLng(
                                   coord,

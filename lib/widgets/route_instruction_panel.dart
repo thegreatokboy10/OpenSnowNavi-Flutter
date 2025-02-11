@@ -127,6 +127,8 @@ class _FloatingRouteInstructionPanelState extends State<FloatingRouteInstruction
   bool _isExpanded = true; // Start expanded by default
   double _collapsedHeight = 100;
   double _expandedHeight = 350;
+  Symbol? _currentStepMarker; // Store the last added marker
+  Symbol? _stepMarkerToRemove; // Store the marker to remove
 
   @override
   Widget build(BuildContext context) {
@@ -276,9 +278,9 @@ class _FloatingRouteInstructionPanelState extends State<FloatingRouteInstruction
     }
   }
 
-  void _addStepMarker(List<double> location) {
+  Future<void> _addStepMarker(List<double> location) async{
     // Add a marker at the step location
-    widget.mapController.addSymbol(
+    _currentStepMarker = await widget.mapController.addSymbol(
       SymbolOptions(
         geometry: LatLng(location[1], location[0]), // Ensure correct lat-lng order
         iconImage: GlobalConstants.routeHighlightImageName, // Custom marker name
@@ -286,23 +288,27 @@ class _FloatingRouteInstructionPanelState extends State<FloatingRouteInstruction
       ),
     );
 
-    print("Added step marker at: ${location[1]}, ${location[0]}");
+    print("Added step marker ${_currentStepMarker?.id} at: ${location[1]}, ${location[0]}");
   }
 
-  void _removeStepMarker() {
-    // Remove all custom markers (assuming only one is added for hover)
-    widget.mapController.clearSymbols();
-
-    print("Removed step marker");
+  Future<void> _removeStepMarker() async {
+    if (_stepMarkerToRemove != null) {
+      print("Removed step marker ${_stepMarkerToRemove?.id}");
+      await widget.mapController.removeSymbol(_stepMarkerToRemove!);
+      _stepMarkerToRemove = null; // Reset marker reference
+    }
   }
 
   /// **Builds each step item**
   Widget _buildStepItem(re.RouteStep step, int index) {
     return MouseRegion(
       onEnter: (_) {
+        print("Hovering over step $index");
         _addStepMarker(step.maneuver.location); // Add marker on hover
       },
       onExit: (_) {
+        print("Exiting step $index");
+        _stepMarkerToRemove = _currentStepMarker; // Set marker to remove when exiting
         _removeStepMarker(); // Remove marker when exiting
       },
       child: ListTile(
