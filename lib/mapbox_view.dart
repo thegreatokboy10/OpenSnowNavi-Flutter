@@ -1596,17 +1596,17 @@ class _GeneratorPageState extends State<GeneratorPage> {
                     ],
                   ),
                   // Display the selected photo below the search box
-                  if (_photoBytes != null)
-                    Container(
-                      width: GlobalConstants.searchboxWidth,
-                      height: 150,
-                      margin: EdgeInsets.only(top: 10),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.6),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Image.memory(_photoBytes!, fit: BoxFit.cover),
-                    ),
+                  // if (_photoBytes != null)
+                  //   Container(
+                  //     width: GlobalConstants.searchboxWidth,
+                  //     height: 150,
+                  //     margin: EdgeInsets.only(top: 10),
+                  //     decoration: BoxDecoration(
+                  //       color: Colors.white.withOpacity(0.6),
+                  //       borderRadius: BorderRadius.circular(10),
+                  //     ),
+                  //     child: Image.memory(_photoBytes!, fit: BoxFit.cover),
+                  //   ),
                   if (poiResults.isNotEmpty)
                     Container(
                       width: 250,
