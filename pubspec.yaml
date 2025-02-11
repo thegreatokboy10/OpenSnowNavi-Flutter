@@ -20,6 +20,8 @@ dependencies:
   url_launcher: ^6.0.20
   location: ^5.0.0
   go_router: ^14.7.2
+  image_picker_web: any # For selecting an image
+  exif: ^3.1.1         # For extracting GPS metadata
 
 dev_dependencies:
   flutter_test:

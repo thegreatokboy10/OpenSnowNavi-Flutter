@@ -1,4 +1,8 @@
+import 'dart:io';
+
+import 'package:exif/exif.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker_web/image_picker_web.dart';
 import 'package:mapbox_gl/mapbox_gl.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'dart:async';
@@ -96,6 +100,9 @@ class _GeneratorPageState extends State<GeneratorPage> {
   Symbol? _redMarker;
   bool _circleTextSourceExists = false;
   List<Map<String, dynamic>> _circleTextFeatures = [];
+
+  Uint8List? _photoBytes;
+  LatLng? _photoLocation;
 
   void _initializeCircleTextSource() {
     if (mapController == null) return;
@@ -1002,6 +1009,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
       return;
     }
     print('Map clicked at: ${coordinates.latitude}, ${coordinates.longitude}');
+    mapController?.animateCamera(CameraUpdate.newLatLng(coordinates));
 
     // Add a red marker at the clicked location
     _addRedMarker(coordinates);
@@ -1039,6 +1047,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
                           icon: Icon(Icons.close),
                           onPressed: () {
                             isUiOpen.flag = true;
+                            _removePhoto();
                             Navigator.pop(context); // Close bottom sheet
                           },
                         ),
@@ -1066,13 +1075,14 @@ class _GeneratorPageState extends State<GeneratorPage> {
                             onPressed: () {
                               isUiOpen.flag = true;
                               Navigator.pop(context); // Close bottom sheet
+                              _removePhoto();
                               _handleAddToRoute(coordinates);
                             },
                             icon: Icon(Icons.add_location_alt),
                             label: Text("Add to Route"),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blue,
-                              foregroundColor: Colors.white,
+                              backgroundColor: Colors.white,
+                              foregroundColor: Colors.black,
                             ),
                           ),
                         ),
@@ -1087,12 +1097,13 @@ class _GeneratorPageState extends State<GeneratorPage> {
                             onPressed: () {
                               isUiOpen.flag = true;
                               Navigator.pop(context); // Close bottom sheet
+                              _removePhoto();
                               _handleGoButton(coordinates);
                             },
                             icon: Icon(Icons.directions),
                             label: Text("Go"),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
+                              backgroundColor: Theme.of(context).primaryColor,
                               foregroundColor: Colors.white,
                             ),
                           ),
@@ -1270,6 +1281,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
   }
 
   void _locateCurrentPosition() async {
+    isUiOpen.flag = true;
     try {
       final location = await _locationService.getCurrentLocation();
       LatLng currentLocation = LatLng(location['latitude'], location['longitude']);
@@ -1290,6 +1302,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
   }
 
   void _showSharePopup() {
+    isUiOpen.flag = true;
     final String generatedUrl = _generateSkiPlannerUrl(selectedResortKey, startCoordinate, endCoordinate, stopovers);
 
     showDialog(
@@ -1307,6 +1320,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
               SizedBox(height: 10),
               ElevatedButton.icon(
                 onPressed: () {
+                  isUiOpen.flag = true;
                   html.window.navigator.clipboard?.writeText(generatedUrl);
                   Navigator.pop(context); // Close dialog
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -1320,7 +1334,10 @@ class _GeneratorPageState extends State<GeneratorPage> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () {
+                isUiOpen.flag = true;
+                Navigator.pop(context);
+              },
               child: Text("Close"),
             ),
           ],
@@ -1370,6 +1387,107 @@ class _GeneratorPageState extends State<GeneratorPage> {
     _removeStopOvers();
     _clearAllCirclesWithText();
     print("Route panel closed, map layers restored.");
+  }
+
+  Future<void> _pickPhoto() async {
+    isUiOpen.flag = true;
+
+    // Pick image from web
+    Uint8List? imageBytes = await ImagePickerWeb.getImageAsBytes();
+
+    if (imageBytes == null) return; // User canceled
+
+    _photoBytes = imageBytes;
+
+    // Extract GPS metadata
+    LatLng? gpsCoordinates = await _extractGpsCoordinates(imageBytes);
+    if (gpsCoordinates != null) {
+      print("Extracted GPS: ${gpsCoordinates.latitude}, ${gpsCoordinates.longitude}");
+      _photoLocation = gpsCoordinates;
+      _onMapClick(Point(0, 0), _photoLocation!);
+    } else {
+      print("No GPS data found in image.");
+    }
+
+    // Update UI
+    setState(() {});
+  }
+
+  void _removePhoto() {
+    setState(() {
+      _photoBytes = null;
+      _photoLocation = null;
+    });
+  }
+    
+  Future<LatLng?> _extractGpsCoordinates(Uint8List imageBytes) async {
+    try {
+      final Map<String, IfdTag> data = await readExifFromBytes(imageBytes);
+
+      // Debugging: Print all EXIF data
+      print("EXIF Data: $data");
+
+      if (data.containsKey("GPS GPSLatitude") && data.containsKey("GPS GPSLongitude")) {
+        List<dynamic> latitudeValues = data["GPS GPSLatitude"]!.values.toList();
+        List<dynamic> longitudeValues = data["GPS GPSLongitude"]!.values.toList();
+
+        String? latRef = data["GPS GPSLatitudeRef"]?.printable;
+        String? lngRef = data["GPS GPSLongitudeRef"]?.printable;
+
+        print("Convert GPS lat: $latitudeValues, $latRef");
+        double lat = _convertExifCoordinates(latitudeValues, latRef);
+        print("Convert GPS lng: $longitudeValues, $lngRef");
+        double lng = _convertExifCoordinates(longitudeValues, lngRef);
+
+        print("Converted GPS: $lat, $lng");
+
+        return LatLng(lat, lng);
+      } else {
+        print("No GPS metadata found in EXIF.");
+      }
+    } catch (e) {
+      print("Error extracting GPS data: $e");
+    }
+    return null;
+  }
+
+  double _convertExifCoordinates(dynamic exifData, String? ref) {
+    print("start GPS Conversion with EXIF Data Type: ${exifData.runtimeType}, Value: $exifData");
+
+    if (exifData is List) {
+      // Handle EXIF GPS coordinates stored as a list of Ratios
+      if (exifData.length < 3) return 0.0; // Ensure valid GPS format
+
+      double degrees = _parseExifValue(exifData[0]); // Degrees
+      double minutes = _parseExifValue(exifData[1]) / 60; // Minutes
+      double seconds = _parseExifValue(exifData[2]) / 3600; // Seconds
+
+      double decimal = degrees + minutes + seconds;
+
+      // Convert to negative if South (S) or West (W)
+      if (ref == 'S' || ref == 'W') {
+        decimal = -decimal;
+      }
+
+      return decimal;
+    }
+    return 0.0;
+  }
+
+  /// **Helper method to convert EXIF GPS values to double**
+  double _parseExifValue(dynamic value) {
+    if (value is int || value is double) {
+      return value.toDouble();
+    } else if (value is String) {
+      return double.tryParse(value) ?? 0.0;
+    } else if (value is Ratio) {
+      // Convert Ratio object to double
+      return value.numerator / value.denominator;
+    } else if (value is List && value.length == 2) {
+      // Handle rational numbers in EXIF metadata (e.g., [1599, 50] -> 1599/50)
+      return value[0] / value[1];
+    }
+    return 0.0;
   }
 
   @override
@@ -1464,8 +1582,31 @@ class _GeneratorPageState extends State<GeneratorPage> {
                           ),
                         ),
                       ),
+                      SizedBox(width: 5),
+
+                      // Open Photo Button
+                      FloatingActionButton(
+                        backgroundColor: Colors.white.withOpacity(GlobalConstants.floatingbuttonopacity),
+                        mini: true,
+                        heroTag: "openPhotoButton",
+                        onPressed: _pickPhoto,
+                        tooltip: 'Open Photo',
+                        child: Icon(Icons.photo_library, color: Colors.black),
+                      ),
                     ],
                   ),
+                  // Display the selected photo below the search box
+                  if (_photoBytes != null)
+                    Container(
+                      width: GlobalConstants.searchboxWidth,
+                      height: 150,
+                      margin: EdgeInsets.only(top: 10),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.6),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Image.memory(_photoBytes!, fit: BoxFit.cover),
+                    ),
                   if (poiResults.isNotEmpty)
                     Container(
                       width: 250,
