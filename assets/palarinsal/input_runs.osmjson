@@ -2,7 +2,7 @@
   "version": 0.6,
   "generator": "Overpass API 0.7.62.4 2390de5a",
   "osm3s": {
-    "timestamp_osm_base": "2025-01-31T21:49:05Z",
+    "timestamp_osm_base": "2025-02-11T12:42:45Z",
     "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL."
   },
   "elements": [
@@ -1809,14 +1809,14 @@
 {
   "type": "node",
   "id": 668878617,
-  "lat": 42.5701509,
-  "lon": 1.4589562
+  "lat": 42.5698620,
+  "lon": 1.4596504
 },
 {
   "type": "node",
   "id": 668878620,
-  "lat": 42.5705467,
-  "lon": 1.4598679
+  "lat": 42.5702464,
+  "lon": 1.4604359
 },
 {
   "type": "node",
@@ -1845,20 +1845,20 @@
 {
   "type": "node",
   "id": 668878645,
-  "lat": 42.5708973,
-  "lon": 1.4606944
+  "lat": 42.5706380,
+  "lon": 1.4610130
 },
 {
   "type": "node",
   "id": 668878647,
-  "lat": 42.5711357,
-  "lon": 1.4611454
+  "lat": 42.5709212,
+  "lon": 1.4615132
 },
 {
   "type": "node",
   "id": 668878649,
-  "lat": 42.5713772,
-  "lon": 1.4616483
+  "lat": 42.5713546,
+  "lon": 1.4614833
 },
 {
   "type": "node",
@@ -2457,8 +2457,8 @@
 {
   "type": "node",
   "id": 668878840,
-  "lat": 42.5722425,
-  "lon": 1.4691661
+  "lat": 42.5722447,
+  "lon": 1.4691377
 },
 {
   "type": "node",
@@ -5574,8 +5574,8 @@
 {
   "type": "node",
   "id": 2747260167,
-  "lat": 42.5292362,
-  "lon": 1.4623448
+  "lat": 42.5291540,
+  "lon": 1.4621750
 },
 {
   "type": "node",
@@ -7162,6 +7162,12 @@
   "lon": 1.4446388
 },
 {
+  "type": "node",
+  "id": 12576965883,
+  "lat": 42.5703692,
+  "lon": 1.4561124
+},
+{
   "type": "way",
   "id": 52112648,
   "nodes": [
@@ -7712,12 +7718,12 @@
   "type": "way",
   "id": 52692967,
   "nodes": [
-    668878611,
+    668878607,
     668878617,
     668878620,
     668878645,
     668878647,
-    668878649
+    668878650
   ],
   "tags": {
     "name": "Salador",
@@ -7884,6 +7890,7 @@
     1656036110,
     1656036095,
     1656036088,
+    2747260167,
     1656036069,
     1656036061,
     1656036047,
@@ -9158,7 +9165,7 @@
   ],
   "tags": {
     "piste:difficulty": "intermediate",
-    "piste:type": "downhill"
+    "piste:type": "connection"
   }
 },
 {
@@ -9691,6 +9698,20 @@
   ],
   "tags": {
     "piste:type": "connection"
+  }
+},
+{
+  "type": "way",
+  "id": 1358883554,
+  "nodes": [
+    668878579,
+    12576965883,
+    12547682748,
+    668878595
+  ],
+  "tags": {
+    "name": "Route to Snow Park",
+    "piste:type": "downhill"
   }
 },
 {

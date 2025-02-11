@@ -1595,7 +1595,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
                       ),
                     ],
                   ),
-                  // Display the selected photo below the search box
+                  // TODO: Display the selected photo below the search box
                   // if (_photoBytes != null)
                   //   Container(
                   //     width: GlobalConstants.searchboxWidth,
