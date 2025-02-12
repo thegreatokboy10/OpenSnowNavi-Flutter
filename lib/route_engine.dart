@@ -116,6 +116,11 @@ class RouteEngine {
       url = 'https://snownavi.ski/route/$selectedResortKey/v1/$coordinates?alternatives=false&overview=false&steps=true';
     }
 
+    // only used for testing local server
+    // if (selectedResortKey == 'palarinsal') {
+    //   url = 'http://localhost:5002/route/v1/driving/$coordinates?alternatives=false&overview=false&steps=true';
+    // }
+
     // print("get route from $url");
 
     try {
