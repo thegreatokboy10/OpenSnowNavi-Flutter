@@ -128,7 +128,7 @@ class _FloatingRouteInstructionPanelState extends State<FloatingRouteInstruction
   double _collapsedHeight = 75;
   double _expandedHeight = 360;
   Symbol? _currentStepMarker; // Store the last added marker
-  Symbol? _stepMarkerToRemove; // Store the marker to remove
+  List<Symbol> _stepMarkersToRemove = []; // Buffer list for step markers
 
   @override
   Widget build(BuildContext context) {
@@ -292,10 +292,11 @@ class _FloatingRouteInstructionPanelState extends State<FloatingRouteInstruction
   }
 
   Future<void> _removeStepMarker() async {
-    if (_stepMarkerToRemove != null) {
-      print("Removed step marker ${_stepMarkerToRemove?.id}");
-      await widget.mapController.removeSymbol(_stepMarkerToRemove!);
-      _stepMarkerToRemove = null; // Reset marker reference
+    while (_stepMarkersToRemove.isNotEmpty) {
+      Symbol marker = _stepMarkersToRemove.removeAt(0); // Get and remove the first marker
+      print("Removing step marker ${marker.id}");
+
+      await widget.mapController.removeSymbol(marker);
     }
   }
 
@@ -308,7 +309,7 @@ class _FloatingRouteInstructionPanelState extends State<FloatingRouteInstruction
       },
       onExit: (_) {
         print("Exiting step $index");
-        _stepMarkerToRemove = _currentStepMarker; // Set marker to remove when exiting
+        _stepMarkersToRemove.add(_currentStepMarker!); // Buffer for removal
         _removeStepMarker(); // Remove marker when exiting
       },
       child: ListTile(
