@@ -288,6 +288,12 @@ class _FloatingRouteInstructionPanelState extends State<FloatingRouteInstruction
       ),
     );
 
+    await widget.mapController.animateCamera(
+      CameraUpdate.newLatLng(
+        LatLng(location[1], location[0]),
+      ),
+    );
+
     print("Added step marker ${_currentStepMarker?.id} at: ${location[1]}, ${location[0]}");
   }
 
