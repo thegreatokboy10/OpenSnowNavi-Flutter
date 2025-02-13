@@ -125,7 +125,7 @@ class FloatingRouteInstructionPanel extends StatefulWidget {
 
 class _FloatingRouteInstructionPanelState extends State<FloatingRouteInstructionPanel> {
   bool _isExpanded = true; // Start expanded by default
-  double _collapsedHeight = 100;
+  double _collapsedHeight = 75;
   double _expandedHeight = 350;
   Symbol? _currentStepMarker; // Store the last added marker
   Symbol? _stepMarkerToRemove; // Store the marker to remove
