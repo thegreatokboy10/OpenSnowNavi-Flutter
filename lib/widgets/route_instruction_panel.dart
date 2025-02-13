@@ -321,6 +321,13 @@ class _FloatingRouteInstructionPanelState extends State<FloatingRouteInstruction
       child: ListTile(
         onTap: () {
           widget.timerFlag.flag = true; // Activate TimerFlag when tapping a step
+          // remove existing marker if any
+          if (_currentStepMarker != null) {
+            _stepMarkersToRemove.add(_currentStepMarker!); // Buffer for removal
+          }
+          _removeStepMarker(); // Remove marker when exiting
+          // add new marker
+          _addStepMarker(step.maneuver.location); // Add marker on tap
         },
         leading: CircleAvatar(
           backgroundColor: Theme.of(context).primaryColor,
