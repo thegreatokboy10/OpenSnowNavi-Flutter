@@ -9,6 +9,7 @@ class Piste {
   final String color;
   final List<List<double>> coordinates;
   final List<String> uses;
+  final List<double>? elevation; // Elevation data is optional
   double lineWidth;
   double highlightOpacity;
   Color secondColor;
@@ -20,7 +21,8 @@ class Piste {
     required this.difficulty,
     required this.color,
     required this.coordinates,
-    required this.uses, // type of piste
+    required this.uses, // Type of piste
+    this.elevation, // Elevation profile is optional
     this.visible = true, // Default to visible
     this.lineWidth = 2, // Default line width
     this.highlightOpacity = 0.8, // Default highlight opacity
@@ -32,14 +34,25 @@ class Piste {
     final properties = feature['properties'];
     final geometry = feature['geometry'];
 
+    // print("Parsing Piste from GeoJSON...");
+    // print("Properties: $properties");
+
     // Check if the geometry type is LineString
     if (geometry['type'] != 'LineString') {
       throw Exception('Unsupported geometry type: ${geometry['type']}');
     }
 
     // Only allow "downhill" and "connection" runs
-    if (!(properties['uses'].contains('downhill') ) && !(properties['uses'].contains('connection'))) {
+    if (!(properties['uses'].contains('downhill')) && !(properties['uses'].contains('connection'))) {
       throw Exception('Unsupported uses: ${properties['uses']}');
+    }
+
+    List<double>? elevationData;
+    if (properties.containsKey('elevationProfile') && properties['elevationProfile']?['heights'] != null) {
+      elevationData = (properties['elevationProfile']['heights'] as List).map((e) => (e as num).toDouble()).toList();
+      print("Elevation data found: ${elevationData.length} points");
+    } else {
+      print("No elevation data available for piste: ${properties['name']}");
     }
 
     return Piste(
@@ -49,6 +62,7 @@ class Piste {
       color: properties['color'] ?? 'gray',
       coordinates: GeoJsonHelper.parseCoordinates(geometry), // Use helper to parse coordinates
       uses: (properties['uses'] ?? []).toList().cast<String>(), // Safely cast uses to List<String>
+      elevation: elevationData,
     );
   }
 
@@ -66,6 +80,7 @@ class Piste {
         "difficulty": difficulty,
         "id": id,
         "uses": uses,
+        if (elevation != null) "elevationProfile": {"heights": elevation}, // Include elevation data if available
       },
     };
   }
@@ -96,5 +111,10 @@ class Piste {
     );
 
     print('Highlighted layer and source added for piste: $name');
+  }
+
+  void unhighlightMe(MapboxMapController mapController) {
+    mapController.removeLayer('highlighted-layer');
+    mapController.removeSource('highlighted-feature');
   }
 }

@@ -22,6 +22,7 @@ import 'search_service.dart';
 import 'location_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'widgets/piste_info_panel.dart';
 import 'widgets/route_instruction_panel.dart'; // Add this for opening URLs
 
 class GeneratorPage extends StatefulWidget {
@@ -536,9 +537,11 @@ class _GeneratorPageState extends State<GeneratorPage> {
       // highlight selected feature
       final id = features[0]["properties"]["id"];
       var featureFound = false;
+      Piste? selectedPiste;
       for (var piste in GlobalData.pistes) {
         if (piste.id == id) {
           piste.highlightMe(mapController!);
+          selectedPiste = piste;
           featureFound = true;
           break;
         }
@@ -553,64 +556,74 @@ class _GeneratorPageState extends State<GeneratorPage> {
         }
       }
 
+      if (selectedPiste != null) {
+        showBottomSheet(
+          context: context,
+          backgroundColor: Colors.white.withOpacity(GlobalConstants.floatingbuttonopacity),
+          enableDrag: false,
+          builder: (BuildContext context) {
+            return PisteInfoPanel(piste: selectedPiste!, timerFlag: isUiOpen, onClose: () => selectedPiste!.unhighlightMe(mapController!),);
+          },
+        );
+      } else {
       // Show bottom sheet
-      showBottomSheet(
-        context: context,
-        backgroundColor: Colors.white.withOpacity(GlobalConstants.floatingbuttonopacity),
-        enableDrag: false,
-        builder: (BuildContext context) {
-          return GestureDetector(
-            behavior: HitTestBehavior.opaque, // 捕获所有事件
-            onTapDown: (details) {
-              // 可以处理点击事件，或者留空来阻止事件传递到 map
-              isUiOpen.flag = true;
-              print("BottomSheet onTapDown, set isUiOpen to true");
-            },
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: EdgeInsets.all(16.0),
-                  width: double.infinity, // Ensure full width
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: <Widget>[
-                          Text(
-                            '$type: $name',
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                          ),
-                          GestureDetector(
-                            child: IconButton(
-                              icon: Icon(Icons.close),
-                              onPressed: () async {
-                                // Remove highlighted layer and source when closing
-                                isUiOpen.flag = true;
-                                await mapController!.removeLayer('highlighted-layer');
-                                await mapController!.removeSource('highlighted-feature');
-                                Navigator.pop(context); // Close the BottomSheet
-                              },
+        showBottomSheet(
+          context: context,
+          backgroundColor: Colors.white.withOpacity(GlobalConstants.floatingbuttonopacity),
+          enableDrag: false,
+          builder: (BuildContext context) {
+            return GestureDetector(
+              behavior: HitTestBehavior.opaque, // 捕获所有事件
+              onTapDown: (details) {
+                // 可以处理点击事件，或者留空来阻止事件传递到 map
+                isUiOpen.flag = true;
+                print("BottomSheet onTapDown, set isUiOpen to true");
+              },
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(16.0),
+                    width: double.infinity, // Ensure full width
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: <Widget>[
+                            Text(
+                              '$type: $name',
+                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                             ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 8.0),
-                      Text(
-                        'Difficulty: $difficulty',
-                        style: TextStyle(fontSize: 16),
-                      ),
-                      SizedBox(height: 40.0),
-                    ],
+                            GestureDetector(
+                              child: IconButton(
+                                icon: Icon(Icons.close),
+                                onPressed: () async {
+                                  // Remove highlighted layer and source when closing
+                                  isUiOpen.flag = true;
+                                  await mapController!.removeLayer('highlighted-layer');
+                                  await mapController!.removeSource('highlighted-feature');
+                                  Navigator.pop(context); // Close the BottomSheet
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 8.0),
+                        Text(
+                          'Difficulty: $difficulty',
+                          style: TextStyle(fontSize: 16),
+                        ),
+                        SizedBox(height: 40.0),
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            ),
-          );
-        },
-      );
-
+                ],
+              ),
+            );
+          },
+        );
+      }
     }
 
     // POI features
