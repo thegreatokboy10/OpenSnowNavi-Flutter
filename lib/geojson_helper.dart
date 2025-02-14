@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:mapbox_gl/mapbox_gl.dart';
 import 'package:polyline_codec/polyline_codec.dart';
@@ -300,6 +302,47 @@ class GeoJsonHelper {
     final img = await picture.toImage(size, size);
     final byteData = await img.toByteData(format: ImageByteFormat.png);
     return byteData!.buffer.asUint8List();
+  }
+
+  // Converts coordinates into distances along the piste
+  static List<double> calculateDistances(List<List<double>> coordinates) {
+    List<double> distances = [0.0];
+
+    for (int i = 1; i < coordinates.length; i++) {
+      final prev = coordinates[i - 1];
+      final curr = coordinates[i];
+
+      double distance = _haversineDistance(prev[1], prev[0], curr[1], curr[0]); // (lat, lon)
+      distances.add(distances.last + distance);
+    }
+
+    return distances;
+  }
+
+  // Calculates total piste length
+  static double calculateTotalDistance(List<List<double>> coordinates) {
+    double totalDistance = 0.0;
+    for (int i = 1; i < coordinates.length; i++) {
+      totalDistance += _haversineDistance(
+        coordinates[i - 1][1], coordinates[i - 1][0],
+        coordinates[i][1], coordinates[i][0],
+      );
+    }
+    return totalDistance;
+  }
+
+  // Haversine formula for distance between two lat/lon points
+  static double _haversineDistance(double lat1, double lon1, double lat2, double lon2) {
+    const R = 6371000; // Earth radius in meters
+    double dLat = (lat2 - lat1) * pi / 180.0;
+    double dLon = (lon2 - lon1) * pi / 180.0;
+
+    double a = sin(dLat / 2) * sin(dLat / 2) +
+        cos(lat1 * pi / 180.0) * cos(lat2 * pi / 180.0) *
+            sin(dLon / 2) * sin(dLon / 2);
+    double c = 2 * atan2(sqrt(a), sqrt(1 - a));
+
+    return R * c; // m
   }
 
 }

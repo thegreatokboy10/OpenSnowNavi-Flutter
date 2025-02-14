@@ -22,6 +22,7 @@ dependencies:
   go_router: ^14.7.2
   image_picker_web: any # For selecting an image
   exif: ^3.1.1         # For extracting GPS metadata
+  fl_chart: ^0.66.0  # Check for the latest version
 
 dev_dependencies:
   flutter_test:
