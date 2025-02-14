@@ -213,6 +213,9 @@ class _FloatingRouteInstructionPanelState extends State<FloatingRouteInstruction
                 icon: Icon(Icons.close),
                 onPressed: () {
                   widget.timerFlag.flag = true;
+                  _stepMarkersToRemove.add(_currentStepMarker!); // Buffer for removal
+                  _removeStepMarker();
+                  _currentStepMarker = null; // Reset current marker
                   widget.onClose();
                 }
               ),
