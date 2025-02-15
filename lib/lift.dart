@@ -88,4 +88,9 @@ class Lift {
 
     print('Highlighted layer and source added for lift: $name');
   }
+
+  void unhighlightMe(MapboxMapController mapController) {
+    mapController.removeLayer('highlighted-layer');
+    mapController.removeSource('highlighted-feature');
+  }
 }

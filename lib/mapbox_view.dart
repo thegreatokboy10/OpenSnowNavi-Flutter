@@ -22,6 +22,7 @@ import 'search_service.dart';
 import 'location_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'widgets/lift_info_panel.dart';
 import 'widgets/piste_info_panel.dart';
 import 'widgets/route_instruction_panel.dart'; // Add this for opening URLs
 
@@ -546,10 +547,12 @@ class _GeneratorPageState extends State<GeneratorPage> {
           break;
         }
       }
+      Lift? selectedLift;
       if (!featureFound) {
         for (var lift in GlobalData.lifts) {
           if (lift.id == id) {
             lift.highlightMe(mapController!);
+            selectedLift = lift;
             featureFound = true;
             break;
           }
@@ -565,62 +568,14 @@ class _GeneratorPageState extends State<GeneratorPage> {
             return PisteInfoPanel(piste: selectedPiste!, timerFlag: isUiOpen, onClose: () => selectedPiste!.unhighlightMe(mapController!),);
           },
         );
-      } else {
+      } else if (selectedLift != null) {
       // Show bottom sheet
         showBottomSheet(
           context: context,
           backgroundColor: Colors.white.withOpacity(GlobalConstants.floatingbuttonopacity),
           enableDrag: false,
           builder: (BuildContext context) {
-            return GestureDetector(
-              behavior: HitTestBehavior.opaque, // 捕获所有事件
-              onTapDown: (details) {
-                // 可以处理点击事件，或者留空来阻止事件传递到 map
-                isUiOpen.flag = true;
-                print("BottomSheet onTapDown, set isUiOpen to true");
-              },
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    padding: EdgeInsets.all(16.0),
-                    width: double.infinity, // Ensure full width
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: <Widget>[
-                            Text(
-                              '$type: $name',
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                            ),
-                            GestureDetector(
-                              child: IconButton(
-                                icon: Icon(Icons.close),
-                                onPressed: () async {
-                                  // Remove highlighted layer and source when closing
-                                  isUiOpen.flag = true;
-                                  await mapController!.removeLayer('highlighted-layer');
-                                  await mapController!.removeSource('highlighted-feature');
-                                  Navigator.pop(context); // Close the BottomSheet
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: 8.0),
-                        Text(
-                          'Difficulty: $difficulty',
-                          style: TextStyle(fontSize: 16),
-                        ),
-                        SizedBox(height: 40.0),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            );
+            return LiftInfoPanel(lift: selectedLift!, timerFlag: isUiOpen, onClose: () => selectedLift!.unhighlightMe(mapController!),);
           },
         );
       }

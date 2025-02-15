@@ -84,7 +84,7 @@ class GlobalConstants {
   static double fontSize = 13;
   static double nameOffset = 0.6;
   // Line size
-  static double pisteLineWidth = 1.5;
+  static double pisteLineWidth = 2.5;
   static double liftLineWidth = 4.0;
   // Floating button
   static double floatingbuttonopacity = 0.9;
