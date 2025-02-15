@@ -138,12 +138,6 @@ class _FloatingRouteInstructionPanelState extends State<FloatingRouteInstruction
   }
 
   @override
-  void dispose() {
-    WebTitleHelper.resetTitle(); // Reset title when panel closes
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Positioned(
       top: 80, // **Placed below the search box**
@@ -226,6 +220,7 @@ class _FloatingRouteInstructionPanelState extends State<FloatingRouteInstruction
                 icon: Icon(Icons.close),
                 onPressed: () {
                   widget.timerFlag.flag = true;
+                  WebTitleHelper.resetTitle();
                   _stepMarkersToRemove.add(_currentStepMarker!); // Buffer for removal
                   _removeStepMarker();
                   _currentStepMarker = null; // Reset current marker
