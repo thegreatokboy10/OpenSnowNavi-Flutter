@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import '../timer_flag.dart';
 import '../lift.dart';
 import '../geojson_helper.dart';
+import '../web_title_helper.dart';
 
-class LiftInfoPanel extends StatelessWidget {
+class LiftInfoPanel extends StatefulWidget {
   final Lift lift;
   final TimerFlag timerFlag;
   final VoidCallback? onClose;
@@ -16,9 +17,27 @@ class LiftInfoPanel extends StatelessWidget {
   }) : super(key: key);
 
   @override
+  _LiftInfoPanelState createState() => _LiftInfoPanelState();
+}
+
+class _LiftInfoPanelState extends State<LiftInfoPanel> {
+  @override
+  void initState() {
+    super.initState();
+    WebTitleHelper.updateTitle("Lift: ${widget.lift.name}"); // Update title
+    print("update title to lift: ${widget.lift.name}");
+  }
+
+  @override
+  void dispose() {
+    WebTitleHelper.resetTitle(); // Reset title when panel closes
+    super.dispose();
+  }
+  
+  @override
   Widget build(BuildContext context) {
-    double computedLength = _calculateLiftLength(lift.coordinates);
-    String iconPath = _getLiftIconPath(lift.type);
+    double computedLength = _calculateLiftLength(widget.lift.coordinates);
+    String iconPath = _getLiftIconPath(widget.lift.type);
 
     return Container(
       padding: const EdgeInsets.all(16.0),
@@ -44,7 +63,7 @@ class LiftInfoPanel extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  lift.name.isNotEmpty ? lift.name : "Unknown Lift",
+                  widget.lift.name.isNotEmpty ? widget.lift.name : "Unknown Lift",
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -52,8 +71,8 @@ class LiftInfoPanel extends StatelessWidget {
               IconButton(
                 icon: Icon(Icons.close, size: 24),
                 onPressed: () {
-                  timerFlag.flag = true;
-                  if (onClose != null) onClose!();
+                  widget.timerFlag.flag = true;
+                  if (widget.onClose != null) widget.onClose!();
                   Navigator.pop(context);
                 },
               ),
@@ -62,16 +81,16 @@ class LiftInfoPanel extends StatelessWidget {
           const SizedBox(height: 6),
 
           // Lift Reference (Ref)
-          if (lift.ref.isNotEmpty)
+          if (widget.lift.ref.isNotEmpty)
             Text(
-              'Ref: ${lift.ref}',
+              'Ref: ${widget.lift.ref}',
               style: TextStyle(fontSize: 14, color: Colors.grey[700]),
             ),
             const SizedBox(height: 6),
 
           // Lift Type
           Text(
-            'Type: ${lift.type}',
+            'Type: ${widget.lift.type}',
             style: TextStyle(fontSize: 14, color: Colors.grey[700]),
           ),
           const SizedBox(height: 6),

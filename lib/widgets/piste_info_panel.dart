@@ -5,6 +5,7 @@ import '../color_helper.dart';
 import '../piste.dart';
 import '../timer_flag.dart';
 import '../geojson_helper.dart';
+import '../web_title_helper.dart';
 
 class PisteInfoPanel extends StatefulWidget {
   final Piste piste;
@@ -24,6 +25,18 @@ class PisteInfoPanel extends StatefulWidget {
 
 class _PisteInfoPanelState extends State<PisteInfoPanel> {
   int? touchedIndex; // For hover interaction
+
+  @override
+  void initState() {
+    super.initState();
+    WebTitleHelper.updateTitle("Piste: ${widget.piste.name}"); // Update title
+  }
+
+  @override
+  void dispose() {
+    WebTitleHelper.resetTitle(); // Reset title when panel closes
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:mapbox_gl/mapbox_gl.dart';
 import 'package:snownavi/global_constants.dart';
 import '../route_engine.dart' as re; // Import your Route and RouteStep models
-import '../timer_flag.dart'; // Import TimerFlag class
+import '../timer_flag.dart';
+import '../web_title_helper.dart'; // Import TimerFlag class
 
 class RouteInstructionPanel extends StatelessWidget {
   final re.Route route;
@@ -129,6 +130,18 @@ class _FloatingRouteInstructionPanelState extends State<FloatingRouteInstruction
   double _expandedHeight = 360;
   Symbol? _currentStepMarker; // Store the last added marker
   List<Symbol> _stepMarkersToRemove = []; // Buffer list for step markers
+
+  @override
+  void initState() {
+    super.initState();
+    WebTitleHelper.updateTitle("Ski route from ${widget.route.steps.first.name} to ${widget.route.steps.last.name}"); // Update title
+  }
+
+  @override
+  void dispose() {
+    WebTitleHelper.resetTitle(); // Reset title when panel closes
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

@@ -107,4 +107,8 @@ class GlobalConstants {
   static int routeHighlightCircleSize = 10;
   static double routeHighlightCircleStrokeWidth = 1;
   static String routeHighlightImageName = "custom-highlight-marker";
+
+  // Web 
+  static String defaultTitle = "Ultimate Ski Route Planner | SnowNavi";
+  static String version = "[v0.5]";
 }

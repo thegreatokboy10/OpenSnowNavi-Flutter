@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker_web/image_picker_web.dart';
 import 'package:mapbox_gl/mapbox_gl.dart';
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:snownavi/web_title_helper.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:html' as html;
@@ -977,6 +978,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
       return;
     }
     print('Map clicked at: ${coordinates.latitude}, ${coordinates.longitude}');
+    WebTitleHelper.updateTitle('Map clicked at: ${coordinates.latitude}, ${coordinates.longitude}');
     mapController?.animateCamera(CameraUpdate.newLatLng(coordinates));
 
     // Add a red marker at the clicked location
@@ -1015,6 +1017,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
                           icon: Icon(Icons.close),
                           onPressed: () {
                             isUiOpen.flag = true;
+                            WebTitleHelper.resetTitle();
                             _removePhoto();
                             Navigator.pop(context); // Close bottom sheet
                           },
@@ -1044,6 +1047,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
                               isUiOpen.flag = true;
                               Navigator.pop(context); // Close bottom sheet
                               _removePhoto();
+                              WebTitleHelper.updateTitle('Route planning: ${coordinates.latitude}, ${coordinates.longitude} added to route');
                               _handleAddToRoute(coordinates);
                             },
                             icon: Icon(Icons.add_location_alt),
@@ -1272,7 +1276,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
   void _showSharePopup() {
     isUiOpen.flag = true;
     final String generatedUrl = _generateSkiPlannerUrl(selectedResortKey, startCoordinate, endCoordinate, stopovers);
-
+    WebTitleHelper.updateTitle("Share SnowNavi - ${GlobalConstants.defaultTitle}");
     showDialog(
       context: context,
       builder: (context) {
@@ -1289,11 +1293,13 @@ class _GeneratorPageState extends State<GeneratorPage> {
               ElevatedButton.icon(
                 onPressed: () {
                   isUiOpen.flag = true;
+                  WebTitleHelper.updateTitle("Thanks for sharing SnowNavi - ${GlobalConstants.defaultTitle}");
                   html.window.navigator.clipboard?.writeText(generatedUrl);
                   Navigator.pop(context); // Close dialog
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text("URL copied to clipboard!")),
                   );
+                  WebTitleHelper.resetTitle();
                 },
                 icon: Icon(Icons.copy),
                 label: Text("Copy URL"),
@@ -1305,6 +1311,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
               onPressed: () {
                 isUiOpen.flag = true;
                 Navigator.pop(context);
+                WebTitleHelper.resetTitle();
               },
               child: Text("Close"),
             ),
@@ -1359,6 +1366,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
 
   Future<void> _pickPhoto() async {
     isUiOpen.flag = true;
+    WebTitleHelper.updateTitle("Using photo to plan your ski trip - ${GlobalConstants.defaultTitle}");
 
     // Pick image from web
     Uint8List? imageBytes = await ImagePickerWeb.getImageAsBytes();
@@ -1371,10 +1379,16 @@ class _GeneratorPageState extends State<GeneratorPage> {
     LatLng? gpsCoordinates = await _extractGpsCoordinates(imageBytes);
     if (gpsCoordinates != null) {
       print("Extracted GPS: ${gpsCoordinates.latitude}, ${gpsCoordinates.longitude}");
+      WebTitleHelper.updateTitle("Find location from photo - ${GlobalConstants.defaultTitle}");
       _photoLocation = gpsCoordinates;
       _onMapClick(Point(0, 0), _photoLocation!);
     } else {
       print("No GPS data found in image.");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Unable to find the location, please try another photo.")),
+      );
+      WebTitleHelper.updateTitle("No location found from photo - ${GlobalConstants.defaultTitle}");
+      WebTitleHelper.resetTitle();
     }
 
     // Update UI
