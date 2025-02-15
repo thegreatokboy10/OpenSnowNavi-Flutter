@@ -5,105 +5,6 @@ import '../route_engine.dart' as re; // Import your Route and RouteStep models
 import '../timer_flag.dart';
 import '../web_title_helper.dart'; // Import TimerFlag class
 
-class RouteInstructionPanel extends StatelessWidget {
-  final re.Route route;
-  final VoidCallback onClose; // Callback to close the panel
-
-  const RouteInstructionPanel({
-    Key? key,
-    required this.route,
-    required this.onClose,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return DraggableScrollableSheet(
-      initialChildSize: 0.4, // Initial size of the panel
-      minChildSize: 0.2, // Minimum size
-      maxChildSize: 0.8, // Maximum expandable size
-      builder: (context, scrollController) {
-        return Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(15)),
-            boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 5)],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header with close button
-              _buildHeader(),
-
-              // Scrollable list of route steps
-              Expanded(
-                child: ListView.builder(
-                  controller: scrollController,
-                  itemCount: route.steps.length,
-                  itemBuilder: (context, index) {
-                    final step = route.steps[index];
-                    return _buildStepItem(step, index);
-                  },
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  /// Builds the panel header showing route summary and close button
-  Widget _buildHeader() {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "Route Summary",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 5),
-              Text(
-                "${(route.distance / 1000).toStringAsFixed(2)} km • ${(route.duration / 60).toStringAsFixed(0)} min",
-                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-              ),
-            ],
-          ),
-          IconButton(
-            icon: Icon(Icons.close),
-            onPressed: onClose,
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Builds each route step in the list
-  Widget _buildStepItem(re.RouteStep step, int index) {
-    return ListTile(
-      leading: CircleAvatar(
-        backgroundColor: Colors.blue,
-        child: Text(
-          (index + 1).toString(),
-          style: TextStyle(color: Colors.white, fontSize: 16),
-        ),
-      ),
-      title: Text(
-        step.name.isNotEmpty ? step.name : "Unnamed Path",
-        style: TextStyle(fontWeight: FontWeight.bold),
-      ),
-      subtitle: Text(
-        "${step.distance.toStringAsFixed(0)} m • ${step.duration.toStringAsFixed(0)} sec",
-      ),
-      trailing: Icon(Icons.directions_walk, color: Colors.blue),
-    );
-  }
-}
-
 class FloatingRouteInstructionPanel extends StatefulWidget {
   final re.Route route;
   final VoidCallback onClose;
@@ -221,9 +122,11 @@ class _FloatingRouteInstructionPanelState extends State<FloatingRouteInstruction
                 onPressed: () {
                   widget.timerFlag.flag = true;
                   WebTitleHelper.resetTitle();
-                  _stepMarkersToRemove.add(_currentStepMarker!); // Buffer for removal
-                  _removeStepMarker();
-                  _currentStepMarker = null; // Reset current marker
+                  if (_currentStepMarker != null) {
+                    _stepMarkersToRemove.add(_currentStepMarker!); // Buffer for removal
+                    _removeStepMarker();
+                    _currentStepMarker = null; // Reset current marker
+                  }
                   widget.onClose();
                 }
               ),
