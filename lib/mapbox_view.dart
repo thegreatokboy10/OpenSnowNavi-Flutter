@@ -107,6 +107,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
   Uint8List? _photoBytes;
   LatLng? _photoLocation;
 
+  bool _isLoading = true; // Track loading state
+
   void _initializeCircleTextSource() {
     if (mapController == null) return;
 
@@ -646,6 +648,10 @@ class _GeneratorPageState extends State<GeneratorPage> {
         print("Start or end coordinate is null, cannot restore route.");
       }
     }
+
+    setState(() {
+      _isLoading = false; // Mark loading as complete
+    });
   }
 
   void _setRouteCoordinates(LatLng start, LatLng end, {List<LatLng>? stopovers}) {
@@ -1472,6 +1478,25 @@ class _GeneratorPageState extends State<GeneratorPage> {
     return 0.0;
   }
 
+  /// **Full-Screen Loading Indicator**
+  Widget _buildLoadingScreen() {
+    return Container(
+      color: Colors.white,
+      alignment: Alignment.center,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          CircularProgressIndicator(),
+          const SizedBox(height: 16),
+          Text(
+            "Loading Map...",
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
@@ -1479,6 +1504,9 @@ class _GeneratorPageState extends State<GeneratorPage> {
       child: Scaffold(
         body: Stack(
           children: [
+            // Show loading screen until the map is fully loaded
+            if (_isLoading) _buildLoadingScreen(),
+            
             MapboxMap(
               accessToken:
                   'pk.eyJ1Ijoib2tib3kyMDA4IiwiYSI6ImNsdGE1dzd6OTAxbHQyanA0aWM1MjU5c24ifQ.vbbY3gzL8nnUFctmDv9UBQ',
