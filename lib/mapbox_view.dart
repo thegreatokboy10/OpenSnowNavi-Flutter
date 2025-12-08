@@ -121,6 +121,16 @@ class _GeneratorPageState extends State<GeneratorPage> {
   Map<String, String> _memberSymbolToDeviceId = {}; // Symbol ID -> Device ID 映射
   Set<String> _addedMemberIconImages = {}; // 已添加的成员图标图片名称
 
+  // 当前位置标记
+  Circle? _myLocationCircle; // 位置圆点
+  Circle? _myLocationPulseCircle; // 呼吸动画圆圈
+  Symbol? _myLocationDirectionSymbol; // 朝向箭头
+  Symbol? _myLocationHeadingText; // 朝向读数文本
+  bool _myLocationIconAdded = false; // 是否已添加朝向图标
+  Timer? _locationPulseTimer; // 呼吸动画定时器
+  double _pulseRadius = 12.0; // 呼吸圆圈半径
+  bool _pulseExpanding = true; // 是否正在扩大
+
   void _initializeCircleTextSource() {
     if (mapController == null) return;
 
@@ -1341,20 +1351,214 @@ class _GeneratorPageState extends State<GeneratorPage> {
     );
   }
 
-  void _addCurrentLocation(LatLng coordinates) {
-    mapController?.addCircle(
+  /// 添加当前位置标记，包含朝向箭头和呼吸动画
+  Future<void> _addCurrentLocation(LatLng coordinates, double? heading) async {
+    if (mapController == null) return;
+
+    // 先移除旧的位置标记
+    await _removeCurrentLocationMarkers();
+
+    // 添加呼吸动画圆圈（外圈，半透明）
+    _myLocationPulseCircle = await mapController!.addCircle(
       CircleOptions(
         geometry: coordinates,
-        circleRadius: 8, // Radius in pixels
-        circleColor:
-            Colors.lightBlue.toHexStringRGB(), // Configurable circle color
-        circleOpacity: 0.9, // Adjust opacity as needed
+        circleRadius: 20,
+        circleColor: Colors.lightBlue.toHexStringRGB(),
+        circleOpacity: 0.3,
+        circleStrokeWidth: 0,
+      ),
+    );
+
+    // 添加位置圆点（内圈）
+    _myLocationCircle = await mapController!.addCircle(
+      CircleOptions(
+        geometry: coordinates,
+        circleRadius: 8,
+        circleColor: Colors.lightBlue.toHexStringRGB(),
+        circleOpacity: 0.9,
         circleStrokeColor:
-            const Color.fromARGB(255, 188, 179, 179).toHexStringRGB(),
+            const Color.fromARGB(255, 255, 255, 255).toHexStringRGB(),
         circleStrokeWidth: 3,
         circleBlur: 0.1,
       ),
     );
+
+    // 启动呼吸动画
+    _startPulseAnimation(coordinates);
+
+    // 确保朝向图标已添加
+    if (!_myLocationIconAdded) {
+      await _addMyLocationDirectionIcon();
+      _myLocationIconAdded = true;
+    }
+
+    // 显示朝向读数（调试用）
+    final headingValue = heading ?? -1;
+    final headingText =
+        headingValue >= 0 ? '${headingValue.toStringAsFixed(0)}°' : 'N/A';
+
+    // 如果有有效的朝向数据，添加朝向箭头
+    if (heading != null && heading >= 0) {
+      _myLocationDirectionSymbol = await mapController!.addSymbol(
+        SymbolOptions(
+          geometry: coordinates,
+          iconImage: 'my-location-direction',
+          iconSize: 0.6,
+          iconRotate: heading,
+          iconAnchor: 'center',
+        ),
+      );
+    }
+
+    // 添加朝向读数文本（显示在位置下方）
+    _myLocationHeadingText = await mapController!.addSymbol(
+      SymbolOptions(
+        geometry: coordinates,
+        textField: '朝向: $headingText',
+        textSize: 12,
+        textColor: '#000000',
+        textHaloColor: '#FFFFFF',
+        textHaloWidth: 1.5,
+        textOffset: const Offset(0, 2.5), // 向下偏移
+        textAnchor: 'top',
+      ),
+    );
+  }
+
+  /// 启动呼吸动画
+  void _startPulseAnimation(LatLng coordinates) {
+    _stopPulseAnimation();
+    _pulseRadius = 12.0;
+    _pulseExpanding = true;
+
+    _locationPulseTimer = Timer.periodic(
+      const Duration(milliseconds: 50),
+      (_) async {
+        if (mapController == null || _myLocationPulseCircle == null) {
+          _stopPulseAnimation();
+          return;
+        }
+
+        // 更新半径
+        if (_pulseExpanding) {
+          _pulseRadius += 0.8;
+          if (_pulseRadius >= 30) {
+            _pulseExpanding = false;
+          }
+        } else {
+          _pulseRadius -= 0.8;
+          if (_pulseRadius <= 12) {
+            _pulseExpanding = true;
+          }
+        }
+
+        // 计算透明度（随着扩大而变淡）
+        final opacity = 0.4 - ((_pulseRadius - 12) / 18) * 0.3;
+
+        try {
+          await mapController!.updateCircle(
+            _myLocationPulseCircle!,
+            CircleOptions(
+              circleRadius: _pulseRadius,
+              circleOpacity: opacity.clamp(0.1, 0.4),
+            ),
+          );
+        } catch (e) {
+          // 圆圈可能已被移除
+          _stopPulseAnimation();
+        }
+      },
+    );
+  }
+
+  /// 停止呼吸动画
+  void _stopPulseAnimation() {
+    _locationPulseTimer?.cancel();
+    _locationPulseTimer = null;
+  }
+
+  /// 移除当前位置标记
+  Future<void> _removeCurrentLocationMarkers() async {
+    if (mapController == null) return;
+
+    // 停止呼吸动画
+    _stopPulseAnimation();
+
+    // 移除呼吸圆圈
+    if (_myLocationPulseCircle != null) {
+      try {
+        await mapController!.removeCircle(_myLocationPulseCircle!);
+      } catch (e) {
+        print('Error removing pulse circle: $e');
+      }
+      _myLocationPulseCircle = null;
+    }
+
+    // 移除位置圆点
+    if (_myLocationCircle != null) {
+      try {
+        await mapController!.removeCircle(_myLocationCircle!);
+      } catch (e) {
+        print('Error removing location circle: $e');
+      }
+      _myLocationCircle = null;
+    }
+
+    // 移除朝向箭头
+    if (_myLocationDirectionSymbol != null) {
+      try {
+        await mapController!.removeSymbol(_myLocationDirectionSymbol!);
+      } catch (e) {
+        print('Error removing direction symbol: $e');
+      }
+      _myLocationDirectionSymbol = null;
+    }
+
+    // 移除朝向文本
+    if (_myLocationHeadingText != null) {
+      try {
+        await mapController!.removeSymbol(_myLocationHeadingText!);
+      } catch (e) {
+        print('Error removing heading text: $e');
+      }
+      _myLocationHeadingText = null;
+    }
+  }
+
+  /// 添加朝向图标到地图
+  Future<void> _addMyLocationDirectionIcon() async {
+    if (mapController == null) return;
+
+    // 创建一个朝向箭头图标（扇形/三角形）
+    final pictureRecorder = ui.PictureRecorder();
+    final canvas = Canvas(pictureRecorder);
+    final size = 80.0;
+    final paint = Paint()
+      ..color = Colors.blue.withOpacity(0.6)
+      ..style = PaintingStyle.fill;
+
+    // 绘制扇形（朝向指示器）
+    final path = Path();
+    final centerX = size / 2;
+    final centerY = size / 2;
+    final radius = size / 2 - 4;
+
+    // 绘制一个向上的三角形箭头
+    path.moveTo(centerX, 4); // 顶点（向上）
+    path.lineTo(centerX - radius * 0.5, centerY + radius * 0.3);
+    path.lineTo(centerX, centerY);
+    path.lineTo(centerX + radius * 0.5, centerY + radius * 0.3);
+    path.close();
+
+    canvas.drawPath(path, paint);
+
+    final picture = pictureRecorder.endRecording();
+    final image = await picture.toImage(size.toInt(), size.toInt());
+    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    if (byteData != null) {
+      final bytes = byteData.buffer.asUint8List();
+      await mapController!.addImage('my-location-direction', bytes);
+    }
   }
 
   void _clearAllCirclesWithText() {
@@ -1384,7 +1588,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
       final location = await _locationService.getCurrentLocation();
       LatLng currentLocation =
           LatLng(location['latitude'], location['longitude']);
-      print("current location: $currentLocation");
+      final heading = location['heading'] as double?;
+      print("current location: $currentLocation, heading: $heading");
       setState(() {
         resortCoordinate = currentLocation;
       });
@@ -1392,8 +1597,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
       // Animate the map to the current location
       mapController
           ?.animateCamera(CameraUpdate.newLatLngZoom(currentLocation, 14));
-      // Draw the blue icon on the map
-      _addCurrentLocation(currentLocation);
+      // Draw the blue icon on the map with heading
+      await _addCurrentLocation(currentLocation, heading);
     } catch (error) {
       print('Error: $error');
     }

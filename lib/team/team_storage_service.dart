@@ -155,6 +155,22 @@ class TeamStorageService {
     return result.success ? result.data : null;
   }
 
+  /// 更新成员昵称
+  Future<Team?> updateMemberNickname({
+    required String teamId,
+    required String deviceId,
+    required String nickname,
+  }) async {
+    final result = await _api.updateMember(
+      teamId: teamId,
+      deviceId: deviceId,
+      nickname: nickname,
+    );
+    print(
+        '[TeamStorageService] updateMemberNickname result: success=${result.success}, data=${result.data?.id}');
+    return result.success ? result.data : null;
+  }
+
   /// 删除成员（使用 leave API）
   Future<bool> removeMember({
     required String teamId,

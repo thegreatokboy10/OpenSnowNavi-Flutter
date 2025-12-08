@@ -570,6 +570,18 @@ class _TeamPanelState extends State<TeamPanel> {
               padding: EdgeInsets.only(left: 4),
               child: Icon(Icons.location_on, size: 16, color: Colors.blue),
             ),
+          // 自己可以编辑昵称
+          if (isMe)
+            Padding(
+              padding: const EdgeInsets.only(left: 4),
+              child: InkWell(
+                onTap: () {
+                  widget.timerFlag.flag = true;
+                  _showEditNicknameDialog(member.nickname);
+                },
+                child: const Icon(Icons.edit, size: 16, color: Colors.grey),
+              ),
+            ),
         ],
       ),
       subtitle: Text(
@@ -589,6 +601,66 @@ class _TeamPanelState extends State<TeamPanel> {
             )
           : null,
     );
+  }
+
+  /// 显示编辑昵称对话框
+  Future<void> _showEditNicknameDialog(String currentNickname) async {
+    final controller = TextEditingController(text: currentNickname);
+
+    final newNickname = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('修改昵称'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            labelText: '新昵称',
+            hintText: '请输入新昵称',
+          ),
+          autofocus: true,
+          onTap: () => widget.timerFlag.flag = true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              widget.timerFlag.flag = true;
+              Navigator.pop(ctx);
+            },
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () {
+              widget.timerFlag.flag = true;
+              final name = controller.text.trim();
+              if (name.isNotEmpty) {
+                Navigator.pop(ctx, name);
+              }
+            },
+            child: const Text('确定'),
+          ),
+        ],
+      ),
+    );
+
+    controller.dispose();
+
+    if (newNickname != null && newNickname.isNotEmpty) {
+      final success = await _teamService.updateNickname(newNickname);
+      if (success) {
+        if (mounted) {
+          setState(() {});
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('昵称已更新')),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('更新失败，请重试')),
+          );
+        }
+      }
+    }
   }
 
   void _removeMember(TeamMember member) {

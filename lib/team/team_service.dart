@@ -238,10 +238,41 @@ class TeamService {
     return false;
   }
 
+  /// 更新当前用户昵称
+  Future<bool> updateNickname(String newNickname) async {
+    if (_currentTeam == null) {
+      print('[TeamService] updateNickname: currentTeam is null');
+      return false;
+    }
+
+    print('[TeamService] updateNickname: $newNickname');
+    final updatedTeam = await _storageService.updateMemberNickname(
+      teamId: _currentTeam!.id,
+      deviceId: deviceId,
+      nickname: newNickname,
+    );
+
+    if (updatedTeam != null) {
+      _currentTeam = updatedTeam;
+      onTeamUpdated?.call(_currentTeam);
+      return true;
+    }
+    return false;
+  }
+
   /// 获取分享链接
   String getShareLink() {
     if (_currentTeam == null) return '';
-    return '${Uri.base.origin}/?team=${_currentTeam!.id}';
+    // 使用当前页面的完整 base URL（包含路径前缀，如 /preview/）
+    final baseUrl = Uri.base;
+    // 移除现有的查询参数和片段，保留路径
+    final cleanUrl = Uri(
+      scheme: baseUrl.scheme,
+      host: baseUrl.host,
+      port: baseUrl.port,
+      path: baseUrl.path,
+    );
+    return '$cleanUrl?team=${_currentTeam!.id}';
   }
 
   /// 刷新团队数据
