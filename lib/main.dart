@@ -23,6 +23,7 @@ class MyApp extends StatelessWidget {
           // Get optional parameters
           final coordsString = params['coords'];
           final resortKey = params['resortKey'];
+          final teamId = params['team']; // 团队邀请链接参数
 
           List<List<double>>? parsedCoordinates;
 
@@ -36,7 +37,11 @@ class MyApp extends StatelessWidget {
             }).where((element) => element != null).cast<List<double>>().toList();
           }
 
-          return MyHomePage(coordinates: parsedCoordinates, resortKey: resortKey);
+          return MyHomePage(
+            coordinates: parsedCoordinates,
+            resortKey: resortKey,
+            teamId: teamId,
+          );
         },
       ),
     ],
@@ -58,8 +63,9 @@ class MyApp extends StatelessWidget {
 class MyHomePage extends StatefulWidget {
   final List<List<double>>? coordinates;  // Nullable list of lat-lng pairs
   final String? resortKey; // Nullable resort identifier
+  final String? teamId; // 团队ID（从邀请链接获取）
 
-  const MyHomePage({super.key, this.coordinates, this.resortKey});
+  const MyHomePage({super.key, this.coordinates, this.resortKey, this.teamId});
 
   @override
   State<MyHomePage> createState() => _MyHomePageState();
@@ -75,6 +81,7 @@ class _MyHomePageState extends State<MyHomePage> {
     generatorPage = GeneratorPage(
       coordinates: widget.coordinates,
       resortKey: widget.resortKey,
+      teamId: widget.teamId,
     ); // Pass parsed data
   }
 

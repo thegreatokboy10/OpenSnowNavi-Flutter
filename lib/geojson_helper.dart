@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:mapbox_gl/mapbox_gl.dart';
 import 'package:polyline_codec/polyline_codec.dart';
 import 'package:snownavi/global_constants.dart';
-import 'dart:typed_data'; 
+import 'dart:typed_data';
 import 'dart:ui';
 import 'dart:async';
 import 'lift.dart';
@@ -31,13 +31,16 @@ class GeoJsonHelper {
     }
 
     // Generate GeoJSON features
-    List<Map<String, dynamic>> features = items.map((item) {
-      if (item is Lift || item is Piste) {
-        return item.toFeature(); // Call the class-specific method
-      } else {
-        throw Exception('Unsupported object type: ${item.runtimeType}');
-      }
-    }).toList().cast<Map<String, dynamic>>();
+    List<Map<String, dynamic>> features = items
+        .map((item) {
+          if (item is Lift || item is Piste) {
+            return item.toFeature(); // Call the class-specific method
+          } else {
+            throw Exception('Unsupported object type: ${item.runtimeType}');
+          }
+        })
+        .toList()
+        .cast<Map<String, dynamic>>();
 
     try {
       // Add GeoJSON source
@@ -77,7 +80,8 @@ class GeoJsonHelper {
     required String layerId, // Layer ID for the arrow layer
     required String iconImage, // Icon image for the arrow
     required double minZoom, // Minimum zoom level for the layer
-    List<dynamic>? iconImageExpression, // Optional dynamic icon image expression
+    List<dynamic>?
+        iconImageExpression, // Optional dynamic icon image expression
     double iconOpacity = 0.8, // Opacity for the arrow
   }) {
     try {
@@ -87,7 +91,8 @@ class GeoJsonHelper {
         SymbolLayerProperties(
           iconImage: iconImageExpression ?? iconImage,
           symbolPlacement: 'line-center', // Place along the line
-          symbolSpacing: 5000000, // Ensures only one arrow is placed on the line
+          symbolSpacing:
+              5000000, // Ensures only one arrow is placed on the line
           iconAllowOverlap: false,
           iconRotate: ['get', 'bearing'], // Rotate arrow based on line bearing
           iconRotationAlignment: 'map',
@@ -132,13 +137,14 @@ class GeoJsonHelper {
       print('Error adding name layer $layerId: $e');
     }
   }
-  
+
   // Helper function to parse coordinates for LineString geometry
   static List<List<double>> parseCoordinates(dynamic geometry) {
     if (geometry['type'] == 'LineString') {
       // Map coordinates explicitly to List<List<double>> for LineString
       return (geometry['coordinates'] as List)
-          .map<List<double>>((e) => (e as List).map<double>((coord) => coord.toDouble()).toList())
+          .map<List<double>>((e) =>
+              (e as List).map<double>((coord) => coord.toDouble()).toList())
           .toList();
     } else {
       throw Exception('Unsupported geometry type: ${geometry['type']}');
@@ -149,7 +155,8 @@ class GeoJsonHelper {
   static void addHighlightedFeatureSource({
     required MapboxMapController mapController,
     required String sourceId, // The source ID to create
-    required Map<String, dynamic> geometry, // Geometry of the highlighted feature
+    required Map<String, dynamic>
+        geometry, // Geometry of the highlighted feature
     required String color, // The color of the highlighted feature
   }) {
     try {
@@ -242,12 +249,20 @@ class GeoJsonHelper {
         CameraUpdate.newLatLngBounds(
           LatLngBounds(
             southwest: LatLng(
-              allPoints.map((point) => point[0].toDouble()).reduce((a, b) => a < b ? a : b), // Minimum latitude
-              allPoints.map((point) => point[1].toDouble()).reduce((a, b) => a < b ? a : b), // Minimum longitude
+              allPoints
+                  .map((point) => point[0].toDouble())
+                  .reduce((a, b) => a < b ? a : b), // Minimum latitude
+              allPoints
+                  .map((point) => point[1].toDouble())
+                  .reduce((a, b) => a < b ? a : b), // Minimum longitude
             ),
             northeast: LatLng(
-              allPoints.map((point) => point[0].toDouble()).reduce((a, b) => a > b ? a : b), // Maximum latitude
-              allPoints.map((point) => point[1].toDouble()).reduce((a, b) => a > b ? a : b), // Maximum longitude
+              allPoints
+                  .map((point) => point[0].toDouble())
+                  .reduce((a, b) => a > b ? a : b), // Maximum latitude
+              allPoints
+                  .map((point) => point[1].toDouble())
+                  .reduce((a, b) => a > b ? a : b), // Maximum longitude
             ),
           ),
         ),
@@ -277,16 +292,20 @@ class GeoJsonHelper {
         belowLayerId: beforeLayerId,
       );
 
-      print('Route drawn and camera fitted to route bounds. Source ID: $routeSourceId, Layer ID: $routeLayerId');
+      print(
+          'Route drawn and camera fitted to route bounds. Source ID: $routeSourceId, Layer ID: $routeLayerId');
     } catch (e) {
       print('Error drawing route on map: $e');
     }
   }
 
-  static  Future<Uint8List> createCircleMarker() async {
+  static Future<Uint8List> createCircleMarker() async {
     final int size = GlobalConstants.routeHighlightCircleSize; // Marker size
     final recorder = PictureRecorder();
-    final canvas = Canvas(recorder, Rect.fromPoints(Offset(0, 0), Offset(size.toDouble(), size.toDouble())));
+    final canvas = Canvas(
+        recorder,
+        Rect.fromPoints(
+            Offset(0, 0), Offset(size.toDouble(), size.toDouble())));
 
     final paint = Paint()
       ..color = Colors.blue
@@ -304,6 +323,92 @@ class GeoJsonHelper {
     return byteData!.buffer.asUint8List();
   }
 
+  /// 创建团队成员标记图标（带颜色和滑雪者图案）
+  static Future<Uint8List> createTeamMemberMarker({
+    required Color color,
+    bool isLeader = false,
+    int size = 48,
+  }) async {
+    final recorder = PictureRecorder();
+    final canvas = Canvas(
+        recorder,
+        Rect.fromPoints(
+          const Offset(0, 0),
+          Offset(size.toDouble(), size.toDouble()),
+        ));
+
+    final center = Offset(size / 2, size / 2);
+    final radius = size / 2.5;
+
+    // 绘制阴影
+    final shadowPaint = Paint()
+      ..color = Colors.black.withOpacity(0.3)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
+    canvas.drawCircle(
+        Offset(center.dx + 2, center.dy + 2), radius, shadowPaint);
+
+    // 绘制外圈（白色边框）
+    final borderPaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(center, radius, borderPaint);
+
+    // 绘制内圈（彩色填充）
+    final fillPaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(center, radius - 3, fillPaint);
+
+    // 绘制滑雪者图案（简化的人形图标）
+    final iconPaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.5
+      ..strokeCap = StrokeCap.round;
+
+    // 头部
+    final headCenter = Offset(center.dx, center.dy - radius * 0.3);
+    canvas.drawCircle(
+        headCenter, radius * 0.18, iconPaint..style = PaintingStyle.fill);
+
+    // 身体（斜线表示滑雪姿势）
+    iconPaint.style = PaintingStyle.stroke;
+    final bodyStart =
+        Offset(center.dx - radius * 0.15, center.dy - radius * 0.1);
+    final bodyEnd = Offset(center.dx + radius * 0.2, center.dy + radius * 0.35);
+    canvas.drawLine(bodyStart, bodyEnd, iconPaint);
+
+    // 滑雪杖
+    final poleStart =
+        Offset(center.dx - radius * 0.35, center.dy - radius * 0.15);
+    final poleEnd = Offset(center.dx + radius * 0.1, center.dy + radius * 0.4);
+    canvas.drawLine(poleStart, poleEnd, iconPaint..strokeWidth = 1.5);
+
+    // 如果是队长，添加皇冠标记
+    if (isLeader) {
+      final crownPaint = Paint()
+        ..color = Colors.amber
+        ..style = PaintingStyle.fill;
+
+      final crownPath = Path();
+      final crownY = center.dy - radius - 4;
+      crownPath.moveTo(center.dx - 6, crownY + 6);
+      crownPath.lineTo(center.dx - 6, crownY + 2);
+      crownPath.lineTo(center.dx - 3, crownY + 4);
+      crownPath.lineTo(center.dx, crownY);
+      crownPath.lineTo(center.dx + 3, crownY + 4);
+      crownPath.lineTo(center.dx + 6, crownY + 2);
+      crownPath.lineTo(center.dx + 6, crownY + 6);
+      crownPath.close();
+      canvas.drawPath(crownPath, crownPaint);
+    }
+
+    final picture = recorder.endRecording();
+    final img = await picture.toImage(size, size);
+    final byteData = await img.toByteData(format: ImageByteFormat.png);
+    return byteData!.buffer.asUint8List();
+  }
+
   // Converts coordinates into distances along the piste
   static List<double> calculateDistances(List<List<double>> coordinates) {
     List<double> distances = [0.0];
@@ -312,7 +417,8 @@ class GeoJsonHelper {
       final prev = coordinates[i - 1];
       final curr = coordinates[i];
 
-      double distance = _haversineDistance(prev[1], prev[0], curr[1], curr[0]); // (lat, lon)
+      double distance =
+          _haversineDistance(prev[1], prev[0], curr[1], curr[0]); // (lat, lon)
       distances.add(distances.last + distance);
     }
 
@@ -324,25 +430,29 @@ class GeoJsonHelper {
     double totalDistance = 0.0;
     for (int i = 1; i < coordinates.length; i++) {
       totalDistance += _haversineDistance(
-        coordinates[i - 1][1], coordinates[i - 1][0],
-        coordinates[i][1], coordinates[i][0],
+        coordinates[i - 1][1],
+        coordinates[i - 1][0],
+        coordinates[i][1],
+        coordinates[i][0],
       );
     }
     return totalDistance;
   }
 
   // Haversine formula for distance between two lat/lon points
-  static double _haversineDistance(double lat1, double lon1, double lat2, double lon2) {
+  static double _haversineDistance(
+      double lat1, double lon1, double lat2, double lon2) {
     const R = 6371000; // Earth radius in meters
     double dLat = (lat2 - lat1) * pi / 180.0;
     double dLon = (lon2 - lon1) * pi / 180.0;
 
     double a = sin(dLat / 2) * sin(dLat / 2) +
-        cos(lat1 * pi / 180.0) * cos(lat2 * pi / 180.0) *
-            sin(dLon / 2) * sin(dLon / 2);
+        cos(lat1 * pi / 180.0) *
+            cos(lat2 * pi / 180.0) *
+            sin(dLon / 2) *
+            sin(dLon / 2);
     double c = 2 * atan2(sqrt(a), sqrt(1 - a));
 
     return R * c; // m
   }
-
 }
