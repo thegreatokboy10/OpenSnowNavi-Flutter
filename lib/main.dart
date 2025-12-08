@@ -1,4 +1,7 @@
+// ignore_for_file: avoid_web_libraries_in_flutter
+import 'dart:html' as html;
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_web_plugins/flutter_web_plugins.dart'; // Import for URL strategy
 import 'package:go_router/go_router.dart';
 import 'mapbox_view.dart';
@@ -6,6 +9,11 @@ import 'mapbox_view.dart';
 void main() {
   setUrlStrategy(PathUrlStrategy()); // Enable clean URLs
   runApp(MyApp());
+
+  // Notify JavaScript when Flutter first frame is rendered
+  SchedulerBinding.instance.addPostFrameCallback((_) {
+    html.window.dispatchEvent(html.CustomEvent('flutter-first-frame'));
+  });
 }
 
 class MyApp extends StatelessWidget {
@@ -28,13 +36,21 @@ class MyApp extends StatelessWidget {
           List<List<double>>? parsedCoordinates;
 
           if (coordsString != null && coordsString.isNotEmpty) {
-            parsedCoordinates = coordsString.split(';').map((coord) {
-              final parts = coord.split(',');
-              if (parts.length == 2) {
-                return [double.parse(parts[0]), double.parse(parts[1])]; // Convert to lat-lng pair
-              }
-              return null;
-            }).where((element) => element != null).cast<List<double>>().toList();
+            parsedCoordinates = coordsString
+                .split(';')
+                .map((coord) {
+                  final parts = coord.split(',');
+                  if (parts.length == 2) {
+                    return [
+                      double.parse(parts[0]),
+                      double.parse(parts[1])
+                    ]; // Convert to lat-lng pair
+                  }
+                  return null;
+                })
+                .where((element) => element != null)
+                .cast<List<double>>()
+                .toList();
           }
 
           return MyHomePage(
@@ -61,7 +77,7 @@ class MyApp extends StatelessWidget {
 }
 
 class MyHomePage extends StatefulWidget {
-  final List<List<double>>? coordinates;  // Nullable list of lat-lng pairs
+  final List<List<double>>? coordinates; // Nullable list of lat-lng pairs
   final String? resortKey; // Nullable resort identifier
   final String? teamId; // 团队ID（从邀请链接获取）
 
@@ -87,18 +103,16 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return Scaffold(
-          body: Stack(
-            children: [
-              generatorPage,  // Always visible
-              if (selectedIndex == 1) FavoritePage(), // Overlay FavoritePage
-            ],
-          ),
-        );
-      }
-    );
+    return LayoutBuilder(builder: (context, constraints) {
+      return Scaffold(
+        body: Stack(
+          children: [
+            generatorPage, // Always visible
+            if (selectedIndex == 1) FavoritePage(), // Overlay FavoritePage
+          ],
+        ),
+      );
+    });
   }
 }
 

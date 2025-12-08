@@ -97,45 +97,33 @@ class _TeamPanelState extends State<TeamPanel> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque, // 捕获所有事件，防止传递到地图
-      onTapDown: (_) {
-        widget.timerFlag.flag = true;
-      },
-      onPanUpdate: (_) {
-        widget.timerFlag.flag = true;
-      },
-      onVerticalDragUpdate: (_) {
-        widget.timerFlag.flag = true;
-      },
-      child: Container(
-        width: 320,
-        constraints: const BoxConstraints(maxHeight: 500),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.15),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+    return Container(
+      width: 320,
+      constraints: const BoxConstraints(maxHeight: 500),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.15),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildHeader(),
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: _teamService.currentTeam == null
+                  ? _buildNoTeamView()
+                  : _buildTeamView(),
             ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildHeader(),
-            Flexible(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: _teamService.currentTeam == null
-                    ? _buildNoTeamView()
-                    : _buildTeamView(),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
