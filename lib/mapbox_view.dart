@@ -26,12 +26,16 @@ import 'package:url_launcher/url_launcher.dart';
 import 'widgets/lift_info_panel.dart';
 import 'widgets/piste_info_panel.dart';
 import 'widgets/route_instruction_panel.dart'; // Add this for opening URLs
+import 'widgets/team_panel.dart';
+import 'team/team_service.dart';
 
 class GeneratorPage extends StatefulWidget {
   final List<List<double>>? coordinates; // List of lat-lng pairs
   final String? resortKey; // Resort key for the map
+  final String? teamId; // Team ID for joining a team from shared link
 
-  const GeneratorPage({Key? key, this.coordinates, this.resortKey}) : super(key: key);
+  const GeneratorPage({Key? key, this.coordinates, this.resortKey, this.teamId})
+      : super(key: key);
 
   @override
   _GeneratorPageState createState() => _GeneratorPageState();
@@ -44,7 +48,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
   // Create an instance of RouteEngine
   final routeEngine = re.RouteEngine();
   re.Route? route;
-  List<LatLng> stopovers = []; // TODO: think about how to properly support stopovers
+  List<LatLng> stopovers =
+      []; // TODO: think about how to properly support stopovers
   // Resort
   String selectedResortKey = '3valley'; // Default selection for 3 Valleys
   // Filter set for pistes and lifts
@@ -55,9 +60,9 @@ class _GeneratorPageState extends State<GeneratorPage> {
   List<String> pisteDifficultyFilters = [
     'novice',
     'easy',
-    'intermediate', 
-    'advanced', 
-    'expert', 
+    'intermediate',
+    'advanced',
+    'expert',
     'freeride',
   ];
 
@@ -109,6 +114,23 @@ class _GeneratorPageState extends State<GeneratorPage> {
 
   bool _isLoading = true; // Track loading state
 
+  // Team feature
+  bool _showTeamPanel = false;
+  final TeamService _teamService = TeamService.instance;
+  List<Symbol> _teamMemberSymbols = [];
+  Map<String, String> _memberSymbolToDeviceId = {}; // Symbol ID -> Device ID 映射
+  Set<String> _addedMemberIconImages = {}; // 已添加的成员图标图片名称
+
+  // 当前位置标记
+  Circle? _myLocationCircle; // 位置圆点
+  Circle? _myLocationPulseCircle; // 呼吸动画圆圈
+  Symbol? _myLocationDirectionSymbol; // 朝向箭头
+  Symbol? _myLocationHeadingText; // 朝向读数文本
+  bool _myLocationIconAdded = false; // 是否已添加朝向图标
+  Timer? _locationPulseTimer; // 呼吸动画定时器
+  double _pulseRadius = 12.0; // 呼吸圆圈半径
+  bool _pulseExpanding = true; // 是否正在扩大
+
   void _initializeCircleTextSource() {
     if (mapController == null) return;
 
@@ -116,7 +138,10 @@ class _GeneratorPageState extends State<GeneratorPage> {
     mapController?.addSource(
       'circle-text-source',
       GeojsonSourceProperties(
-        data: {"type": "FeatureCollection", "features": []}, // Start with empty features
+        data: {
+          "type": "FeatureCollection",
+          "features": []
+        }, // Start with empty features
       ),
     );
 
@@ -153,19 +178,57 @@ class _GeneratorPageState extends State<GeneratorPage> {
     super.initState();
     _searchController = TextEditingController();
     needRestore = _restoreParameters();
-    _childWidgetKeys = List.generate(3, (index) => GlobalKey()); 
+    _childWidgetKeys = List.generate(3, (index) => GlobalKey());
+    _initializeTeam();
+  }
+
+  Future<void> _initializeTeam() async {
+    await _teamService.initialize();
+
+    // 处理团队邀请链接
+    if (widget.teamId != null && widget.teamId!.isNotEmpty) {
+      final result = await _teamService.joinTeam(widget.teamId!);
+      if (result.success) {
+        setState(() => _showTeamPanel = true);
+      }
+    }
+
+    // 初始化时如果有团队，定位到当前位置
+    // 注意：标记更新会在 _onStyleLoadedCallback 中进行，因为此时地图可能还没准备好
+    if (_teamService.currentTeam != null) {
+      print(
+          '[MapboxView] Team restored, will update markers when map is ready');
+
+      // 自动定位到当前设备位置
+      try {
+        final location = await _locationService.getCurrentLocation();
+        final currentLatLng =
+            LatLng(location['latitude'], location['longitude']);
+        // 等待地图控制器准备好
+        if (mapController != null) {
+          mapController!.animateCamera(
+            CameraUpdate.newLatLngZoom(currentLatLng, 15),
+          );
+        }
+      } catch (e) {
+        print('[MapboxView] Failed to get current location: $e');
+      }
+    }
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _teamService.dispose();
     super.dispose();
   }
 
   // Parses coordinates and restores class variables
   bool _restoreParameters() {
-    bool hasResortKey = widget.resortKey != null && widget.resortKey!.isNotEmpty;
-    bool hasCoordinates = widget.coordinates != null && widget.coordinates!.isNotEmpty;
+    bool hasResortKey =
+        widget.resortKey != null && widget.resortKey!.isNotEmpty;
+    bool hasCoordinates =
+        widget.coordinates != null && widget.coordinates!.isNotEmpty;
 
     if (!hasResortKey || !hasCoordinates) {
       print("no route needs to restored");
@@ -176,8 +239,10 @@ class _GeneratorPageState extends State<GeneratorPage> {
     selectedResortKey = widget.resortKey!;
 
     // Assign coordinates only if they exist
-    startCoordinate = LatLng(widget.coordinates!.first[1], widget.coordinates!.first[0]);
-    endCoordinate = LatLng(widget.coordinates!.last[1], widget.coordinates!.last[0]);
+    startCoordinate =
+        LatLng(widget.coordinates!.first[1], widget.coordinates!.first[0]);
+    endCoordinate =
+        LatLng(widget.coordinates!.last[1], widget.coordinates!.last[0]);
 
     if (widget.coordinates!.length > 2) {
       stopovers = widget.coordinates!
@@ -188,19 +253,22 @@ class _GeneratorPageState extends State<GeneratorPage> {
       stopovers = [];
     }
 
-    print("route needs to be restored with $selectedResortKey and $startCoordinate to $endCoordinate via $stopovers");
+    print(
+        "route needs to be restored with $selectedResortKey and $startCoordinate to $endCoordinate via $stopovers");
     return true; // Both parameters are present
   }
 
   void _onSearchChanged(String query) {
-    if (_debounce?.isActive ?? false) _debounce!.cancel(); // Cancel any active timer
+    if (_debounce?.isActive ?? false)
+      _debounce!.cancel(); // Cancel any active timer
 
     _debounce = Timer(const Duration(milliseconds: 300), () async {
       if (query.length >= 3) {
         hasSearched = true; // Set to true when a search is triggered
         LatLng center = resortCoordinate!;
         double radiusKm = 15.0;
-        List<Map<String, dynamic>> results = await SearchService.searchPOI(query, center, radiusKm);
+        List<Map<String, dynamic>> results =
+            await SearchService.searchPOI(query, center, radiusKm);
         setState(() {
           poiResults = results;
         });
@@ -234,7 +302,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
   }
 
   // Function to create a Flutter icon as an image (in memory) that takes the icon as a parameter
-  Future<Uint8List> _createFlutterIconAsImage(IconData iconData, Color color, double size) async {
+  Future<Uint8List> _createFlutterIconAsImage(
+      IconData iconData, Color color, double size) async {
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
     final textPainter = TextPainter(textDirection: TextDirection.ltr);
@@ -348,7 +417,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
       sourceId: GlobalConstants.pisteSourceId,
       layerId: 'run-name-layer',
       textSize: 10.0, // Adjust font size for lift names
-      minZoom: GlobalConstants.minZoomPiste, // Use the predefined minimum zoom for pistes
+      minZoom: GlobalConstants
+          .minZoomPiste, // Use the predefined minimum zoom for pistes
       textOffset: 0.5, // Slight vertical adjustment for text
       textOpacity: opacity,
     );
@@ -357,7 +427,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
       mapController: mapController!,
       sourceId: GlobalConstants.pisteSourceId,
       layerId: 'run-arrow-layer',
-      iconImage: 'default-piste-arrow', // Fallback icon if no dynamic expression is provided
+      iconImage:
+          'default-piste-arrow', // Fallback icon if no dynamic expression is provided
       iconOpacity: opacity,
       minZoom: GlobalConstants.minZoomPiste,
       iconImageExpression: [
@@ -385,7 +456,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
       sourceId: GlobalConstants.liftSourceId,
       layerId: 'lift-name-layer',
       textSize: 12.0, // Adjust font size for lift names
-      minZoom: GlobalConstants.minZoomLift, // Use the predefined minimum zoom for lifts
+      minZoom: GlobalConstants
+          .minZoomLift, // Use the predefined minimum zoom for lifts
       textOffset: 0.5, // Slight vertical adjustment for text
       textOpacity: opacity,
     );
@@ -464,7 +536,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
   }
   ///////////////////////////////////////////////////////////////////
 
-  void onFeatureTap(dynamic featureId, Point<double> point, LatLng latLng) async {
+  void onFeatureTap(
+      dynamic featureId, Point<double> point, LatLng latLng) async {
     if (isUiOpen.flag) {
       print("set isUiOpen to false");
       isUiOpen.flag = false;
@@ -472,8 +545,9 @@ class _GeneratorPageState extends State<GeneratorPage> {
     }
 
     // Piste and Lift features
-    List features = await mapController!.queryRenderedFeatures(point, layerIds, null);
-    
+    List features =
+        await mapController!.queryRenderedFeatures(point, layerIds, null);
+
     if (features.isNotEmpty) {
       dynamic type = features[0]["properties"]["type"];
       type ??= features[0]["properties"]["uses"];
@@ -493,20 +567,28 @@ class _GeneratorPageState extends State<GeneratorPage> {
       if (geometry["type"] == "LineString") {
         print("find geometry for $type");
         final coordinates = geometry["coordinates"];
-        
+
         // Initialize bounds with the first coordinate
         LatLng southwest = LatLng(coordinates[0][1], coordinates[0][0]);
         LatLng northeast = LatLng(coordinates[0][1], coordinates[0][0]);
-        
+
         for (var coord in coordinates) {
           LatLng point = LatLng(coord[1], coord[0]);
           southwest = LatLng(
-            southwest.latitude < point.latitude ? southwest.latitude : point.latitude,
-            southwest.longitude < point.longitude ? southwest.longitude : point.longitude,
+            southwest.latitude < point.latitude
+                ? southwest.latitude
+                : point.latitude,
+            southwest.longitude < point.longitude
+                ? southwest.longitude
+                : point.longitude,
           );
           northeast = LatLng(
-            northeast.latitude > point.latitude ? northeast.latitude : point.latitude,
-            northeast.longitude > point.longitude ? northeast.longitude : point.longitude,
+            northeast.latitude > point.latitude
+                ? northeast.latitude
+                : point.latitude,
+            northeast.longitude > point.longitude
+                ? northeast.longitude
+                : point.longitude,
           );
         }
 
@@ -514,11 +596,16 @@ class _GeneratorPageState extends State<GeneratorPage> {
         double currentBearing = mapController!.cameraPosition!.bearing;
 
         // Create the LatLngBounds object
-        LatLngBounds bounds = LatLngBounds(southwest: southwest, northeast: northeast);
+        LatLngBounds bounds =
+            LatLngBounds(southwest: southwest, northeast: northeast);
 
         // Change camera to focus on the LineString bounds
         await mapController!.animateCamera(
-          CameraUpdate.newLatLngBounds(bounds, top: 50.0, bottom: 3 * 50.0, left: 50.0, right: 50.0), // 50 is padding
+          CameraUpdate.newLatLngBounds(bounds,
+              top: 50.0,
+              bottom: 3 * 50.0,
+              left: 50.0,
+              right: 50.0), // 50 is padding
         );
 
         await Future.delayed(Duration(milliseconds: 100));
@@ -565,20 +652,30 @@ class _GeneratorPageState extends State<GeneratorPage> {
       if (selectedPiste != null) {
         showBottomSheet(
           context: context,
-          backgroundColor: Colors.white.withOpacity(GlobalConstants.floatingbuttonopacity),
+          backgroundColor:
+              Colors.white.withOpacity(GlobalConstants.floatingbuttonopacity),
           enableDrag: false,
           builder: (BuildContext context) {
-            return PisteInfoPanel(piste: selectedPiste!, timerFlag: isUiOpen, onClose: () => selectedPiste!.unhighlightMe(mapController!),);
+            return PisteInfoPanel(
+              piste: selectedPiste!,
+              timerFlag: isUiOpen,
+              onClose: () => selectedPiste!.unhighlightMe(mapController!),
+            );
           },
         );
       } else if (selectedLift != null) {
-      // Show bottom sheet
+        // Show bottom sheet
         showBottomSheet(
           context: context,
-          backgroundColor: Colors.white.withOpacity(GlobalConstants.floatingbuttonopacity),
+          backgroundColor:
+              Colors.white.withOpacity(GlobalConstants.floatingbuttonopacity),
           enableDrag: false,
           builder: (BuildContext context) {
-            return LiftInfoPanel(lift: selectedLift!, timerFlag: isUiOpen, onClose: () => selectedLift!.unhighlightMe(mapController!),);
+            return LiftInfoPanel(
+              lift: selectedLift!,
+              timerFlag: isUiOpen,
+              onClose: () => selectedLift!.unhighlightMe(mapController!),
+            );
           },
         );
       }
@@ -625,7 +722,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
       imageName: 'expert-piste-arrow',
     );
     Uint8List markerImage = await GeoJsonHelper.createCircleMarker();
-    mapController!.addImage(GlobalConstants.routeHighlightImageName, markerImage);  
+    mapController!
+        .addImage(GlobalConstants.routeHighlightImageName, markerImage);
 
     // Add layers from GeoJSON assets
     await _loadSkiResortData();
@@ -637,11 +735,12 @@ class _GeneratorPageState extends State<GeneratorPage> {
       // 安全地处理起点和终点
       if (startCoordinate != null && endCoordinate != null) {
         // 设置起点和终点
-        _setRouteCoordinates(startCoordinate!, endCoordinate!, stopovers: stopovers);
-        
+        _setRouteCoordinates(startCoordinate!, endCoordinate!,
+            stopovers: stopovers);
+
         // 生成路线
         _generateRoute(startCoordinate!, endCoordinate!, stopovers: stopovers);
-        
+
         // 标记为已恢复
         needRestore = false;
       } else {
@@ -649,12 +748,19 @@ class _GeneratorPageState extends State<GeneratorPage> {
       }
     }
 
+    // 地图样式加载完成后，更新团队成员标记
+    if (_teamService.currentTeam != null) {
+      print('[MapboxView] Style loaded, updating team member markers');
+      await _updateTeamMemberMarkers();
+    }
+
     setState(() {
       _isLoading = false; // Mark loading as complete
     });
   }
 
-  void _setRouteCoordinates(LatLng start, LatLng end, {List<LatLng>? stopovers}) {
+  void _setRouteCoordinates(LatLng start, LatLng end,
+      {List<LatLng>? stopovers}) {
     _clearAllCirclesWithText(); // Clear existing circles
 
     // Add start point
@@ -687,7 +793,16 @@ class _GeneratorPageState extends State<GeneratorPage> {
   void _onMapCreated(MapboxMapController controller) {
     mapController = controller;
     mapController?.onFeatureTapped.add(onFeatureTap);
+    mapController?.onSymbolTapped.add(_handleSymbolTapped);
     _locationService.enableBackgroundMode(true);
+  }
+
+  /// 处理 Symbol 点击事件
+  void _handleSymbolTapped(Symbol symbol) {
+    // 检查是否是团队成员标记
+    if (_memberSymbolToDeviceId.containsKey(symbol.id)) {
+      _onTeamMemberSymbolTapped(symbol);
+    }
   }
 
   void _onCameraIdle() async {
@@ -711,7 +826,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
           target: currentCameraPosition!.target,
           zoom: currentCameraPosition.zoom,
           bearing: currentCameraPosition.bearing,
-          tilt: is3DMode ? 60.0 : 0.0,  // Change tilt only
+          tilt: is3DMode ? 60.0 : 0.0, // Change tilt only
         ),
       ));
     }
@@ -743,7 +858,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
                         value: filterMapCopy[difficulty] ?? false,
                         onChanged: (bool? newValue) {
                           isUiOpen.flag = true;
-                          print("FilterDialog inside checkbox onTapDown, set isUiOpen to true");
+                          print(
+                              "FilterDialog inside checkbox onTapDown, set isUiOpen to true");
                           setState(() {
                             // 更新副本中的值
                             filterMapCopy[difficulty] = newValue ?? false;
@@ -785,9 +901,9 @@ class _GeneratorPageState extends State<GeneratorPage> {
   void _applyFilters() {
     // 构建 difficultyList，收集被选中的难度值
     List<String> difficultyList = difficultyFilterMap.entries
-      .where((entry) => entry.value) // 过滤出被选中的 difficulty
-      .map((entry) => entry.key) // 将 difficulty 的名称转换为带引号的字符串
-      .toList();
+        .where((entry) => entry.value) // 过滤出被选中的 difficulty
+        .map((entry) => entry.key) // 将 difficulty 的名称转换为带引号的字符串
+        .toList();
 
     pisteLayers.forEach((layerId) {
       print("setting filter for $layerId with $difficultyList");
@@ -798,7 +914,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
           [
             'in', // 使用 'in' 过滤条件，匹配多个难度值
             ['get', 'difficulty'],
-            ['literal', difficultyList], 
+            ['literal', difficultyList],
           ],
         );
       } else {
@@ -815,10 +931,10 @@ class _GeneratorPageState extends State<GeneratorPage> {
       'France': 'FR',
       'China': 'CN',
       'Andorra': 'AD',
-      'Switzerland': 'CH',  // 添加瑞士
-      'Austria': 'AT',      // 添加奥地利
-      'Germany': 'DE',      // 添加德国
-      'Italy': 'IT'         // 添加意大利
+      'Switzerland': 'CH', // 添加瑞士
+      'Austria': 'AT', // 添加奥地利
+      'Germany': 'DE', // 添加德国
+      'Italy': 'IT' // 添加意大利
       // Add other countries and their codes here as needed
     };
 
@@ -837,7 +953,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
     final lat = selectedResort?['coordinate']['lat'];
     final lng = selectedResort?['coordinate']['lng'];
     resortCoordinate = LatLng(lat, lng);
-    final zoom = selectedResort?['zoom'] ?? 13.0; // Default zoom if not provided
+    final zoom =
+        selectedResort?['zoom'] ?? 13.0; // Default zoom if not provided
     if (lat != null && lng != null && mapController != null) {
       mapController!.animateCamera(
         CameraUpdate.newCameraPosition(
@@ -858,7 +975,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
     final lng = selectedResort?['coordinate']['lng'] ?? 0.0;
     resortCoordinate = LatLng(lat, lng);
     final zoom = selectedResort?['zoom'] ?? 13.0;
-    
+
     return CameraPosition(
       target: LatLng(lat, lng),
       zoom: zoom,
@@ -887,33 +1004,40 @@ class _GeneratorPageState extends State<GeneratorPage> {
     });
   }
 
-  
-  String _generateSkiPlannerUrl(String selectedResortKey, LatLng? startCoordinate, LatLng? endCoordinate, List<LatLng>? stopovers) {
+  String _generateSkiPlannerUrl(String selectedResortKey,
+      LatLng? startCoordinate, LatLng? endCoordinate, List<LatLng>? stopovers) {
     // Get the current full URL (including existing parameters)
-    final String currentFullPath = html.window.location.href; // Example: http://localhost:60423/preview/?coords=...
+    final String currentFullPath = html.window.location
+        .href; // Example: http://localhost:60423/preview/?coords=...
     final Uri currentUri = Uri.parse(currentFullPath);
 
     // Remove existing query parameters and keep only domain + path
     final String baseUrl = "${currentUri.origin}${currentUri.path}";
-    
+
     // Ensure start and end coordinates exist
     if (startCoordinate == null || endCoordinate == null) {
       return baseUrl;
     }
 
     // Collect all coordinates (start → stopovers → end)
-    List<LatLng> allCoordinates = [startCoordinate, if (stopovers != null) ...stopovers, endCoordinate];
+    List<LatLng> allCoordinates = [
+      startCoordinate,
+      if (stopovers != null) ...stopovers,
+      endCoordinate
+    ];
 
     // Convert coordinates to the required format (lng,lat;lng,lat)
     final String coordsString = allCoordinates
-        .map((coord) => "${coord.longitude},${coord.latitude}") // Ensure correct order
+        .map((coord) =>
+            "${coord.longitude},${coord.latitude}") // Ensure correct order
         .join(';');
 
     // Build query parameters
     final Uri uri = Uri.parse(baseUrl).replace(
       queryParameters: {
         'coords': coordsString,
-        if (selectedResortKey.isNotEmpty) 'resortKey': selectedResortKey, // Include only if not empty
+        if (selectedResortKey.isNotEmpty)
+          'resortKey': selectedResortKey, // Include only if not empty
       },
     );
 
@@ -921,7 +1045,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
     return uri.toString();
   }
 
-  void _generateRoute(LatLng startCoordinate, LatLng endCoordinate, {List<LatLng>? stopovers}) async {
+  void _generateRoute(LatLng startCoordinate, LatLng endCoordinate,
+      {List<LatLng>? stopovers}) async {
     re.Route? newRoute = await routeEngine.generateRoute(
       startCoordinate: startCoordinate,
       endCoordinate: endCoordinate,
@@ -932,15 +1057,15 @@ class _GeneratorPageState extends State<GeneratorPage> {
     if (newRoute != null) {
       // 如果存在，则移除现有的路线图层和源
       await _removeExistingRoute();
-      
+
       setState(() {
         route = newRoute;
       });
 
       GeoJsonHelper.drawRoute(
-        mapController: mapController!, 
-        route: route!, 
-        routeSourceId: GlobalConstants.routeSourceId, 
+        mapController: mapController!,
+        route: route!,
+        routeSourceId: GlobalConstants.routeSourceId,
         routeLayerId: GlobalConstants.routeLayerId,
         routeColor: GlobalConstants.routeColor,
         routeLineWidth: GlobalConstants.routeLineWidth,
@@ -950,8 +1075,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
       routeLayers.add(GlobalConstants.routeLayerId);
 
       // refresh piste and lift layers to apply lowlight opacity
-      _refreshPisteAndLiftLayers(opacity: GlobalConstants.lowlightFeatureOpacity);
-      
+      _refreshPisteAndLiftLayers(
+          opacity: GlobalConstants.lowlightFeatureOpacity);
     }
   }
 
@@ -973,9 +1098,9 @@ class _GeneratorPageState extends State<GeneratorPage> {
       ),
     );
 
-    print("Added red marker at: ${coordinates.latitude}, ${coordinates.longitude}");
+    print(
+        "Added red marker at: ${coordinates.latitude}, ${coordinates.longitude}");
   }
-
 
   void _onMapClick(Point<double> point, LatLng coordinates) async {
     if (isUiOpen.flag) {
@@ -984,7 +1109,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
       return;
     }
     print('Map clicked at: ${coordinates.latitude}, ${coordinates.longitude}');
-    WebTitleHelper.updateTitle('Map clicked at: ${coordinates.latitude}, ${coordinates.longitude}');
+    WebTitleHelper.updateTitle(
+        'Map clicked at: ${coordinates.latitude}, ${coordinates.longitude}');
     mapController?.animateCamera(CameraUpdate.newLatLng(coordinates));
 
     // Add a red marker at the clicked location
@@ -993,7 +1119,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
     // Show bottom sheet
     showBottomSheet(
       context: context,
-      backgroundColor: Colors.white.withOpacity(GlobalConstants.floatingbuttonopacity),
+      backgroundColor:
+          Colors.white.withOpacity(GlobalConstants.floatingbuttonopacity),
       enableDrag: false, // Prevent accidental closing
       builder: (BuildContext context) {
         return GestureDetector(
@@ -1017,7 +1144,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
                       children: <Widget>[
                         Text(
                           "Selected Location",
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold),
                         ),
                         IconButton(
                           icon: Icon(Icons.close),
@@ -1046,14 +1174,16 @@ class _GeneratorPageState extends State<GeneratorPage> {
                         GestureDetector(
                           onTapDown: (details) {
                             isUiOpen.flag = true;
-                            print("Add to Route button tapped, isUiOpen set to true");
+                            print(
+                                "Add to Route button tapped, isUiOpen set to true");
                           },
                           child: ElevatedButton.icon(
                             onPressed: () {
                               isUiOpen.flag = true;
                               Navigator.pop(context); // Close bottom sheet
                               _removePhoto();
-                              WebTitleHelper.updateTitle('Route planning: ${coordinates.latitude}, ${coordinates.longitude} added to route');
+                              WebTitleHelper.updateTitle(
+                                  'Route planning: ${coordinates.latitude}, ${coordinates.longitude} added to route');
                               _handleAddToRoute(coordinates);
                             },
                             icon: Icon(Icons.add_location_alt),
@@ -1149,7 +1279,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
   // web does not support long click, it maps double click to long click
   void _onMapLongClick(Point<double> point, LatLng coordinates) async {
     print('Long-click at: ${coordinates.latitude}, ${coordinates.longitude}');
-    
+
     // if (startCoordinate != null && endCoordinate != null) {
     //   // Case: Both coordinates are already set. Clear all and reset startCoordinate
     //   print("clear all and set startCoordinate: $coordinates");
@@ -1208,7 +1338,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
       },
       "properties": {
         "color": circleColor, // Circle color
-        "text": text,         // Text label
+        "text": text, // Text label
         "textColor": textColor, // Text color
       },
     };
@@ -1221,19 +1351,214 @@ class _GeneratorPageState extends State<GeneratorPage> {
     );
   }
 
-  void _addCurrentLocation(
-    LatLng coordinates) {
-    mapController?.addCircle(
+  /// 添加当前位置标记，包含朝向箭头和呼吸动画
+  Future<void> _addCurrentLocation(LatLng coordinates, double? heading) async {
+    if (mapController == null) return;
+
+    // 先移除旧的位置标记
+    await _removeCurrentLocationMarkers();
+
+    // 添加呼吸动画圆圈（外圈，半透明）
+    _myLocationPulseCircle = await mapController!.addCircle(
       CircleOptions(
         geometry: coordinates,
-        circleRadius: 8,         // Radius in pixels
-        circleColor: Colors.lightBlue.toHexStringRGB(), // Configurable circle color
-        circleOpacity: 0.9,       // Adjust opacity as needed
-        circleStrokeColor: const Color.fromARGB(255, 188, 179, 179).toHexStringRGB(),
+        circleRadius: 20,
+        circleColor: Colors.lightBlue.toHexStringRGB(),
+        circleOpacity: 0.3,
+        circleStrokeWidth: 0,
+      ),
+    );
+
+    // 添加位置圆点（内圈）
+    _myLocationCircle = await mapController!.addCircle(
+      CircleOptions(
+        geometry: coordinates,
+        circleRadius: 8,
+        circleColor: Colors.lightBlue.toHexStringRGB(),
+        circleOpacity: 0.9,
+        circleStrokeColor:
+            const Color.fromARGB(255, 255, 255, 255).toHexStringRGB(),
         circleStrokeWidth: 3,
         circleBlur: 0.1,
       ),
     );
+
+    // 启动呼吸动画
+    _startPulseAnimation(coordinates);
+
+    // 确保朝向图标已添加
+    if (!_myLocationIconAdded) {
+      await _addMyLocationDirectionIcon();
+      _myLocationIconAdded = true;
+    }
+
+    // 显示朝向读数（调试用）
+    final headingValue = heading ?? -1;
+    final headingText =
+        headingValue >= 0 ? '${headingValue.toStringAsFixed(0)}°' : 'N/A';
+
+    // 如果有有效的朝向数据，添加朝向箭头
+    if (heading != null && heading >= 0) {
+      _myLocationDirectionSymbol = await mapController!.addSymbol(
+        SymbolOptions(
+          geometry: coordinates,
+          iconImage: 'my-location-direction',
+          iconSize: 0.6,
+          iconRotate: heading,
+          iconAnchor: 'center',
+        ),
+      );
+    }
+
+    // 添加朝向读数文本（显示在位置下方）
+    _myLocationHeadingText = await mapController!.addSymbol(
+      SymbolOptions(
+        geometry: coordinates,
+        textField: '朝向: $headingText',
+        textSize: 12,
+        textColor: '#000000',
+        textHaloColor: '#FFFFFF',
+        textHaloWidth: 1.5,
+        textOffset: const Offset(0, 2.5), // 向下偏移
+        textAnchor: 'top',
+      ),
+    );
+  }
+
+  /// 启动呼吸动画
+  void _startPulseAnimation(LatLng coordinates) {
+    _stopPulseAnimation();
+    _pulseRadius = 12.0;
+    _pulseExpanding = true;
+
+    _locationPulseTimer = Timer.periodic(
+      const Duration(milliseconds: 50),
+      (_) async {
+        if (mapController == null || _myLocationPulseCircle == null) {
+          _stopPulseAnimation();
+          return;
+        }
+
+        // 更新半径
+        if (_pulseExpanding) {
+          _pulseRadius += 0.8;
+          if (_pulseRadius >= 30) {
+            _pulseExpanding = false;
+          }
+        } else {
+          _pulseRadius -= 0.8;
+          if (_pulseRadius <= 12) {
+            _pulseExpanding = true;
+          }
+        }
+
+        // 计算透明度（随着扩大而变淡）
+        final opacity = 0.4 - ((_pulseRadius - 12) / 18) * 0.3;
+
+        try {
+          await mapController!.updateCircle(
+            _myLocationPulseCircle!,
+            CircleOptions(
+              circleRadius: _pulseRadius,
+              circleOpacity: opacity.clamp(0.1, 0.4),
+            ),
+          );
+        } catch (e) {
+          // 圆圈可能已被移除
+          _stopPulseAnimation();
+        }
+      },
+    );
+  }
+
+  /// 停止呼吸动画
+  void _stopPulseAnimation() {
+    _locationPulseTimer?.cancel();
+    _locationPulseTimer = null;
+  }
+
+  /// 移除当前位置标记
+  Future<void> _removeCurrentLocationMarkers() async {
+    if (mapController == null) return;
+
+    // 停止呼吸动画
+    _stopPulseAnimation();
+
+    // 移除呼吸圆圈
+    if (_myLocationPulseCircle != null) {
+      try {
+        await mapController!.removeCircle(_myLocationPulseCircle!);
+      } catch (e) {
+        print('Error removing pulse circle: $e');
+      }
+      _myLocationPulseCircle = null;
+    }
+
+    // 移除位置圆点
+    if (_myLocationCircle != null) {
+      try {
+        await mapController!.removeCircle(_myLocationCircle!);
+      } catch (e) {
+        print('Error removing location circle: $e');
+      }
+      _myLocationCircle = null;
+    }
+
+    // 移除朝向箭头
+    if (_myLocationDirectionSymbol != null) {
+      try {
+        await mapController!.removeSymbol(_myLocationDirectionSymbol!);
+      } catch (e) {
+        print('Error removing direction symbol: $e');
+      }
+      _myLocationDirectionSymbol = null;
+    }
+
+    // 移除朝向文本
+    if (_myLocationHeadingText != null) {
+      try {
+        await mapController!.removeSymbol(_myLocationHeadingText!);
+      } catch (e) {
+        print('Error removing heading text: $e');
+      }
+      _myLocationHeadingText = null;
+    }
+  }
+
+  /// 添加朝向图标到地图
+  Future<void> _addMyLocationDirectionIcon() async {
+    if (mapController == null) return;
+
+    // 创建一个朝向箭头图标（扇形/三角形）
+    final pictureRecorder = ui.PictureRecorder();
+    final canvas = Canvas(pictureRecorder);
+    final size = 80.0;
+    final paint = Paint()
+      ..color = Colors.blue.withOpacity(0.6)
+      ..style = PaintingStyle.fill;
+
+    // 绘制扇形（朝向指示器）
+    final path = Path();
+    final centerX = size / 2;
+    final centerY = size / 2;
+    final radius = size / 2 - 4;
+
+    // 绘制一个向上的三角形箭头
+    path.moveTo(centerX, 4); // 顶点（向上）
+    path.lineTo(centerX - radius * 0.5, centerY + radius * 0.3);
+    path.lineTo(centerX, centerY);
+    path.lineTo(centerX + radius * 0.5, centerY + radius * 0.3);
+    path.close();
+
+    canvas.drawPath(path, paint);
+
+    final picture = pictureRecorder.endRecording();
+    final image = await picture.toImage(size.toInt(), size.toInt());
+    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    if (byteData != null) {
+      final bytes = byteData.buffer.asUint8List();
+      await mapController!.addImage('my-location-direction', bytes);
+    }
   }
 
   void _clearAllCirclesWithText() {
@@ -1251,7 +1576,6 @@ class _GeneratorPageState extends State<GeneratorPage> {
     print("Cleared all circles with text.");
   }
 
-
   Future<void> _launchUrl(String _url) async {
     if (!await launchUrl(Uri.parse(_url))) {
       throw Exception('Could not launch $_url');
@@ -1262,27 +1586,296 @@ class _GeneratorPageState extends State<GeneratorPage> {
     isUiOpen.flag = true;
     try {
       final location = await _locationService.getCurrentLocation();
-      LatLng currentLocation = LatLng(location['latitude'], location['longitude']);
-      print("current location: $currentLocation");
+      LatLng currentLocation =
+          LatLng(location['latitude'], location['longitude']);
+      final heading = location['heading'] as double?;
+      print("current location: $currentLocation, heading: $heading");
       setState(() {
         resortCoordinate = currentLocation;
       });
-      
+
       // Animate the map to the current location
-      mapController?.animateCamera(CameraUpdate.newLatLngZoom(currentLocation, 14));
-      // Draw the blue icon on the map
-      _addCurrentLocation(
-        currentLocation
-      );
+      mapController
+          ?.animateCamera(CameraUpdate.newLatLngZoom(currentLocation, 14));
+      // Draw the blue icon on the map with heading
+      await _addCurrentLocation(currentLocation, heading);
     } catch (error) {
       print('Error: $error');
     }
   }
 
+  /// 更新团队成员在地图上的标记
+  Future<void> _updateTeamMemberMarkers() async {
+    if (mapController == null) return;
+
+    // 清除旧标记
+    for (final symbol in _teamMemberSymbols) {
+      await mapController!.removeSymbol(symbol);
+    }
+    _teamMemberSymbols.clear();
+    _memberSymbolToDeviceId.clear();
+
+    // 获取成员位置
+    final memberLocations = _teamService.getMemberLocations();
+
+    // 添加新标记
+    for (final member in memberLocations) {
+      // 为每个成员创建唯一的图标
+      final iconName =
+          'team-member-${member.colorIndex}-${member.isLeader ? 1 : 0}';
+
+      // 如果图标还没添加过，先添加
+      if (!_addedMemberIconImages.contains(iconName)) {
+        final iconBytes = await GeoJsonHelper.createTeamMemberMarker(
+          color: Color(member.color),
+          isLeader: member.isLeader,
+          size: 56,
+        );
+        await mapController!.addImage(iconName, iconBytes);
+        _addedMemberIconImages.add(iconName);
+      }
+
+      // 获取颜色的十六进制值用于文字
+      final colorHex =
+          '#${member.color.toRadixString(16).substring(2).toUpperCase()}';
+
+      final symbol = await mapController!.addSymbol(
+        SymbolOptions(
+          geometry: member.location,
+          iconImage: iconName,
+          iconSize: 1.0,
+          iconAnchor: 'center',
+          textField: member.nickname,
+          textOffset: const Offset(0, 2.0),
+          textSize: 13,
+          textColor: colorHex,
+          textHaloColor: '#FFFFFF',
+          textHaloWidth: 2,
+          textAnchor: 'top',
+        ),
+      );
+      _teamMemberSymbols.add(symbol);
+      _memberSymbolToDeviceId[symbol.id] = member.deviceId;
+    }
+
+    if (mounted) setState(() {});
+  }
+
+  /// 显示团队成员信息弹窗
+  void _showTeamMemberInfoDialog(MemberLocation member) {
+    isUiOpen.flag = true;
+
+    // 格式化更新时间
+    String lastUpdateStr = '未知';
+    if (member.lastUpdate != null) {
+      final now = DateTime.now();
+      final diff = now.difference(member.lastUpdate!);
+      if (diff.inSeconds < 60) {
+        lastUpdateStr = '${diff.inSeconds}秒前';
+      } else if (diff.inMinutes < 60) {
+        lastUpdateStr = '${diff.inMinutes}分钟前';
+      } else {
+        lastUpdateStr = '${diff.inHours}小时前';
+      }
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Color(member.color),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Icon(
+                    member.isLeader ? Icons.star : Icons.downhill_skiing,
+                    color: Colors.white,
+                    size: 22,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      member.nickname,
+                      style: const TextStyle(
+                          fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    if (member.isLeader)
+                      const Text(
+                        '队长',
+                        style: TextStyle(fontSize: 12, color: Colors.orange),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildInfoRow(Icons.location_on, '位置',
+                  '${member.location.latitude.toStringAsFixed(6)}, ${member.location.longitude.toStringAsFixed(6)}'),
+              const SizedBox(height: 8),
+              _buildInfoRow(Icons.access_time, '更新时间', lastUpdateStr),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                isUiOpen.flag = true;
+                Navigator.pop(context);
+              },
+              child: const Text('关闭'),
+            ),
+            TextButton(
+              onPressed: () {
+                isUiOpen.flag = true;
+                Navigator.pop(context);
+                // 飞到成员位置
+                mapController?.animateCamera(
+                  CameraUpdate.newLatLngZoom(member.location, 16),
+                );
+              },
+              child: const Text('定位'),
+            ),
+            // 不显示"导航到TA"按钮如果是自己
+            if (!member.isMe)
+              ElevatedButton.icon(
+                onPressed: () async {
+                  isUiOpen.flag = true;
+                  Navigator.pop(context);
+                  await _startRouteToMember(member);
+                },
+                icon: const Icon(Icons.directions, size: 18),
+                label: const Text('导航到TA'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(member.color),
+                  foregroundColor: Colors.white,
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildInfoRow(IconData icon, String label, String value) {
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: Colors.grey[600]),
+        const SizedBox(width: 8),
+        Text('$label: ', style: TextStyle(color: Colors.grey[600])),
+        Expanded(
+          child: Text(
+            value,
+            style: const TextStyle(fontWeight: FontWeight.w500),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// 开始导航到成员位置
+  Future<void> _startRouteToMember(MemberLocation member) async {
+    isUiOpen.flag = true;
+
+    try {
+      // 获取当前位置作为起点
+      final location = await _locationService.getCurrentLocation();
+      final currentLocation =
+          LatLng(location['latitude'], location['longitude']);
+
+      // 清除之前的路线
+      await _removeExistingRoute();
+      _clearAllCirclesWithText();
+
+      // 设置起点和终点
+      startCoordinate = currentLocation;
+      endCoordinate = member.location;
+      stopovers.clear();
+
+      // 添加起点标记
+      _addCircleWithText(
+        currentLocation,
+        circleColor: "#00FF00",
+        text: "A",
+      );
+
+      // 添加终点标记
+      _addCircleWithText(
+        member.location,
+        circleColor: "#0000FF",
+        text: "B",
+      );
+
+      // 生成路线
+      _generateRoute(startCoordinate!, endCoordinate!, stopovers: stopovers);
+
+      // 显示提示
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('正在规划到 ${member.nickname} 的路线...'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error starting route to member: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('无法获取当前位置，请确保已开启位置权限'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+
+    isUiOpen.flag = false;
+  }
+
+  /// 处理成员标记点击
+  void _onTeamMemberSymbolTapped(Symbol symbol) {
+    isUiOpen.flag = true;
+
+    final deviceId = _memberSymbolToDeviceId[symbol.id];
+    if (deviceId == null) return;
+
+    final member = _teamService.getMemberLocationByDeviceId(deviceId);
+    if (member == null) return;
+
+    _showTeamMemberInfoDialog(member);
+  }
+
   void _showSharePopup() {
     isUiOpen.flag = true;
-    final String generatedUrl = _generateSkiPlannerUrl(selectedResortKey, startCoordinate, endCoordinate, stopovers);
-    WebTitleHelper.updateTitle("Share SnowNavi - ${GlobalConstants.defaultTitle}");
+    final String generatedUrl = _generateSkiPlannerUrl(
+        selectedResortKey, startCoordinate, endCoordinate, stopovers);
+    WebTitleHelper.updateTitle(
+        "Share SnowNavi - ${GlobalConstants.defaultTitle}");
     showDialog(
       context: context,
       builder: (context) {
@@ -1299,7 +1892,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
               ElevatedButton.icon(
                 onPressed: () {
                   isUiOpen.flag = true;
-                  WebTitleHelper.updateTitle("Thanks for sharing SnowNavi - ${GlobalConstants.defaultTitle}");
+                  WebTitleHelper.updateTitle(
+                      "Thanks for sharing SnowNavi - ${GlobalConstants.defaultTitle}");
                   html.window.navigator.clipboard?.writeText(generatedUrl);
                   Navigator.pop(context); // Close dialog
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -1337,6 +1931,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
       print("setZoomEnabled to $_zoomGesturesEnabled");
     });
   }
+
   void _toggleZoomGestures() {
     _setZoomGestures(null);
   }
@@ -1344,9 +1939,11 @@ class _GeneratorPageState extends State<GeneratorPage> {
   void _checkIfInsideChildWidget(PointerEvent event) {
     print("checking pointerEvent $event");
     for (var key in _childWidgetKeys) {
-      final RenderBox? box = key.currentContext?.findRenderObject() as RenderBox?;
+      final RenderBox? box =
+          key.currentContext?.findRenderObject() as RenderBox?;
       if (box != null) {
-        final Offset position = box.localToGlobal(Offset.zero); // Top-left position
+        final Offset position =
+            box.localToGlobal(Offset.zero); // Top-left position
         final Size size = box.size;
 
         // Check if mouse event is inside this widget's bounds
@@ -1364,7 +1961,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
 
   void _handleRouteClose() {
     // Additional actions after closing the route
-    _removeExistingRoute();  // Clears the drawn route from the map
+    _removeExistingRoute(); // Clears the drawn route from the map
     _removeStopOvers();
     _clearAllCirclesWithText();
     print("Route panel closed, map layers restored.");
@@ -1372,7 +1969,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
 
   Future<void> _pickPhoto() async {
     isUiOpen.flag = true;
-    WebTitleHelper.updateTitle("Using photo to plan your ski trip - ${GlobalConstants.defaultTitle}");
+    WebTitleHelper.updateTitle(
+        "Using photo to plan your ski trip - ${GlobalConstants.defaultTitle}");
 
     // Pick image from web
     Uint8List? imageBytes = await ImagePickerWeb.getImageAsBytes();
@@ -1384,16 +1982,21 @@ class _GeneratorPageState extends State<GeneratorPage> {
     // Extract GPS metadata
     LatLng? gpsCoordinates = await _extractGpsCoordinates(imageBytes);
     if (gpsCoordinates != null) {
-      print("Extracted GPS: ${gpsCoordinates.latitude}, ${gpsCoordinates.longitude}");
-      WebTitleHelper.updateTitle("Find location from photo - ${GlobalConstants.defaultTitle}");
+      print(
+          "Extracted GPS: ${gpsCoordinates.latitude}, ${gpsCoordinates.longitude}");
+      WebTitleHelper.updateTitle(
+          "Find location from photo - ${GlobalConstants.defaultTitle}");
       _photoLocation = gpsCoordinates;
       _onMapClick(Point(0, 0), _photoLocation!);
     } else {
       print("No GPS data found in image.");
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Unable to find the location, please try another photo.")),
+        SnackBar(
+            content:
+                Text("Unable to find the location, please try another photo.")),
       );
-      WebTitleHelper.updateTitle("No location found from photo - ${GlobalConstants.defaultTitle}");
+      WebTitleHelper.updateTitle(
+          "No location found from photo - ${GlobalConstants.defaultTitle}");
       WebTitleHelper.resetTitle();
     }
 
@@ -1407,7 +2010,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
       _photoLocation = null;
     });
   }
-    
+
   Future<LatLng?> _extractGpsCoordinates(Uint8List imageBytes) async {
     try {
       final Map<String, IfdTag> data = await readExifFromBytes(imageBytes);
@@ -1415,9 +2018,11 @@ class _GeneratorPageState extends State<GeneratorPage> {
       // Debugging: Print all EXIF data
       print("EXIF Data: $data");
 
-      if (data.containsKey("GPS GPSLatitude") && data.containsKey("GPS GPSLongitude")) {
+      if (data.containsKey("GPS GPSLatitude") &&
+          data.containsKey("GPS GPSLongitude")) {
         List<dynamic> latitudeValues = data["GPS GPSLatitude"]!.values.toList();
-        List<dynamic> longitudeValues = data["GPS GPSLongitude"]!.values.toList();
+        List<dynamic> longitudeValues =
+            data["GPS GPSLongitude"]!.values.toList();
 
         String? latRef = data["GPS GPSLatitudeRef"]?.printable;
         String? lngRef = data["GPS GPSLongitudeRef"]?.printable;
@@ -1440,7 +2045,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
   }
 
   double _convertExifCoordinates(dynamic exifData, String? ref) {
-    print("start GPS Conversion with EXIF Data Type: ${exifData.runtimeType}, Value: $exifData");
+    print(
+        "start GPS Conversion with EXIF Data Type: ${exifData.runtimeType}, Value: $exifData");
 
     if (exifData is List) {
       // Handle EXIF GPS coordinates stored as a list of Ratios
@@ -1500,13 +2106,13 @@ class _GeneratorPageState extends State<GeneratorPage> {
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
-      onHover: _checkIfInsideChildWidget, 
+      onHover: _checkIfInsideChildWidget,
       child: Scaffold(
         body: Stack(
           children: [
             // Show loading screen until the map is fully loaded
             if (_isLoading) _buildLoadingScreen(),
-            
+
             MapboxMap(
               accessToken:
                   'pk.eyJ1Ijoib2tib3kyMDA4IiwiYSI6ImNsdGE1dzd6OTAxbHQyanA0aWM1MjU5c24ifQ.vbbY3gzL8nnUFctmDv9UBQ',
@@ -1519,12 +2125,13 @@ class _GeneratorPageState extends State<GeneratorPage> {
               doubleClickZoomEnabled: false,
               scrollGesturesEnabled: true,
               zoomGesturesEnabled: _zoomGesturesEnabled,
-              styleString: 'mapbox://styles/okboy2008/clx1zai3s01ck01rb5zsv600u', // Your custom Mapbox style
+              styleString:
+                  'mapbox://styles/okboy2008/clx1zai3s01ck01rb5zsv600u', // Your custom Mapbox style
               compassEnabled: true, // Disable the compass button
               compassViewPosition: CompassViewPosition.BottomRight,
             ),
             // Floating Route Panel (Between Search Box & Filter Button)
-            if (route != null) 
+            if (route != null)
               FloatingRouteInstructionPanel(
                 key: _childWidgetKeys[0],
                 route: route!,
@@ -1539,12 +2146,14 @@ class _GeneratorPageState extends State<GeneratorPage> {
               left: 100,
               child: GestureDetector(
                 onTap: () {
-                  _launchUrl('https://www.xiaohongshu.com/user/profile/5ffeddbb000000000100388d');
+                  _launchUrl(
+                      'https://www.xiaohongshu.com/user/profile/5ffeddbb000000000100388d');
                 },
                 child: Container(
                   padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: const Color.fromARGB(255, 255, 255, 255).withOpacity(0.3),
+                    color: const Color.fromARGB(255, 255, 255, 255)
+                        .withOpacity(0.3),
                     borderRadius: BorderRadius.circular(2),
                   ),
                   child: Text(
@@ -1552,7 +2161,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
                     style: TextStyle(
                       color: const Color.fromARGB(255, 209, 6, 6),
                       fontSize: 12,
-                      decoration: TextDecoration.none, // Add underline for link effect
+                      decoration:
+                          TextDecoration.none, // Add underline for link effect
                     ),
                   ),
                 ),
@@ -1596,7 +2206,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
 
                       // Open Photo Button
                       FloatingActionButton(
-                        backgroundColor: Colors.white.withOpacity(GlobalConstants.floatingbuttonopacity),
+                        backgroundColor: Colors.white
+                            .withOpacity(GlobalConstants.floatingbuttonopacity),
                         mini: true,
                         heroTag: "openPhotoButton",
                         onPressed: _pickPhoto,
@@ -1634,12 +2245,15 @@ class _GeneratorPageState extends State<GeneratorPage> {
                             title: Text(poi['name']),
                             subtitle: Text(
                               '${poi['distance'].toStringAsFixed(2)} km',
-                              style: TextStyle(height: 1.5), // Adjust line spacing for readability
+                              style: TextStyle(
+                                  height:
+                                      1.5), // Adjust line spacing for readability
                             ),
-                            isThreeLine: true, // Allows multiple lines in the subtitle
+                            isThreeLine:
+                                true, // Allows multiple lines in the subtitle
                             onTap: () {
                               LatLng coord = LatLng(poi['lat'], poi['lng']);
-                              _onMapClick(Point(0,0), coord);
+                              _onMapClick(Point(0, 0), coord);
                               isUiOpen.flag = true;
                               mapController?.animateCamera(
                                 CameraUpdate.newLatLng(
@@ -1681,11 +2295,12 @@ class _GeneratorPageState extends State<GeneratorPage> {
             // 筛选按钮
             Positioned(
               bottom: 38,
-              left: 20, 
+              left: 20,
               child: Transform.scale(
                 scale: GlobalConstants.floatingActionButtonScale, // 缩放比例
                 child: FloatingActionButton(
-                  backgroundColor: Colors.white.withOpacity(GlobalConstants.floatingbuttonopacity), // 按钮颜色
+                  backgroundColor: Colors.white.withOpacity(
+                      GlobalConstants.floatingbuttonopacity), // 按钮颜色
                   onPressed: _showFilterDialog,
                   tooltip: 'Filter',
                   child: Icon(Icons.filter_alt), // 使用筛选图标
@@ -1694,11 +2309,12 @@ class _GeneratorPageState extends State<GeneratorPage> {
             ),
             Positioned(
               top: 18,
-              right: 20, 
+              right: 20,
               child: Transform.scale(
                 scale: GlobalConstants.floatingActionButtonScale,
                 child: FloatingActionButton(
-                  backgroundColor: Colors.white.withOpacity(GlobalConstants.floatingbuttonopacity),
+                  backgroundColor: Colors.white
+                      .withOpacity(GlobalConstants.floatingbuttonopacity),
                   onPressed: _toggle2D3DView,
                   child: Text(
                     is3DMode ? '2D' : '3D',
@@ -1713,11 +2329,12 @@ class _GeneratorPageState extends State<GeneratorPage> {
             ),
             Positioned(
               top: 68,
-              right: 20, 
+              right: 20,
               child: Transform.scale(
                 scale: GlobalConstants.floatingActionButtonScale,
                 child: FloatingActionButton(
-                  backgroundColor: Colors.white.withOpacity(GlobalConstants.floatingbuttonopacity),
+                  backgroundColor: Colors.white
+                      .withOpacity(GlobalConstants.floatingbuttonopacity),
                   onPressed: _locateCurrentPosition,
                   tooltip: 'Locate Me',
                   child: Icon(Icons.my_location),
@@ -1730,13 +2347,62 @@ class _GeneratorPageState extends State<GeneratorPage> {
               child: Transform.scale(
                 scale: GlobalConstants.floatingActionButtonScale,
                 child: FloatingActionButton(
-                  backgroundColor: Colors.white.withOpacity(GlobalConstants.floatingbuttonopacity),
+                  backgroundColor: Colors.white
+                      .withOpacity(GlobalConstants.floatingbuttonopacity),
                   onPressed: _showSharePopup, // Show popup with URL
                   tooltip: 'Share SnowNavi',
                   child: Icon(Icons.share),
                 ),
               ),
             ),
+            // Team button
+            Positioned(
+              top: 168,
+              right: 20,
+              child: Transform.scale(
+                scale: GlobalConstants.floatingActionButtonScale,
+                child: FloatingActionButton(
+                  backgroundColor: _teamService.currentTeam != null
+                      ? Colors.deepOrange
+                          .withOpacity(GlobalConstants.floatingbuttonopacity)
+                      : Colors.white
+                          .withOpacity(GlobalConstants.floatingbuttonopacity),
+                  onPressed: () {
+                    isUiOpen.flag = true;
+                    setState(() => _showTeamPanel = !_showTeamPanel);
+                  },
+                  tooltip: '组队滑雪',
+                  child: Icon(
+                    Icons.group,
+                    color: _teamService.currentTeam != null
+                        ? Colors.white
+                        : Colors.black,
+                  ),
+                ),
+              ),
+            ),
+            // Team Panel
+            if (_showTeamPanel)
+              Positioned(
+                top: 70,
+                right: 70,
+                child: TeamPanel(
+                  resortKey: selectedResortKey,
+                  timerFlag: isUiOpen,
+                  onClose: () => setState(() => _showTeamPanel = false),
+                  onMemberLocationsUpdate: (locations) =>
+                      _updateTeamMemberMarkers(),
+                  onMemberTapped: (member) {
+                    isUiOpen.flag = true;
+                    // 先将相机移动到成员位置
+                    mapController?.animateCamera(
+                      CameraUpdate.newLatLngZoom(member.location, 16),
+                    );
+                    // 然后显示成员信息弹窗
+                    _showTeamMemberInfoDialog(member);
+                  },
+                ),
+              ),
             // Dropdown for selecting ski resort
             Positioned(
               bottom: 40, // Position at the bottom
@@ -1759,7 +2425,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
                       child: Text(
                         '$flagEmoji ${resort?['name']['en'] ?? 'Unknown Resort'}',
                         style: TextStyle(
-                          fontFamily: 'NotoEmoji',  // Specify Noto Emoji font family
+                          fontFamily:
+                              'NotoEmoji', // Specify Noto Emoji font family
                           fontSize: 12,
                         ),
                         textAlign: TextAlign.left, // Align text to the left

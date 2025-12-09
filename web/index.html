@@ -20,6 +20,9 @@
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="Never get lost on snow again! SnowNavi is an Ultimate Ski Route Planner">
 
+  <!-- Viewport for mobile touch support -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
   <!-- iOS meta tags & icons -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -35,8 +38,107 @@
 
   <title>Ultimate Ski Route Planner | SnowNavi</title>
   <link rel="manifest" href="manifest.json">
+
+  <style>
+    /* Loading spinner styles */
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+      touch-action: none; /* Enable proper touch handling */
+    }
+
+    #loading {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: linear-gradient(135deg, #1a237e 0%, #0d47a1 50%, #01579b 100%);
+      z-index: 9999;
+    }
+
+    .spinner {
+      width: 60px;
+      height: 60px;
+      position: relative;
+      animation: spin 2s linear infinite;
+    }
+
+    .snowflake {
+      font-size: 60px;
+      color: white;
+      text-shadow: 0 0 20px rgba(255,255,255,0.8);
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+      50% {
+        transform: scale(1.2);
+        opacity: 0.7;
+      }
+    }
+
+    .loading-text {
+      color: white;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 18px;
+      margin-top: 20px;
+      letter-spacing: 2px;
+    }
+
+    .loading-dots::after {
+      content: '';
+      animation: dots 1.5s steps(4, end) infinite;
+    }
+
+    @keyframes dots {
+      0% { content: ''; }
+      25% { content: '.'; }
+      50% { content: '..'; }
+      75% { content: '...'; }
+      100% { content: ''; }
+    }
+  </style>
 </head>
 <body>
+  <!-- Loading screen with spinning snowflake -->
+  <div id="loading">
+    <div class="spinner">
+      <span class="snowflake">❄</span>
+    </div>
+    <div class="loading-text">Loading SnowNavi<span class="loading-dots"></span></div>
+  </div>
+
   <script src="flutter_bootstrap.js" async></script>
+
+  <script>
+    // Hide loading screen when Flutter is ready
+    window.addEventListener('flutter-first-frame', function() {
+      var loading = document.getElementById('loading');
+      if (loading) {
+        loading.style.transition = 'opacity 0.5s ease-out';
+        loading.style.opacity = '0';
+        setTimeout(function() {
+          loading.style.display = 'none';
+        }, 500);
+      }
+    });
+  </script>
 </body>
 </html>

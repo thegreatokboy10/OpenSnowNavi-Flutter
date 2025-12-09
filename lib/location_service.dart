@@ -21,13 +21,15 @@ class LocationService {
       }
 
       // Get the current location
-      print("get location demo...");
       final locationData = await _location.getLocation();
+
+      print("locationData: $locationData");
 
       return {
         'latitude': locationData.latitude,
         'longitude': locationData.longitude,
         'accuracy': locationData.accuracy,
+        'heading': locationData.heading, // 朝向角度 (0-360度，0为正北)
       };
     } catch (e) {
       print("error obtaining location: $e");
