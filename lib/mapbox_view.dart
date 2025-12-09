@@ -131,6 +131,15 @@ class _GeneratorPageState extends State<GeneratorPage> {
   double _pulseRadius = 12.0; // 呼吸圆圈半径
   bool _pulseExpanding = true; // 是否正在扩大
 
+  // 移动端检测
+  bool get _isMobile {
+    final userAgent = html.window.navigator.userAgent.toLowerCase();
+    return userAgent.contains('mobile') ||
+        userAgent.contains('android') ||
+        userAgent.contains('iphone') ||
+        userAgent.contains('ipad');
+  }
+
   void _initializeCircleTextSource() {
     if (mapController == null) return;
 
@@ -1102,13 +1111,34 @@ class _GeneratorPageState extends State<GeneratorPage> {
         "Added red marker at: ${coordinates.latitude}, ${coordinates.longitude}");
   }
 
+  /// 移动端：点击 Select 按钮时获取地图中心点并触发点击处理
+  void _onSelectCenterPoint() {
+    if (mapController == null) return;
+
+    // 获取当前地图中心点
+    final cameraPosition = mapController!.cameraPosition;
+    if (cameraPosition != null) {
+      final centerCoord = cameraPosition.target;
+      print(
+          'Select center point: ${centerCoord.latitude}, ${centerCoord.longitude}');
+      // 直接调用核心点击处理逻辑，绕过 isUiOpen 检查
+      _handleLocationSelect(centerCoord);
+    }
+  }
+
   void _onMapClick(Point<double> point, LatLng coordinates) async {
     if (isUiOpen.flag) {
       isUiOpen.flag = false;
       print("Map clicked, set isUiOpen to false");
       return;
     }
-    print('Map clicked at: ${coordinates.latitude}, ${coordinates.longitude}');
+    _handleLocationSelect(coordinates);
+  }
+
+  /// 核心位置选择逻辑，被 _onMapClick 和 _onSelectCenterPoint 调用
+  void _handleLocationSelect(LatLng coordinates) async {
+    print(
+        'Location selected: ${coordinates.latitude}, ${coordinates.longitude}');
     WebTitleHelper.updateTitle(
         'Map clicked at: ${coordinates.latitude}, ${coordinates.longitude}');
     mapController?.animateCamera(CameraUpdate.newLatLng(coordinates));
@@ -2130,6 +2160,76 @@ class _GeneratorPageState extends State<GeneratorPage> {
               compassEnabled: true, // Disable the compass button
               compassViewPosition: CompassViewPosition.BottomRight,
             ),
+            // 移动端焦点标记和选择按钮
+            if (_isMobile) ...[
+              // 地图中心焦点标记（十字准星）
+              Center(
+                child: IgnorePointer(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 2,
+                        height: 20,
+                        color: Colors.red.withOpacity(0.8),
+                      ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 20,
+                            height: 2,
+                            color: Colors.red.withOpacity(0.8),
+                          ),
+                          Container(
+                            width: 12,
+                            height: 12,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.red, width: 2),
+                              color: Colors.white.withOpacity(0.5),
+                            ),
+                          ),
+                          Container(
+                            width: 20,
+                            height: 2,
+                            color: Colors.red.withOpacity(0.8),
+                          ),
+                        ],
+                      ),
+                      Container(
+                        width: 2,
+                        height: 20,
+                        color: Colors.red.withOpacity(0.8),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              // Select 按钮
+              Positioned(
+                bottom: MediaQuery.of(context).size.height / 2 - 80,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: ElevatedButton.icon(
+                    onPressed: _onSelectCenterPoint,
+                    icon: Icon(Icons.touch_app, size: 18),
+                    label: Text('Select'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      elevation: 4,
+                    ),
+                  ),
+                ),
+              ),
+            ],
             // Floating Route Panel (Between Search Box & Filter Button)
             if (route != null)
               FloatingRouteInstructionPanel(
