@@ -4,12 +4,14 @@ import 'package:flutter/services.dart';
 import '../team/team_models.dart';
 import '../team/team_service.dart';
 import '../timer_flag.dart';
+import 'meeting_point_panel.dart';
 
 class TeamPanel extends StatefulWidget {
   final String resortKey;
   final VoidCallback? onClose;
   final Function(List<MemberLocation>)? onMemberLocationsUpdate;
   final Function(MemberLocation)? onMemberTapped; // 成员点击回调
+  final Function(bool)? onShowMeetingPointsLayerChanged; // 集合点图层显示回调
   final TimerFlag timerFlag;
 
   const TeamPanel({
@@ -19,6 +21,7 @@ class TeamPanel extends StatefulWidget {
     this.onClose,
     this.onMemberLocationsUpdate,
     this.onMemberTapped,
+    this.onShowMeetingPointsLayerChanged,
   });
 
   @override
@@ -32,6 +35,7 @@ class _TeamPanelState extends State<TeamPanel> {
   final TextEditingController _teamIdController = TextEditingController();
 
   bool _isLoading = true;
+  bool _showMeetingPointsLayer = true; // 是否显示集合点图层
   String? _errorMessage;
 
   @override
@@ -421,7 +425,7 @@ class _TeamPanelState extends State<TeamPanel> {
         ),
         const SizedBox(height: 12),
 
-        // 分享链接
+        // 分享链接和集合点按钮
         Row(
           children: [
             Expanded(
@@ -435,7 +439,23 @@ class _TeamPanelState extends State<TeamPanel> {
                   );
                 },
                 icon: const Icon(Icons.share, size: 18),
-                label: const Text('复制邀请链接'),
+                label: const Text('邀请链接'),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  widget.timerFlag.flag = true;
+                  _showMeetingPointsPanel();
+                },
+                icon:
+                    const Icon(Icons.star, size: 18, color: Colors.deepOrange),
+                label: const Text('集合点'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.deepOrange,
+                  side: const BorderSide(color: Colors.deepOrange),
+                ),
               ),
             ),
           ],
@@ -455,6 +475,22 @@ class _TeamPanelState extends State<TeamPanel> {
             },
             contentPadding: EdgeInsets.zero,
           ),
+
+        // 集合点图层开关
+        SwitchListTile(
+          title: const Text('显示集合点'),
+          subtitle: const Text('在地图上显示所有收藏的集合点'),
+          value: _showMeetingPointsLayer,
+          activeColor: Colors.deepOrange,
+          onChanged: (value) {
+            widget.timerFlag.flag = true;
+            setState(() {
+              _showMeetingPointsLayer = value;
+            });
+            widget.onShowMeetingPointsLayerChanged?.call(value);
+          },
+          contentPadding: EdgeInsets.zero,
+        ),
 
         const Divider(),
 
@@ -758,6 +794,45 @@ class _TeamPanelState extends State<TeamPanel> {
             child: const Text('确定', style: TextStyle(color: Colors.red)),
           ),
         ],
+      ),
+    );
+  }
+
+  /// 显示集合点面板
+  void _showMeetingPointsPanel() {
+    widget.timerFlag.flag = true;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => MeetingPointPanel(
+        timerFlag: widget.timerFlag,
+        onClose: () {
+          widget.timerFlag.flag = true;
+          Navigator.pop(context);
+        },
+        onPointTapped: (point) {
+          widget.timerFlag.flag = true;
+          Navigator.pop(context);
+          // 通知父组件定位到集合点
+          widget.onMemberTapped?.call(MemberLocation(
+            deviceId: 'meeting_point_${point.id}',
+            nickname: point.name,
+            location: point.latLng,
+            colorIndex: 0,
+          ));
+        },
+        onNavigate: (point) {
+          widget.timerFlag.flag = true;
+          Navigator.pop(context);
+          // 通知父组件导航到集合点
+          widget.onMemberTapped?.call(MemberLocation(
+            deviceId: 'meeting_point_${point.id}',
+            nickname: point.name,
+            location: point.latLng,
+            colorIndex: 0,
+          ));
+        },
       ),
     );
   }
