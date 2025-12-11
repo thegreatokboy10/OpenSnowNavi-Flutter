@@ -1,24 +1,39 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:mapbox_gl/mapbox_gl.dart';
 import '../route_planning/route_planning_state.dart';
 import '../timer_flag.dart';
+import '../route_engine.dart' as re;
+import '../search_service.dart';
+import '../global_constants.dart';
+
+/// 正在编辑的点位类型
+enum EditingPointType { none, origin, destination, stopover, newStopover }
 
 class RoutePlanningPanel extends StatefulWidget {
   final RoutePlanningData data;
+  final re.Route? route; // 当前路线结果
+  final LatLng? resortCoordinate; // 雪场中心坐标，用于搜索
   final VoidCallback onClose;
-  final VoidCallback onGenerateRoute;
-  final VoidCallback onAddStopover;
-  final Function(int) onRemoveStopover;
-  final Function(int, int) onReorderStopovers;
+  final Function(LatLng coordinates, String name, RoutePointType type)
+      onPointSelected; // 选择点位回调
+  final Function(int) onRemovePoint; // 删除点位回调（支持起点、终点、途径点）
+  final Function(int, int) onReorderPoints; // 重新排序回调
+  final Function(LatLng coordinates) onPickPhoto; // 从图片选择位置回调
+  final MapboxMapController? mapController; // 用于显示路线详情的高亮
   final TimerFlag? timerFlag;
 
   const RoutePlanningPanel({
     Key? key,
     required this.data,
+    this.route,
+    this.resortCoordinate,
     required this.onClose,
-    required this.onGenerateRoute,
-    required this.onAddStopover,
-    required this.onRemoveStopover,
-    required this.onReorderStopovers,
+    required this.onPointSelected,
+    required this.onRemovePoint,
+    required this.onReorderPoints,
+    required this.onPickPhoto,
+    this.mapController,
     this.timerFlag,
   }) : super(key: key);
 
@@ -27,16 +42,115 @@ class RoutePlanningPanel extends StatefulWidget {
 }
 
 class _RoutePlanningPanelState extends State<RoutePlanningPanel> {
+  // 搜索相关状态
+  final TextEditingController _searchController = TextEditingController();
+  List<Map<String, dynamic>> _searchResults = [];
+  bool _isSearching = false;
+  Timer? _debounce;
+
+  // 正在编辑的点位
+  EditingPointType _editingType = EditingPointType.none;
+  int _editingStopoverIndex = -1;
+
+  // 路线详情展开状态
+  bool _isRouteDetailsExpanded = false;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _debounce?.cancel();
+    super.dispose();
+  }
+
   void _setTimerFlag() {
     if (widget.timerFlag != null) {
       widget.timerFlag!.flag = true;
     }
   }
 
+  void _onSearchChanged(String query) {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+
+    _debounce = Timer(const Duration(milliseconds: 300), () async {
+      if (query.length >= 2 && widget.resortCoordinate != null) {
+        final results = await SearchService.searchPOI(
+          query,
+          widget.resortCoordinate!,
+          15.0,
+        );
+        setState(() {
+          _searchResults = results;
+          _isSearching = true;
+        });
+      } else {
+        setState(() {
+          _searchResults = [];
+          _isSearching = false;
+        });
+      }
+    });
+  }
+
+  void _selectSearchResult(Map<String, dynamic> poi) {
+    _setTimerFlag();
+    final coordinates = LatLng(poi['lat'], poi['lng']);
+    final name = poi['name'].toString().split(',').first; // 取第一部分作为名称
+
+    RoutePointType type;
+    switch (_editingType) {
+      case EditingPointType.origin:
+        type = RoutePointType.origin;
+        break;
+      case EditingPointType.destination:
+        type = RoutePointType.destination;
+        break;
+      case EditingPointType.stopover:
+      case EditingPointType.newStopover:
+        type = RoutePointType.stopover;
+        break;
+      default:
+        return;
+    }
+
+    widget.onPointSelected(coordinates, name, type);
+
+    // 重置编辑状态
+    setState(() {
+      _editingType = EditingPointType.none;
+      _editingStopoverIndex = -1;
+      _searchController.clear();
+      _searchResults = [];
+      _isSearching = false;
+    });
+  }
+
+  void _startEditing(EditingPointType type, [int stopoverIndex = -1]) {
+    _setTimerFlag();
+    setState(() {
+      _editingType = type;
+      _editingStopoverIndex = stopoverIndex;
+      _searchController.clear();
+      _searchResults = [];
+      _isSearching = false;
+    });
+  }
+
+  void _cancelEditing() {
+    _setTimerFlag();
+    setState(() {
+      _editingType = EditingPointType.none;
+      _editingStopoverIndex = -1;
+      _searchController.clear();
+      _searchResults = [];
+      _isSearching = false;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 320,
+      width: GlobalConstants.searchboxWidth,
+      constraints: BoxConstraints(maxHeight: 600),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -48,191 +162,452 @@ class _RoutePlanningPanelState extends State<RoutePlanningPanel> {
           ),
         ],
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // 标题栏
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: Theme.of(context).primaryColor,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.directions, color: Colors.white),
-                SizedBox(width: 8),
-                Text(
-                  '路线规划',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Spacer(),
-                IconButton(
-                  icon: Icon(Icons.close, color: Colors.white),
-                  onPressed: () {
-                    _setTimerFlag();
-                    widget.onClose();
-                  },
-                  padding: EdgeInsets.zero,
-                  constraints: BoxConstraints(),
-                ),
-              ],
-            ),
-          ),
-
-          // 起点
-          _buildRoutePointTile(
-            icon: Icons.trip_origin,
-            color: Colors.green,
-            label: '起点',
-            point: widget.data.origin,
-          ),
-
-          Divider(height: 1),
-
-          // 途径点列表（可拖拽排序）
-          if (widget.data.stopovers.isNotEmpty) ...[
-            _buildStopoversList(),
-            Divider(height: 1),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildHeader(),
+            _buildPointsList(),
+            if (_editingType != EditingPointType.none) _buildSearchSection(),
+            _buildAddStopoverButton(),
+            if (widget.route != null) _buildRouteDetails(),
           ],
+        ),
+      ),
+    );
+  }
 
-          // 终点
-          _buildRoutePointTile(
-            icon: Icons.location_on,
-            color: Colors.blue,
-            label: '终点',
-            point: widget.data.destination,
-          ),
-
-          Divider(height: 1),
-
-          // 操作按钮
-          Padding(
-            padding: EdgeInsets.all(12),
-            child: Row(
-              children: [
-                // 添加途径点按钮
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      _setTimerFlag();
-                      widget.onAddStopover();
-                    },
-                    icon: Icon(Icons.add_location),
-                    label: Text('添加途径点'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.orange,
-                      side: BorderSide(color: Colors.orange),
-                    ),
-                  ),
-                ),
-                SizedBox(width: 8),
-                // 查看路线按钮
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: widget.data.canGenerateRoute
-                        ? () {
-                            _setTimerFlag();
-                            widget.onGenerateRoute();
-                          }
-                        : null,
-                    icon: Icon(Icons.navigation),
-                    label: Text('查看路线'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context).primaryColor,
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
-                ),
-              ],
+  /// 构建标题栏
+  Widget _buildHeader() {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).primaryColor,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.directions, color: Colors.white),
+          SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              '路线规划',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
             ),
+          ),
+          if (widget.route != null) ...[
+            Text(
+              '${(widget.route!.distance / 1000).toStringAsFixed(1)}km',
+              style: TextStyle(color: Colors.white70, fontSize: 12),
+            ),
+            SizedBox(width: 8),
+          ],
+          IconButton(
+            icon: Icon(Icons.close, color: Colors.white),
+            onPressed: () {
+              _setTimerFlag();
+              widget.onClose();
+            },
+            padding: EdgeInsets.zero,
+            constraints: BoxConstraints(),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildRoutePointTile({
+  /// 构建点位列表（起点 + 途径点 + 终点）
+  Widget _buildPointsList() {
+    return ReorderableListView(
+      shrinkWrap: true,
+      physics: NeverScrollableScrollPhysics(),
+      onReorder: (oldIndex, newIndex) {
+        _setTimerFlag();
+        widget.onReorderPoints(oldIndex, newIndex);
+      },
+      children: _buildAllPointTiles(),
+    );
+  }
+
+  List<Widget> _buildAllPointTiles() {
+    List<Widget> tiles = [];
+
+    // 起点
+    tiles.add(_buildPointTile(
+      key: ValueKey('origin'),
+      index: 0,
+      icon: Icons.trip_origin,
+      color: Colors.green,
+      label: '起点',
+      point: widget.data.origin,
+      isEditing: _editingType == EditingPointType.origin,
+      onEdit: () => _startEditing(EditingPointType.origin),
+      onRemove:
+          widget.data.origin != null ? () => widget.onRemovePoint(0) : null,
+    ));
+
+    // 途径点
+    for (int i = 0; i < widget.data.stopovers.length; i++) {
+      tiles.add(_buildPointTile(
+        key: ValueKey('stopover_$i'),
+        index: i + 1,
+        icon: Icons.more_vert,
+        color: Colors.orange,
+        label: '途径点 ${i + 1}',
+        point: widget.data.stopovers[i],
+        isEditing: _editingType == EditingPointType.stopover &&
+            _editingStopoverIndex == i,
+        onEdit: () => _startEditing(EditingPointType.stopover, i),
+        onRemove: () => widget.onRemovePoint(i + 1),
+        showNumber: i + 1,
+      ));
+    }
+
+    // 终点
+    final destIndex = widget.data.stopovers.length + 1;
+    tiles.add(_buildPointTile(
+      key: ValueKey('destination'),
+      index: destIndex,
+      icon: Icons.location_on,
+      color: Colors.blue,
+      label: '终点',
+      point: widget.data.destination,
+      isEditing: _editingType == EditingPointType.destination,
+      onEdit: () => _startEditing(EditingPointType.destination),
+      onRemove: widget.data.destination != null
+          ? () => widget.onRemovePoint(destIndex)
+          : null,
+    ));
+
+    return tiles;
+  }
+
+  Widget _buildPointTile({
+    required Key key,
+    required int index,
     required IconData icon,
     required Color color,
     required String label,
     RoutePoint? point,
+    required bool isEditing,
+    required VoidCallback onEdit,
+    VoidCallback? onRemove,
+    int? showNumber,
   }) {
-    return ListTile(
-      leading: Icon(icon, color: color, size: 28),
-      title: Text(
-        point?.name ?? '点击地图选择$label',
-        style: TextStyle(
-          color: point != null ? Colors.black87 : Colors.grey,
-          fontStyle: point != null ? FontStyle.normal : FontStyle.italic,
-        ),
+    return Container(
+      key: key,
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+        color: isEditing ? Colors.blue.shade50 : Colors.white,
       ),
-      subtitle: point != null
-          ? Text(
-              '${point.coordinates.latitude.toStringAsFixed(5)}, ${point.coordinates.longitude.toStringAsFixed(5)}',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
-            )
-          : null,
-      dense: true,
-    );
-  }
-
-  Widget _buildStopoversList() {
-    return ReorderableListView.builder(
-      shrinkWrap: true,
-      physics: NeverScrollableScrollPhysics(),
-      itemCount: widget.data.stopovers.length,
-      onReorder: (oldIndex, newIndex) {
-        _setTimerFlag();
-        widget.onReorderStopovers(oldIndex, newIndex);
-      },
-      itemBuilder: (context, index) {
-        final stopover = widget.data.stopovers[index];
-        return ListTile(
-          key: ValueKey(stopover.id),
-          leading: Container(
-            width: 28,
-            height: 28,
-            decoration: BoxDecoration(
-              color: Colors.orange,
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Text(
-                '${index + 1}',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
+      child: ListTile(
+        leading: showNumber != null
+            ? Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: color,
+                  shape: BoxShape.circle,
                 ),
-              ),
+                child: Center(
+                  child: Text(
+                    '$showNumber',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              )
+            : Icon(icon, color: color, size: 28),
+        title: Text(
+          point?.name ?? '点击选择$label',
+          style: TextStyle(
+            color: point != null ? Colors.black87 : Colors.grey,
+            fontStyle: point != null ? FontStyle.normal : FontStyle.italic,
+            fontSize: 14,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: Icon(Icons.edit, color: Colors.grey, size: 18),
+              onPressed: onEdit,
+              padding: EdgeInsets.zero,
+              constraints: BoxConstraints(),
+              tooltip: '修改',
             ),
-          ),
-          title: Text(
-            stopover.name,
-            style: TextStyle(fontSize: 14),
-          ),
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.drag_handle, color: Colors.grey),
+            SizedBox(width: 4),
+            Icon(Icons.drag_handle, color: Colors.grey, size: 20),
+            if (onRemove != null) ...[
+              SizedBox(width: 4),
               IconButton(
-                icon: Icon(Icons.close, color: Colors.red, size: 20),
+                icon: Icon(Icons.close, color: Colors.red, size: 18),
                 onPressed: () {
                   _setTimerFlag();
-                  widget.onRemoveStopover(index);
+                  onRemove();
                 },
                 padding: EdgeInsets.zero,
                 constraints: BoxConstraints(),
+                tooltip: '删除',
+              ),
+            ],
+          ],
+        ),
+        dense: true,
+        onTap: point == null ? onEdit : null,
+      ),
+    );
+  }
+
+  /// 构建搜索区域
+  Widget _buildSearchSection() {
+    String editingLabel = '';
+    switch (_editingType) {
+      case EditingPointType.origin:
+        editingLabel = '搜索起点';
+        break;
+      case EditingPointType.destination:
+        editingLabel = '搜索终点';
+        break;
+      case EditingPointType.stopover:
+        editingLabel = '搜索途径点 ${_editingStopoverIndex + 1}';
+        break;
+      case EditingPointType.newStopover:
+        editingLabel = '搜索新途径点';
+        break;
+      default:
+        break;
+    }
+
+    return Container(
+      padding: EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        border: Border(
+          top: BorderSide(color: Colors.grey.shade300),
+          bottom: BorderSide(color: Colors.grey.shade300),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  editingLabel,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    color: Theme.of(context).primaryColor,
+                  ),
+                ),
+              ),
+              TextButton(
+                onPressed: _cancelEditing,
+                child: Text('取消'),
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  minimumSize: Size(40, 30),
+                ),
               ),
             ],
           ),
-          dense: true,
-        );
-      },
+          SizedBox(height: 8),
+          // 搜索框
+          TextField(
+            controller: _searchController,
+            onChanged: _onSearchChanged,
+            decoration: InputDecoration(
+              hintText: '搜索地点...',
+              prefixIcon: Icon(Icons.search, size: 20),
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide.none,
+              ),
+              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              isDense: true,
+            ),
+            style: TextStyle(fontSize: 14),
+          ),
+          SizedBox(height: 8),
+          // 从图片选择按钮
+          OutlinedButton.icon(
+            onPressed: () {
+              _setTimerFlag();
+              // TODO: 实现图片选择后回调
+            },
+            icon: Icon(Icons.photo_camera, size: 16),
+            label: Text('从图片读取位置'),
+            style: OutlinedButton.styleFrom(
+              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              minimumSize: Size(0, 32),
+            ),
+          ),
+          // 搜索结果列表
+          if (_searchResults.isNotEmpty)
+            Container(
+              constraints: BoxConstraints(maxHeight: 200),
+              margin: EdgeInsets.only(top: 8),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: _searchResults.length,
+                itemBuilder: (context, index) {
+                  final poi = _searchResults[index];
+                  return ListTile(
+                    dense: true,
+                    title: Text(
+                      poi['name'].toString().split(',').first,
+                      style: TextStyle(fontSize: 13),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    subtitle: Text(
+                      '${poi['distance'].toStringAsFixed(2)} km',
+                      style: TextStyle(fontSize: 11),
+                    ),
+                    onTap: () => _selectSearchResult(poi),
+                  );
+                },
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// 构建添加途径点按钮
+  Widget _buildAddStopoverButton() {
+    if (_editingType == EditingPointType.newStopover) {
+      return SizedBox.shrink(); // 正在添加途径点时隐藏按钮
+    }
+
+    return Padding(
+      padding: EdgeInsets.all(12),
+      child: OutlinedButton.icon(
+        onPressed: () => _startEditing(EditingPointType.newStopover),
+        icon: Icon(Icons.add_location, size: 18),
+        label: Text('添加途径点'),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: Colors.orange,
+          side: BorderSide(color: Colors.orange),
+          minimumSize: Size(double.infinity, 36),
+        ),
+      ),
+    );
+  }
+
+  /// 构建路线详情区域
+  Widget _buildRouteDetails() {
+    final route = widget.route!;
+
+    return Container(
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: Colors.grey.shade300)),
+      ),
+      child: Column(
+        children: [
+          // 路线概要（可点击展开/收起）
+          InkWell(
+            onTap: () {
+              _setTimerFlag();
+              setState(() {
+                _isRouteDetailsExpanded = !_isRouteDetailsExpanded;
+              });
+            },
+            child: Padding(
+              padding: EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  Icon(Icons.route, color: Theme.of(context).primaryColor),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '路线详情',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          '${(route.distance / 1000).toStringAsFixed(2)} km • ${(route.duration / 60).toStringAsFixed(0)} 分钟',
+                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    _isRouteDetailsExpanded
+                        ? Icons.keyboard_arrow_up
+                        : Icons.keyboard_arrow_down,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // 展开的路线步骤列表
+          if (_isRouteDetailsExpanded)
+            Container(
+              constraints: BoxConstraints(maxHeight: 250),
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: route.steps.length,
+                itemBuilder: (context, index) {
+                  final step = route.steps[index];
+                  return ListTile(
+                    dense: true,
+                    leading: CircleAvatar(
+                      radius: 12,
+                      backgroundColor: Theme.of(context).primaryColor,
+                      child: Text(
+                        '${index + 1}',
+                        style: TextStyle(color: Colors.white, fontSize: 10),
+                      ),
+                    ),
+                    title: Text(
+                      step.name.isNotEmpty ? step.name : 'Unnamed',
+                      style: TextStyle(fontSize: 13),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    subtitle: Text(
+                      '${step.distance.toStringAsFixed(0)} m',
+                      style: TextStyle(fontSize: 11),
+                    ),
+                    onTap: () {
+                      _setTimerFlag();
+                      // 点击步骤时移动地图到该位置
+                      widget.mapController?.animateCamera(
+                        CameraUpdate.newLatLng(
+                          LatLng(
+                            step.maneuver.location[1],
+                            step.maneuver.location[0],
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

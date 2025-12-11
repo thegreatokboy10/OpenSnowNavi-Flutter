@@ -114,6 +114,68 @@ class RoutePlanningData {
     }
   }
 
+  /// 重新排序所有点（起点、途径点、终点）
+  /// index 0 = 起点, 1..n = 途径点, n+1 = 终点
+  void reorderAllPoints(int oldIndex, int newIndex) {
+    if (oldIndex < newIndex) {
+      newIndex -= 1;
+    }
+
+    // 构建完整列表
+    List<RoutePoint?> allPointsList = [origin, ...stopovers, destination];
+
+    // 移动元素
+    final item = allPointsList.removeAt(oldIndex);
+    allPointsList.insert(newIndex, item);
+
+    // 重新分配角色
+    origin = allPointsList.isNotEmpty && allPointsList[0] != null
+        ? allPointsList[0]!.copyWith(type: RoutePointType.origin, id: 'origin')
+        : null;
+
+    destination = allPointsList.length > 1 && allPointsList.last != null
+        ? allPointsList.last!
+            .copyWith(type: RoutePointType.destination, id: 'destination')
+        : null;
+
+    // 中间的都是途径点
+    stopovers = [];
+    for (int i = 1; i < allPointsList.length - 1; i++) {
+      if (allPointsList[i] != null) {
+        stopovers.add(allPointsList[i]!
+            .copyWith(type: RoutePointType.stopover, id: 'stopover_${i - 1}'));
+      }
+    }
+  }
+
+  /// 删除指定索引的点（0=起点, 1..n=途径点, n+1=终点）
+  void removePointAt(int index) {
+    final totalPoints =
+        1 + stopovers.length + 1; // origin + stopovers + destination
+    if (index == 0) {
+      // 删除起点
+      origin = null;
+      if (mode == RoutePlanningMode.planning) {
+        mode = RoutePlanningMode.selectingOrigin;
+      }
+    } else if (index == totalPoints - 1 ||
+        (origin == null && index == stopovers.length)) {
+      // 删除终点
+      destination = null;
+      mode = RoutePlanningMode.idle;
+    } else {
+      // 删除途径点
+      final stopoverIndex = origin != null ? index - 1 : index;
+      if (stopoverIndex >= 0 && stopoverIndex < stopovers.length) {
+        stopovers.removeAt(stopoverIndex);
+        // 重新编号
+        for (int i = 0; i < stopovers.length; i++) {
+          stopovers[i] = stopovers[i].copyWith(id: 'stopover_$i');
+        }
+      }
+    }
+  }
+
   /// 获取所有点的坐标列表（起点 -> 途径点 -> 终点）
   List<LatLng> getAllCoordinates() {
     List<LatLng> coords = [];
@@ -137,4 +199,3 @@ class RoutePlanningData {
     return points;
   }
 }
-

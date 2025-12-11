@@ -1495,27 +1495,67 @@ class _GeneratorPageState extends State<GeneratorPage> {
     _updateRoutePlanningMarkers();
   }
 
-  /// 开始添加途径点模式
-  void _startAddingStopover() {
+  /// 处理路线规划面板中选择的点位
+  void _handleRoutePlanningPointSelected(
+      LatLng coordinates, String name, RoutePointType type) {
     setState(() {
-      _isAddingStopover = true;
-    });
-  }
-
-  /// 删除途径点
-  void _removeRoutePlanningStopover(int index) {
-    setState(() {
-      _routePlanningData.removeStopover(index);
+      switch (type) {
+        case RoutePointType.origin:
+          _routePlanningData.setOrigin(RoutePoint(
+            id: 'origin',
+            name: name,
+            coordinates: coordinates,
+            type: RoutePointType.origin,
+          ));
+          break;
+        case RoutePointType.destination:
+          _routePlanningData.setDestination(RoutePoint(
+            id: 'destination',
+            name: name,
+            coordinates: coordinates,
+            type: RoutePointType.destination,
+          ));
+          break;
+        case RoutePointType.stopover:
+          _routePlanningData.addStopover(RoutePoint(
+            id: 'stopover_${_routePlanningData.stopovers.length}',
+            name: name,
+            coordinates: coordinates,
+            type: RoutePointType.stopover,
+          ));
+          break;
+      }
     });
     _updateRoutePlanningMarkers();
+    // 自动算路
+    _autoGenerateRouteIfReady();
   }
 
-  /// 重新排序途径点
-  void _reorderRoutePlanningStopover(int oldIndex, int newIndex) {
+  /// 处理删除点位
+  void _handleRoutePlanningRemovePoint(int index) {
     setState(() {
-      _routePlanningData.reorderStopovers(oldIndex, newIndex);
+      _routePlanningData.removePointAt(index);
     });
     _updateRoutePlanningMarkers();
+    // 如果删除后仍可算路，重新算路
+    _autoGenerateRouteIfReady();
+  }
+
+  /// 处理重新排序点位
+  void _handleRoutePlanningReorderPoints(int oldIndex, int newIndex) {
+    setState(() {
+      _routePlanningData.reorderAllPoints(oldIndex, newIndex);
+    });
+    _updateRoutePlanningMarkers();
+    // 重新算路
+    _autoGenerateRouteIfReady();
+  }
+
+  /// 自动算路（如果起点和终点都存在）
+  void _autoGenerateRouteIfReady() {
+    if (_routePlanningData.canGenerateRoute) {
+      _generateRoutePlanningRoute();
+    }
   }
 
   /// 生成路线
@@ -2711,130 +2751,120 @@ class _GeneratorPageState extends State<GeneratorPage> {
                 ),
               ),
             ),
-            Positioned(
-              key: _childWidgetKeys[1],
-              top: 20,
-              left: 20,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Search Bar
-                  Row(
-                    children: [
+            // 搜索框和图片选择按钮（路线规划面板显示时隐藏）
+            if (!_showRoutePlanningPanel)
+              Positioned(
+                key: _childWidgetKeys[1],
+                top: 20,
+                left: 20,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Search Bar
+                    Row(
+                      children: [
+                        Container(
+                          width: GlobalConstants.searchboxWidth,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.6),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: TextField(
+                            controller: _searchController,
+                            onChanged: _onSearchChanged,
+                            onSubmitted: _onSearchSubmitted,
+                            decoration: InputDecoration(
+                              hintText: 'Search POI',
+                              prefixIcon: Icon(Icons.search),
+                              filled: true,
+                              fillColor: Colors.white.withOpacity(0.6),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: BorderSide.none,
+                              ),
+                              contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 15, vertical: 10),
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: 5),
+
+                        // Open Photo Button
+                        FloatingActionButton(
+                          backgroundColor: Colors.white.withOpacity(
+                              GlobalConstants.floatingbuttonopacity),
+                          mini: true,
+                          heroTag: "openPhotoButton",
+                          onPressed: _pickPhoto,
+                          tooltip: 'Open Photo',
+                          child: Icon(Icons.photo_library, color: Colors.black),
+                        ),
+                      ],
+                    ),
+                    if (poiResults.isNotEmpty)
                       Container(
-                        width: GlobalConstants.searchboxWidth,
+                        width: 250,
+                        height: 600,
+                        margin: EdgeInsets.only(top: 10),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.6),
+                          color: Colors.white,
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: TextField(
-                          controller: _searchController,
-                          onChanged: _onSearchChanged,
-                          onSubmitted: _onSearchSubmitted,
-                          decoration: InputDecoration(
-                            hintText: 'Search POI',
-                            prefixIcon: Icon(Icons.search),
-                            filled: true,
-                            fillColor: Colors.white.withOpacity(0.6),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: BorderSide.none,
-                            ),
-                            contentPadding: EdgeInsets.symmetric(
-                                horizontal: 15, vertical: 10),
+                        child: ListView.builder(
+                          itemCount: poiResults.length,
+                          itemBuilder: (context, index) {
+                            final poi = poiResults[index];
+                            return ListTile(
+                              title: Text(poi['name']),
+                              subtitle: Text(
+                                '${poi['distance'].toStringAsFixed(2)} km',
+                                style: TextStyle(
+                                    height:
+                                        1.5), // Adjust line spacing for readability
+                              ),
+                              isThreeLine:
+                                  true, // Allows multiple lines in the subtitle
+                              onTap: () {
+                                LatLng coord = LatLng(poi['lat'], poi['lng']);
+                                _onMapClick(Point(0, 0), coord);
+                                isUiOpen.flag = true;
+                                mapController?.animateCamera(
+                                  CameraUpdate.newLatLng(
+                                    coord,
+                                  ),
+                                );
+                                setState(() {
+                                  hasSearched = false;
+                                  poiResults = [];
+                                  _searchController.clear();
+                                });
+                              },
+                            );
+                          },
+                        ),
+                      )
+                    else if (hasSearched)
+                      Container(
+                        width: 250,
+                        height: 50,
+                        margin: EdgeInsets.only(top: 10),
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          'No results found',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w400,
+                            color: Colors.grey,
                           ),
                         ),
                       ),
-                      SizedBox(width: 5),
-
-                      // Open Photo Button
-                      FloatingActionButton(
-                        backgroundColor: Colors.white
-                            .withOpacity(GlobalConstants.floatingbuttonopacity),
-                        mini: true,
-                        heroTag: "openPhotoButton",
-                        onPressed: _pickPhoto,
-                        tooltip: 'Open Photo',
-                        child: Icon(Icons.photo_library, color: Colors.black),
-                      ),
-                    ],
-                  ),
-                  // TODO: Display the selected photo below the search box
-                  // if (_photoBytes != null)
-                  //   Container(
-                  //     width: GlobalConstants.searchboxWidth,
-                  //     height: 150,
-                  //     margin: EdgeInsets.only(top: 10),
-                  //     decoration: BoxDecoration(
-                  //       color: Colors.white.withOpacity(0.6),
-                  //       borderRadius: BorderRadius.circular(10),
-                  //     ),
-                  //     child: Image.memory(_photoBytes!, fit: BoxFit.cover),
-                  //   ),
-                  if (poiResults.isNotEmpty)
-                    Container(
-                      width: 250,
-                      height: 600,
-                      margin: EdgeInsets.only(top: 10),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: ListView.builder(
-                        itemCount: poiResults.length,
-                        itemBuilder: (context, index) {
-                          final poi = poiResults[index];
-                          return ListTile(
-                            title: Text(poi['name']),
-                            subtitle: Text(
-                              '${poi['distance'].toStringAsFixed(2)} km',
-                              style: TextStyle(
-                                  height:
-                                      1.5), // Adjust line spacing for readability
-                            ),
-                            isThreeLine:
-                                true, // Allows multiple lines in the subtitle
-                            onTap: () {
-                              LatLng coord = LatLng(poi['lat'], poi['lng']);
-                              _onMapClick(Point(0, 0), coord);
-                              isUiOpen.flag = true;
-                              mapController?.animateCamera(
-                                CameraUpdate.newLatLng(
-                                  coord,
-                                ),
-                              );
-                              setState(() {
-                                hasSearched = false;
-                                poiResults = [];
-                                _searchController.clear();
-                              });
-                            },
-                          );
-                        },
-                      ),
-                    )
-                  else if (hasSearched)
-                    Container(
-                      width: 250,
-                      height: 50,
-                      margin: EdgeInsets.only(top: 10),
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        'No results found',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w400,
-                          color: Colors.grey,
-                        ),
-                      ),
-                    ),
-                ],
+                  ],
+                ),
               ),
-            ),
             // 筛选按钮
             Positioned(
               bottom: 38,
@@ -2955,32 +2985,36 @@ class _GeneratorPageState extends State<GeneratorPage> {
             // Route Planning Panel
             if (_showRoutePlanningPanel)
               Positioned(
-                top: 70,
+                top: 20,
                 left: 20,
                 child: GestureDetector(
                   onTapDown: (_) => isUiOpen.flag = true,
                   child: RoutePlanningPanel(
                     data: _routePlanningData,
+                    route: route,
+                    resortCoordinate: resortCoordinate,
+                    mapController: mapController,
                     timerFlag: isUiOpen,
                     onClose: () {
                       isUiOpen.flag = true;
                       _exitRoutePlanning();
                     },
-                    onGenerateRoute: () {
+                    onPointSelected: (coordinates, name, type) {
                       isUiOpen.flag = true;
-                      _generateRoutePlanningRoute();
+                      _handleRoutePlanningPointSelected(
+                          coordinates, name, type);
                     },
-                    onAddStopover: () {
+                    onRemovePoint: (index) {
                       isUiOpen.flag = true;
-                      _startAddingStopover();
+                      _handleRoutePlanningRemovePoint(index);
                     },
-                    onRemoveStopover: (index) {
+                    onReorderPoints: (oldIndex, newIndex) {
                       isUiOpen.flag = true;
-                      _removeRoutePlanningStopover(index);
+                      _handleRoutePlanningReorderPoints(oldIndex, newIndex);
                     },
-                    onReorderStopovers: (oldIndex, newIndex) {
+                    onPickPhoto: (coordinates) {
                       isUiOpen.flag = true;
-                      _reorderRoutePlanningStopover(oldIndex, newIndex);
+                      // 图片选择后的坐标处理
                     },
                   ),
                 ),
