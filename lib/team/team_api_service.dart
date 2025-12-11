@@ -7,8 +7,8 @@ class TeamApiService {
   static TeamApiService? _instance;
 
   // API 基础 URL - 生产环境
-  static const String _baseUrl =
-      "http://localhost:8899"; //'https://snownavi.ski';
+  static const String _baseUrl = 'https://snownavi.ski';
+  // "http://localhost:8899";
 
   TeamApiService._();
 
