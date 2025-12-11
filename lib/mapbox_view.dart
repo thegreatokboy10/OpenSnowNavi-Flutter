@@ -32,6 +32,7 @@ import 'team/team_service.dart';
 import 'meeting_point/meeting_point_model.dart';
 import 'meeting_point/meeting_point_service.dart';
 import 'route_planning/route_planning_state.dart';
+import 'l10n/locale_service.dart';
 
 class GeneratorPage extends StatefulWidget {
   final List<List<double>>? coordinates; // List of lat-lng pairs
@@ -215,6 +216,9 @@ class _GeneratorPageState extends State<GeneratorPage> {
     _circleTextSourceExists = true;
   }
 
+  // 语言服务
+  final LocaleService _localeService = LocaleService.instance;
+
   @override
   void initState() {
     super.initState();
@@ -222,6 +226,13 @@ class _GeneratorPageState extends State<GeneratorPage> {
     needRestore = _restoreParameters();
     _childWidgetKeys = List.generate(3, (index) => GlobalKey());
     _initializeTeam();
+
+    // 监听语言变化
+    _localeService.addListener(_onLocaleChanged);
+  }
+
+  void _onLocaleChanged() {
+    setState(() {});
   }
 
   Future<void> _initializeTeam() async {
@@ -268,7 +279,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
 
     final deviceId = _teamService.deviceId;
     final currentMember = _teamService.currentMember;
-    final nickname = currentMember?.nickname ?? '未知';
+    final nickname = currentMember?.nickname ?? LocaleService.S.unknown;
 
     _meetingPointService.setContext(
       teamId: team.id,
@@ -416,7 +427,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
         _routePlanningData.reset();
         _routePlanningData.setOrigin(RoutePoint(
           id: 'origin',
-          name: '我的位置',
+          name: LocaleService.S.myLocation,
           coordinates: currentLatLng,
           type: RoutePointType.origin,
         ));
@@ -449,6 +460,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
   void dispose() {
     _searchController.dispose();
     _teamService.dispose();
+    _localeService.removeListener(_onLocaleChanged);
     super.dispose();
   }
 
@@ -1149,12 +1161,13 @@ class _GeneratorPageState extends State<GeneratorPage> {
                 print("FilterDialog onTapDown, set isUiOpen to true");
               },
               child: AlertDialog(
-                title: Text('Filter Pistes'),
+                title: Text(_localeService.strings.filterPistes),
                 content: SingleChildScrollView(
                   child: ListBody(
                     children: filterMapCopy.keys.map((difficulty) {
                       return CheckboxListTile(
-                        title: Text(difficulty),
+                        title:
+                            Text(LocaleService.S.getDifficultyName(difficulty)),
                         value: filterMapCopy[difficulty] ?? false,
                         onChanged: (bool? newValue) {
                           isUiOpen.flag = true;
@@ -1171,7 +1184,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
                 ),
                 actions: <Widget>[
                   TextButton(
-                    child: Text('Cancel'),
+                    child: Text(_localeService.strings.cancel),
                     onPressed: () {
                       // 用户点击取消，不进行任何更改，直接关闭对话框
                       isUiOpen.flag = true;
@@ -1179,7 +1192,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
                     },
                   ),
                   TextButton(
-                    child: Text('OK'),
+                    child: Text(_localeService.strings.ok),
                     onPressed: () {
                       // 用户点击确定，将副本的值更新到原始 difficultyFilterMap
                       isUiOpen.flag = true;
@@ -1721,7 +1734,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
             '${startCoordinate!.latitude.toStringAsFixed(4)}, ${startCoordinate!.longitude.toStringAsFixed(4)}';
         _routePlanningData.setOrigin(RoutePoint(
           id: 'origin',
-          name: '起点 ($originName)',
+          name: LocaleService.S.originWithCoords(originName),
           coordinates: startCoordinate!,
           type: RoutePointType.origin,
         ));
@@ -1733,7 +1746,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
             '${endCoordinate!.latitude.toStringAsFixed(4)}, ${endCoordinate!.longitude.toStringAsFixed(4)}';
         _routePlanningData.setDestination(RoutePoint(
           id: 'destination',
-          name: '终点 ($destName)',
+          name: LocaleService.S.destinationWithCoords(destName),
           coordinates: endCoordinate!,
           type: RoutePointType.destination,
         ));
@@ -1746,7 +1759,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
               '${stopovers![i].latitude.toStringAsFixed(4)}, ${stopovers![i].longitude.toStringAsFixed(4)}';
           _routePlanningData.addStopover(RoutePoint(
             id: 'stopover_$i',
-            name: '途径点 ${i + 1} ($stopoverName)',
+            name: LocaleService.S.stopoverWithCoords(i + 1, stopoverName),
             coordinates: stopovers![i],
             type: RoutePointType.stopover,
           ));
@@ -1848,7 +1861,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
                 _startRoutePlanning(coordinates, locationName);
               },
               icon: Icon(Icons.directions),
-              label: Text("路线"),
+              label: Text(LocaleService.S.route),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Theme.of(context).primaryColor,
                 foregroundColor: Colors.white,
@@ -1863,10 +1876,11 @@ class _GeneratorPageState extends State<GeneratorPage> {
                   isUiOpen.flag = true;
                   Navigator.pop(context);
                   _removePhoto();
-                  _handleSetMeetingPoint(coordinates, '集合点 $locationName');
+                  _handleSetMeetingPoint(coordinates,
+                      LocaleService.S.meetingPointLabel(locationName));
                 },
                 icon: Icon(Icons.star),
-                label: Text("添加集合点"),
+                label: Text(LocaleService.S.addMeetingPoint),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.deepOrange,
                   foregroundColor: Colors.white,
@@ -1885,7 +1899,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
                 _setRoutePlanningOrigin(coordinates, locationName);
               },
               icon: Icon(Icons.trip_origin),
-              label: Text("设为起点"),
+              label: Text(LocaleService.S.setAsOrigin),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.green,
                 foregroundColor: Colors.white,
@@ -1902,7 +1916,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
                 _addRoutePlanningStopover(coordinates, locationName);
               },
               icon: Icon(Icons.add_location),
-              label: Text("添加途径点"),
+              label: Text(LocaleService.S.addAsStopover),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.orange,
                 foregroundColor: Colors.white,
@@ -1923,7 +1937,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
                 setState(() => _currentEditingType = EditingPointType.none);
               },
               icon: Icon(Icons.trip_origin),
-              label: Text("设为起点"),
+              label: Text(LocaleService.S.setAsOrigin),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.green,
                 foregroundColor: Colors.white,
@@ -1944,7 +1958,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
                 setState(() => _currentEditingType = EditingPointType.none);
               },
               icon: Icon(Icons.location_on),
-              label: Text("设为终点"),
+              label: Text(LocaleService.S.setAsDestination),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blue,
                 foregroundColor: Colors.white,
@@ -1968,7 +1982,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
                 });
               },
               icon: Icon(Icons.edit_location),
-              label: Text("设为途径点"),
+              label: Text(LocaleService.S.setAsStopover),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.orange,
                 foregroundColor: Colors.white,
@@ -1992,7 +2006,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
                 });
               },
               icon: Icon(Icons.add_location),
-              label: Text("添加途径点"),
+              label: Text(LocaleService.S.addAsStopover),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.orange,
                 foregroundColor: Colors.white,
@@ -2013,11 +2027,11 @@ class _GeneratorPageState extends State<GeneratorPage> {
     final name = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('添加集合点'),
+        title: Text(LocaleService.S.addMeetingPoint),
         content: TextField(
           controller: controller,
           decoration: InputDecoration(
-            labelText: '集合点名称',
+            labelText: LocaleService.S.meetingPointName,
             border: OutlineInputBorder(),
           ),
           autofocus: true,
@@ -2025,11 +2039,11 @@ class _GeneratorPageState extends State<GeneratorPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('取消'),
+            child: Text(LocaleService.S.cancel),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, controller.text),
-            child: Text('添加'),
+            child: Text(LocaleService.S.add),
           ),
         ],
       ),
@@ -2042,14 +2056,16 @@ class _GeneratorPageState extends State<GeneratorPage> {
         longitude: coordinates.longitude,
       );
 
-      if (point != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('集合点 "$name" 已添加')),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('添加集合点失败')),
-        );
+      if (mounted) {
+        if (point != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(LocaleService.S.meetingPointAdded(name))),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(LocaleService.S.addMeetingPointFailed)),
+          );
+        }
       }
     }
   }
@@ -2192,7 +2208,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
     _myLocationHeadingText = await mapController!.addSymbol(
       SymbolOptions(
         geometry: coordinates,
-        textField: '朝向: $headingText',
+        textField: LocaleService.S.headingLabel(headingText),
         textSize: 12,
         textColor: '#000000',
         textHaloColor: '#FFFFFF',
@@ -2448,16 +2464,16 @@ class _GeneratorPageState extends State<GeneratorPage> {
     isUiOpen.flag = true;
 
     // 格式化更新时间
-    String lastUpdateStr = '未知';
+    String lastUpdateStr = LocaleService.S.unknown;
     if (member.lastUpdate != null) {
       final now = DateTime.now();
       final diff = now.difference(member.lastUpdate!);
       if (diff.inSeconds < 60) {
-        lastUpdateStr = '${diff.inSeconds}秒前';
+        lastUpdateStr = LocaleService.S.secondsAgo(diff.inSeconds);
       } else if (diff.inMinutes < 60) {
-        lastUpdateStr = '${diff.inMinutes}分钟前';
+        lastUpdateStr = LocaleService.S.minutesAgo(diff.inMinutes);
       } else {
-        lastUpdateStr = '${diff.inHours}小时前';
+        lastUpdateStr = LocaleService.S.hoursAgo(diff.inHours);
       }
     }
 
@@ -2503,9 +2519,10 @@ class _GeneratorPageState extends State<GeneratorPage> {
                           fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                     if (member.isLeader)
-                      const Text(
-                        '队长',
-                        style: TextStyle(fontSize: 12, color: Colors.orange),
+                      Text(
+                        LocaleService.S.leader,
+                        style:
+                            const TextStyle(fontSize: 12, color: Colors.orange),
                       ),
                   ],
                 ),
@@ -2516,10 +2533,11 @@ class _GeneratorPageState extends State<GeneratorPage> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildInfoRow(Icons.location_on, '位置',
+              _buildInfoRow(Icons.location_on, LocaleService.S.location,
                   '${member.location.latitude.toStringAsFixed(6)}, ${member.location.longitude.toStringAsFixed(6)}'),
               const SizedBox(height: 8),
-              _buildInfoRow(Icons.access_time, '更新时间', lastUpdateStr),
+              _buildInfoRow(
+                  Icons.access_time, LocaleService.S.updateTime, lastUpdateStr),
             ],
           ),
           actions: [
@@ -2528,7 +2546,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
                 isUiOpen.flag = true;
                 Navigator.pop(context);
               },
-              child: const Text('关闭'),
+              child: Text(LocaleService.S.close),
             ),
             TextButton(
               onPressed: () {
@@ -2539,7 +2557,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
                   CameraUpdate.newLatLngZoom(member.location, 16),
                 );
               },
-              child: const Text('定位'),
+              child: Text(LocaleService.S.locateMe),
             ),
             // 不显示"导航到TA"按钮如果是自己
             if (!member.isMe)
@@ -2550,7 +2568,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
                   await _startRouteToMember(member);
                 },
                 icon: const Icon(Icons.directions, size: 18),
-                label: const Text('导航到TA'),
+                label: Text(LocaleService.S.navigateToMember),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Color(member.color),
                   foregroundColor: Colors.white,
@@ -2598,7 +2616,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
         _routePlanningData.reset();
         _routePlanningData.setOrigin(RoutePoint(
           id: 'origin',
-          name: '我的位置',
+          name: LocaleService.S.myLocation,
           coordinates: currentLocation,
           type: RoutePointType.origin,
         ));
@@ -2621,7 +2639,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('正在规划到 ${member.nickname} 的路线...'),
+            content:
+                Text(LocaleService.S.planningRouteToMember(member.nickname)),
             duration: const Duration(seconds: 2),
           ),
         );
@@ -2630,8 +2649,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
       print('Error starting route to member: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('无法获取当前位置，请确保已开启位置权限'),
+          SnackBar(
+            content: Text(LocaleService.S.cannotGetLocation),
             backgroundColor: Colors.red,
           ),
         );
@@ -2815,8 +2834,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
           "Find location from photo - ${GlobalConstants.defaultTitle}");
 
       // 使用坐标设置路线规划点位
-      final name =
-          '图片位置 (${gpsCoordinates.latitude.toStringAsFixed(4)}, ${gpsCoordinates.longitude.toStringAsFixed(4)})';
+      final name = LocaleService.S
+          .photoLocation(gpsCoordinates.latitude, gpsCoordinates.longitude);
       _handleRoutePlanningPointSelected(gpsCoordinates, name, type);
 
       // 移动地图到该位置
@@ -2827,7 +2846,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
       print("No GPS data found in image.");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("无法从图片中读取位置信息，请尝试其他图片")),
+          SnackBar(content: Text(LocaleService.S.noGpsDataInPhoto)),
         );
       }
     }
@@ -2843,7 +2862,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
     try {
       final location = await _locationService.getCurrentLocation();
       final currentLatLng = LatLng(location['latitude'], location['longitude']);
-      final name = '我的位置';
+      final name = LocaleService.S.myLocation;
 
       _handleRoutePlanningPointSelected(currentLatLng, name, type);
 
@@ -2855,7 +2874,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
       print('Failed to get current location: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("无法获取当前位置，请检查定位权限")),
+          SnackBar(content: Text(LocaleService.S.cannotGetLocation)),
         );
       }
     }
@@ -2952,7 +2971,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
           CircularProgressIndicator(),
           const SizedBox(height: 16),
           Text(
-            "Loading Map...",
+            _localeService.strings.loadingMap,
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
         ],
@@ -2981,7 +3000,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  '地图图层',
+                  _localeService.strings.mapLayers,
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -3032,7 +3051,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
                           ),
                           SizedBox(height: 2),
                           Text(
-                            '显示全球滑雪道图层',
+                            _localeService.strings.openSnowMapDesc,
                             style: TextStyle(
                               fontSize: 12,
                               color: Colors.grey[600],
@@ -3193,7 +3212,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
                     borderRadius: BorderRadius.circular(2),
                   ),
                   child: Text(
-                    'Follow me on 小红书 @了不起的okboy',
+                    LocaleService.S.followMeOnSocialMedia,
                     style: TextStyle(
                       color: const Color.fromARGB(255, 209, 6, 6),
                       fontSize: 12,
@@ -3227,7 +3246,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
                             onChanged: _onSearchChanged,
                             onSubmitted: _onSearchSubmitted,
                             decoration: InputDecoration(
-                              hintText: 'Search POI',
+                              hintText: _localeService.strings.searchPoi,
                               prefixIcon: Icon(Icons.search),
                               filled: true,
                               fillColor: Colors.white.withOpacity(0.6),
@@ -3249,7 +3268,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
                           mini: true,
                           heroTag: "openPhotoButton",
                           onPressed: _pickPhoto,
-                          tooltip: 'Open Photo',
+                          tooltip: _localeService.strings.openPhoto,
                           child: Icon(Icons.photo_library, color: Colors.black),
                         ),
                       ],
@@ -3307,7 +3326,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Text(
-                          'No results found',
+                          _localeService.strings.noResults,
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w400,
@@ -3328,7 +3347,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
                   backgroundColor: Colors.white.withOpacity(
                       GlobalConstants.floatingbuttonopacity), // 按钮颜色
                   onPressed: _showFilterDialog,
-                  tooltip: 'Filter',
+                  tooltip: _localeService.strings.filter,
                   child: Icon(Icons.filter_alt), // 使用筛选图标
                 ),
               ),
@@ -3343,7 +3362,9 @@ class _GeneratorPageState extends State<GeneratorPage> {
                       .withOpacity(GlobalConstants.floatingbuttonopacity),
                   onPressed: _toggle2D3DView,
                   child: Text(
-                    is3DMode ? '2D' : '3D',
+                    is3DMode
+                        ? _localeService.strings.mode2D
+                        : _localeService.strings.mode3D,
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -3362,7 +3383,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
                   backgroundColor: Colors.white
                       .withOpacity(GlobalConstants.floatingbuttonopacity),
                   onPressed: _locateCurrentPosition,
-                  tooltip: 'Locate Me',
+                  tooltip: _localeService.strings.locateMe,
                   child: Icon(Icons.my_location),
                 ),
               ),
@@ -3376,7 +3397,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
                   backgroundColor: Colors.white
                       .withOpacity(GlobalConstants.floatingbuttonopacity),
                   onPressed: _showSharePopup, // Show popup with URL
-                  tooltip: 'Share SnowNavi',
+                  tooltip: _localeService.strings.share,
                   child: Icon(Icons.share),
                 ),
               ),
@@ -3397,7 +3418,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
                     isUiOpen.flag = true;
                     setState(() => _showTeamPanel = !_showTeamPanel);
                   },
-                  tooltip: '组队滑雪',
+                  tooltip: _localeService.strings.teamSkiing,
                   child: Icon(
                     Icons.group,
                     color: _teamService.currentTeam != null
@@ -3455,7 +3476,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
                     isUiOpen.flag = true;
                     setState(() => _showLayerPanel = !_showLayerPanel);
                   },
-                  tooltip: '图层',
+                  tooltip: _localeService.strings.layers,
                   child: Icon(
                     Icons.layers,
                     color: _showOpenSnowMapLayer ? Colors.white : Colors.black,
@@ -3470,6 +3491,27 @@ class _GeneratorPageState extends State<GeneratorPage> {
                 right: 70,
                 child: _buildLayerPanel(),
               ),
+            // 语言切换按钮
+            Positioned(
+              top: 268,
+              right: 20,
+              child: Transform.scale(
+                scale: GlobalConstants.floatingActionButtonScale,
+                child: FloatingActionButton(
+                  backgroundColor: Colors.white
+                      .withOpacity(GlobalConstants.floatingbuttonopacity),
+                  onPressed: () {
+                    isUiOpen.flag = true;
+                    _localeService.toggleLocale();
+                  },
+                  tooltip: _localeService.strings.language,
+                  child: Text(
+                    _localeService.localeIcon,
+                    style: TextStyle(fontSize: 20),
+                  ),
+                ),
+              ),
+            ),
             // Route Planning Panel
             if (_showRoutePlanningPanel)
               Positioned(

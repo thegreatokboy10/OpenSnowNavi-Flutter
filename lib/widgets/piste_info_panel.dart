@@ -6,6 +6,7 @@ import '../piste.dart';
 import '../timer_flag.dart';
 import '../geojson_helper.dart';
 import '../web_title_helper.dart';
+import '../l10n/locale_service.dart';
 
 class PisteInfoPanel extends StatefulWidget {
   final Piste piste;
@@ -48,7 +49,9 @@ class _PisteInfoPanelState extends State<PisteInfoPanel> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 2))],
+        boxShadow: [
+          BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 2))
+        ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -57,7 +60,8 @@ class _PisteInfoPanelState extends State<PisteInfoPanel> {
           // Piste Name and Close Button
           Row(
             children: [
-              _buildDifficultyIndicator(widget.piste.color), // 🔹 Included here!
+              _buildDifficultyIndicator(
+                  widget.piste.color), // 🔹 Included here!
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -80,23 +84,23 @@ class _PisteInfoPanelState extends State<PisteInfoPanel> {
 
           // Piste Difficulty
           Text(
-            'Difficulty: ${widget.piste.difficulty}',
+            '${LocaleService.S.difficulty}: ${widget.piste.difficulty}',
             style: TextStyle(fontSize: 14, color: Colors.grey[700]),
           ),
 
           // Piste Info: Distance, Ascent, Descent
           const SizedBox(height: 6),
           Text(
-            'Distance: ${_formatDistance(widget.piste.coordinates)}   '
-            'Ascent: ${_calculateAscent().toInt()}m   '
-            'Descent: ${_calculateDescent().toInt()}m',
+            '${LocaleService.S.distance}: ${_formatDistance(widget.piste.coordinates)}   '
+            '${LocaleService.S.ascent}: ${_calculateAscent().toInt()}m   '
+            '${LocaleService.S.descent}: ${_calculateDescent().toInt()}m',
             style: TextStyle(fontSize: 14, color: Colors.grey[700]),
           ),
 
           // Slope Information
           const SizedBox(height: 6),
           Text(
-            'Avg Slope: ${averageSlope.toInt()}° (${_slopeToPercentage(averageSlope).toInt()}%)   ',
+            '${LocaleService.S.avgSlope}: ${averageSlope.toInt()}° (${_slopeToPercentage(averageSlope).toInt()}%)   ',
             // 'Max Slope: ${maxSlope.toStringAsFixed(1)}° (${_slopeToPercentage(maxSlope)}%)',
             style: TextStyle(fontSize: 14, color: Colors.grey[700]),
           ),
@@ -106,7 +110,7 @@ class _PisteInfoPanelState extends State<PisteInfoPanel> {
           // Elevation Graph
           widget.piste.elevation != null && widget.piste.elevation!.isNotEmpty
               ? _buildElevationChart()
-              : Text("No elevation data available"),
+              : Text(LocaleService.S.noElevationData),
         ],
       ),
     );
@@ -127,7 +131,8 @@ class _PisteInfoPanelState extends State<PisteInfoPanel> {
 
   Widget _buildElevationChart() {
     final elevationData = widget.piste.elevation!;
-    final distanceData = GeoJsonHelper.calculateDistances(widget.piste.coordinates);
+    final distanceData =
+        GeoJsonHelper.calculateDistances(widget.piste.coordinates);
 
     // Get min and max elevation to determine Y-axis range
     double minElevation = elevationData.reduce(min);
@@ -143,16 +148,19 @@ class _PisteInfoPanelState extends State<PisteInfoPanel> {
         LineChartData(
           minY: adjustedMinElevation, // Set Y-axis starting point
           maxY: adjustedMaxElevation, // Set Y-axis ending point
-          gridData: FlGridData(show: false), // Hide grid lines for a cleaner look
+          gridData:
+              FlGridData(show: false), // Hide grid lines for a cleaner look
           titlesData: FlTitlesData(
             leftTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
                 reservedSize: 40,
-                interval: (adjustedMaxElevation - adjustedMinElevation) / 5, // Display Y-axis labels every 50 meters
+                interval: (adjustedMaxElevation - adjustedMinElevation) /
+                    5, // Display Y-axis labels every 50 meters
                 getTitlesWidget: (value, meta) {
                   // Only display values that are multiples of 50
-                  if (value >= adjustedMinElevation && value <= adjustedMaxElevation) {
+                  if (value >= adjustedMinElevation &&
+                      value <= adjustedMaxElevation) {
                     return Text(
                       '${value.toInt()}',
                       style: TextStyle(fontSize: 10),
@@ -179,8 +187,10 @@ class _PisteInfoPanelState extends State<PisteInfoPanel> {
                 },
               ),
             ),
-            topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)), // Hide top labels
-            rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)), // Hide right labels
+            topTitles: AxisTitles(
+                sideTitles: SideTitles(showTitles: false)), // Hide top labels
+            rightTitles: AxisTitles(
+                sideTitles: SideTitles(showTitles: false)), // Hide right labels
           ),
           borderData: FlBorderData(
             show: true,
@@ -192,13 +202,15 @@ class _PisteInfoPanelState extends State<PisteInfoPanel> {
           lineBarsData: [
             LineChartBarData(
               spots: List.generate(
-                min(distanceData.length, elevationData.length), // Prevent index errors
+                min(distanceData.length,
+                    elevationData.length), // Prevent index errors
                 (index) => FlSpot(distanceData[index], elevationData[index]),
               ),
               isCurved: true,
               color: Colors.blueAccent,
               barWidth: 2,
-              belowBarData: BarAreaData(show: true, color: Colors.blueAccent.withOpacity(0.3)),
+              belowBarData: BarAreaData(
+                  show: true, color: Colors.blueAccent.withOpacity(0.3)),
               dotData: FlDotData(show: false),
             ),
           ],
@@ -214,7 +226,8 @@ class _PisteInfoPanelState extends State<PisteInfoPanel> {
                 }).toList();
               },
             ),
-            touchCallback: (FlTouchEvent event, LineTouchResponse? touchResponse) {
+            touchCallback:
+                (FlTouchEvent event, LineTouchResponse? touchResponse) {
               if (event is FlTapUpEvent) {
                 setState(() {
                   touchedIndex = touchResponse?.lineBarSpots?.first.spotIndex;
@@ -230,10 +243,13 @@ class _PisteInfoPanelState extends State<PisteInfoPanel> {
 
   /// **🔹 Safe Average Slope Calculation**
   double _calculateAverageSlope() {
-    if (widget.piste.elevation == null || widget.piste.elevation!.length < 2) return 0;
+    if (widget.piste.elevation == null || widget.piste.elevation!.length < 2)
+      return 0;
 
-    double elevationChange = widget.piste.elevation!.first - widget.piste.elevation!.last;
-    double totalDistance = GeoJsonHelper.calculateTotalDistance(widget.piste.coordinates);
+    double elevationChange =
+        widget.piste.elevation!.first - widget.piste.elevation!.last;
+    double totalDistance =
+        GeoJsonHelper.calculateTotalDistance(widget.piste.coordinates);
 
     if (totalDistance <= 0) return 0;
 
@@ -242,15 +258,20 @@ class _PisteInfoPanelState extends State<PisteInfoPanel> {
 
   /// **🔹 Safe Maximum Slope Calculation**
   double _calculateMaxSlope() {
-    if (widget.piste.elevation == null || widget.piste.elevation!.length < 2) return 0;
-    
-    final distances = GeoJsonHelper.calculateDistances(widget.piste.coordinates);
+    if (widget.piste.elevation == null || widget.piste.elevation!.length < 2)
+      return 0;
+
+    final distances =
+        GeoJsonHelper.calculateDistances(widget.piste.coordinates);
     if (distances.length < 2) return 0;
 
     double maxSlope = 0;
 
-    for (int i = 1; i < min(widget.piste.elevation!.length, distances.length); i++) {
-      double elevationChange = widget.piste.elevation![i-1] - widget.piste.elevation![i];
+    for (int i = 1;
+        i < min(widget.piste.elevation!.length, distances.length);
+        i++) {
+      double elevationChange =
+          widget.piste.elevation![i - 1] - widget.piste.elevation![i];
       double distanceChange = (distances[i] - distances[i - 1]);
 
       if (distanceChange > 0) {
@@ -275,7 +296,8 @@ class _PisteInfoPanelState extends State<PisteInfoPanel> {
 
   /// **🔹 Calculates ascent safely**
   double _calculateAscent() {
-    if (widget.piste.elevation == null || widget.piste.elevation!.length < 2) return 0;
+    if (widget.piste.elevation == null || widget.piste.elevation!.length < 2)
+      return 0;
 
     double ascent = 0;
     for (int i = 1; i < widget.piste.elevation!.length; i++) {
@@ -288,7 +310,8 @@ class _PisteInfoPanelState extends State<PisteInfoPanel> {
 
   /// **🔹 Calculates descent safely**
   double _calculateDescent() {
-    if (widget.piste.elevation == null || widget.piste.elevation!.length < 2) return 0;
+    if (widget.piste.elevation == null || widget.piste.elevation!.length < 2)
+      return 0;
 
     double descent = 0;
     for (int i = 1; i < widget.piste.elevation!.length; i++) {

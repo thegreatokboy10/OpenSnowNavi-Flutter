@@ -4,6 +4,7 @@ import 'package:snownavi/global_constants.dart';
 import '../route_engine.dart' as re; // Import your Route and RouteStep models
 import '../timer_flag.dart';
 import '../web_title_helper.dart'; // Import TimerFlag class
+import '../l10n/locale_service.dart';
 
 class FloatingRouteInstructionPanel extends StatefulWidget {
   final re.Route route;
@@ -22,10 +23,12 @@ class FloatingRouteInstructionPanel extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  _FloatingRouteInstructionPanelState createState() => _FloatingRouteInstructionPanelState();
+  _FloatingRouteInstructionPanelState createState() =>
+      _FloatingRouteInstructionPanelState();
 }
 
-class _FloatingRouteInstructionPanelState extends State<FloatingRouteInstructionPanel> {
+class _FloatingRouteInstructionPanelState
+    extends State<FloatingRouteInstructionPanel> {
   bool _isExpanded = true; // Start expanded by default
   double _collapsedHeight = 75;
   double _expandedHeight = 360;
@@ -35,7 +38,8 @@ class _FloatingRouteInstructionPanelState extends State<FloatingRouteInstruction
   @override
   void initState() {
     super.initState();
-    WebTitleHelper.updateTitle("Ski route from ${widget.route.steps.first.name} to ${widget.route.steps.last.name}"); // Update title
+    WebTitleHelper.updateTitle(
+        "Ski route from ${widget.route.steps.first.name} to ${widget.route.steps.last.name}"); // Update title
   }
 
   @override
@@ -44,7 +48,8 @@ class _FloatingRouteInstructionPanelState extends State<FloatingRouteInstruction
       top: 80, // **Placed below the search box**
       left: 20, // Align with search box
       child: GestureDetector(
-        behavior: HitTestBehavior.opaque, // Prevents touch events from passing to Mapbox
+        behavior: HitTestBehavior
+            .opaque, // Prevents touch events from passing to Mapbox
         onVerticalDragUpdate: (details) {
           print("drag update with: $details");
           widget.timerFlag.flag = true; // Activate TimerFlag on drag
@@ -65,12 +70,15 @@ class _FloatingRouteInstructionPanelState extends State<FloatingRouteInstruction
         },
         onPanUpdate: (details) {
           print("drag on pan with: $details");
-          widget.timerFlag.flag = true; // Activate TimerFlag on any pan movement
+          widget.timerFlag.flag =
+              true; // Activate TimerFlag on any pan movement
         },
         child: AnimatedContainer(
           width: widget.panelWidth, // Match search box width
           duration: Duration(milliseconds: 300),
-          height: _isExpanded ? _expandedHeight : _collapsedHeight, // Expand downward
+          height: _isExpanded
+              ? _expandedHeight
+              : _collapsedHeight, // Expand downward
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(15),
@@ -98,10 +106,12 @@ class _FloatingRouteInstructionPanelState extends State<FloatingRouteInstruction
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text("Route Summary", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              Text(LocaleService.S.routeDetails,
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               SizedBox(height: 5),
               Text(
-                "${(widget.route.distance / 1000).toStringAsFixed(2)} km • ${(widget.route.duration / 60).toStringAsFixed(0)} min",
+                LocaleService.S.routeSummary(
+                    widget.route.distance / 1000, widget.route.duration / 60),
                 style: TextStyle(fontSize: 14, color: Colors.grey[600]),
               ),
             ],
@@ -109,27 +119,30 @@ class _FloatingRouteInstructionPanelState extends State<FloatingRouteInstruction
           Row(
             children: [
               IconButton(
-                icon: Icon(_isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down),
+                icon: Icon(_isExpanded
+                    ? Icons.keyboard_arrow_up
+                    : Icons.keyboard_arrow_down),
                 onPressed: () {
-                  widget.timerFlag.flag = true; // Activate TimerFlag on button press
+                  widget.timerFlag.flag =
+                      true; // Activate TimerFlag on button press
                   setState(() {
                     _isExpanded = !_isExpanded; // Toggle expansion
                   });
                 },
               ),
               IconButton(
-                icon: Icon(Icons.close),
-                onPressed: () {
-                  widget.timerFlag.flag = true;
-                  WebTitleHelper.resetTitle();
-                  if (_currentStepMarker != null) {
-                    _stepMarkersToRemove.add(_currentStepMarker!); // Buffer for removal
-                    _removeStepMarker();
-                    _currentStepMarker = null; // Reset current marker
-                  }
-                  widget.onClose();
-                }
-              ),
+                  icon: Icon(Icons.close),
+                  onPressed: () {
+                    widget.timerFlag.flag = true;
+                    WebTitleHelper.resetTitle();
+                    if (_currentStepMarker != null) {
+                      _stepMarkersToRemove
+                          .add(_currentStepMarker!); // Buffer for removal
+                      _removeStepMarker();
+                      _currentStepMarker = null; // Reset current marker
+                    }
+                    widget.onClose();
+                  }),
             ],
           ),
         ],
@@ -155,7 +168,7 @@ class _FloatingRouteInstructionPanelState extends State<FloatingRouteInstruction
       case 'arrive':
         return Icons.flag; // End of the route
       default:
-        return _getTurnIcon(modifier);  // Use modifier for turn direction
+        return _getTurnIcon(modifier); // Use modifier for turn direction
     }
   }
 
@@ -186,18 +199,20 @@ class _FloatingRouteInstructionPanelState extends State<FloatingRouteInstruction
     int remainingSeconds = (seconds % 60).round(); // Get remaining seconds
 
     if (minutes > 0) {
-      return "$minutes min ${remainingSeconds}s"; // Example: "5 min 30s"
+      return LocaleService.S.stepDurationMinSec(minutes, remainingSeconds);
     } else {
-      return "$remainingSeconds sec"; // Example: "45 sec"
+      return LocaleService.S.stepDurationSec(remainingSeconds);
     }
   }
 
-  Future<void> _addStepMarker(List<double> location) async{
+  Future<void> _addStepMarker(List<double> location) async {
     // Add a marker at the step location
     _currentStepMarker = await widget.mapController.addSymbol(
       SymbolOptions(
-        geometry: LatLng(location[1], location[0]), // Ensure correct lat-lng order
-        iconImage: GlobalConstants.routeHighlightImageName, // Custom marker name
+        geometry:
+            LatLng(location[1], location[0]), // Ensure correct lat-lng order
+        iconImage:
+            GlobalConstants.routeHighlightImageName, // Custom marker name
         iconSize: 1.5, // Adjust size
       ),
     );
@@ -208,12 +223,14 @@ class _FloatingRouteInstructionPanelState extends State<FloatingRouteInstruction
       ),
     );
 
-    print("Added step marker ${_currentStepMarker?.id} at: ${location[1]}, ${location[0]}");
+    print(
+        "Added step marker ${_currentStepMarker?.id} at: ${location[1]}, ${location[0]}");
   }
 
   Future<void> _removeStepMarker() async {
     while (_stepMarkersToRemove.isNotEmpty) {
-      Symbol marker = _stepMarkersToRemove.removeAt(0); // Get and remove the first marker
+      Symbol marker =
+          _stepMarkersToRemove.removeAt(0); // Get and remove the first marker
       print("Removing step marker ${marker.id}");
 
       await widget.mapController.removeSymbol(marker);
@@ -234,7 +251,8 @@ class _FloatingRouteInstructionPanelState extends State<FloatingRouteInstruction
       },
       child: ListTile(
         onTap: () {
-          widget.timerFlag.flag = true; // Activate TimerFlag when tapping a step
+          widget.timerFlag.flag =
+              true; // Activate TimerFlag when tapping a step
           // remove existing marker if any
           if (_currentStepMarker != null) {
             _stepMarkersToRemove.add(_currentStepMarker!); // Buffer for removal
@@ -245,11 +263,17 @@ class _FloatingRouteInstructionPanelState extends State<FloatingRouteInstruction
         },
         leading: CircleAvatar(
           backgroundColor: Theme.of(context).primaryColor,
-          child: Text((index + 1).toString(), style: TextStyle(color: Colors.white, fontSize: 16)),
+          child: Text((index + 1).toString(),
+              style: TextStyle(color: Colors.white, fontSize: 16)),
         ),
-        title: Text(step.name.isNotEmpty ? step.name : "Unnamed Piste", style: TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text("${step.distance.toStringAsFixed(0)} m • ${_formatDuration(step.duration)}"),
-        trailing: Icon(_getManeuverIcon(step.maneuver.type, step.maneuver.modifier), color: Theme.of(context).primaryColor),
+        title: Text(
+            step.name.isNotEmpty ? step.name : LocaleService.S.unnamedPiste,
+            style: TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text(
+            "${step.distance.toStringAsFixed(0)} m • ${_formatDuration(step.duration)}"),
+        trailing: Icon(
+            _getManeuverIcon(step.maneuver.type, step.maneuver.modifier),
+            color: Theme.of(context).primaryColor),
       ),
     );
   }

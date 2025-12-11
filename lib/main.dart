@@ -5,6 +5,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter_web_plugins/flutter_web_plugins.dart'; // Import for URL strategy
 import 'package:go_router/go_router.dart';
 import 'mapbox_view.dart';
+import 'l10n/locale_service.dart';
 
 void main() {
   setUrlStrategy(PathUrlStrategy()); // Enable clean URLs
@@ -66,7 +67,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'Ultimate Ski Route Planner | SnowNavi',
+      title: LocaleService.S.appTitle,
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepOrange),
