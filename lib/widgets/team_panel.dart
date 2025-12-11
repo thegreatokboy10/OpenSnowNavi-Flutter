@@ -415,7 +415,7 @@ class _TeamPanelState extends State<TeamPanel> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      '${team.activeMembers.length}/${team.maxMembers}人',
+                      '${team.members.length}/${team.maxMembers}人',
                       style: const TextStyle(fontSize: 12),
                     ),
                   ),

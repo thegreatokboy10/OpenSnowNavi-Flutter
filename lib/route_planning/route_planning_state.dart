@@ -90,6 +90,16 @@ class RoutePlanningData {
     ));
   }
 
+  /// 替换指定索引的途径点
+  void replaceStopover(int index, RoutePoint point) {
+    if (index >= 0 && index < stopovers.length) {
+      stopovers[index] = point.copyWith(
+        id: 'stopover_$index',
+        type: RoutePointType.stopover,
+      );
+    }
+  }
+
   /// 删除途径点
   void removeStopover(int index) {
     if (index >= 0 && index < stopovers.length) {

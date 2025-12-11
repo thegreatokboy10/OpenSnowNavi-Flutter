@@ -15,13 +15,14 @@ class RoutePlanningPanel extends StatefulWidget {
   final re.Route? route; // 当前路线结果
   final LatLng? resortCoordinate; // 雪场中心坐标，用于搜索
   final VoidCallback onClose;
-  final Function(LatLng coordinates, String name, RoutePointType type)
-      onPointSelected; // 选择点位回调
+  final Function(LatLng coordinates, String name, RoutePointType type,
+      int stopoverIndex) onPointSelected; // 选择点位回调，stopoverIndex=-1表示新增途径点
   final Function(int) onRemovePoint; // 删除点位回调（支持起点、终点、途径点）
   final Function(int, int) onReorderPoints; // 重新排序回调
   final Function(RoutePointType type) onPickPhoto; // 从图片选择位置回调，传递当前编辑的类型
   final Function(RoutePointType type) onUseCurrentLocation; // 使用当前位置回调
-  final Function(EditingPointType type)? onEditingTypeChanged; // 编辑类型变化回调
+  final Function(EditingPointType type, int stopoverIndex)?
+      onEditingTypeChanged; // 编辑类型变化回调，stopoverIndex=-1表示新增
   final MapboxMapController? mapController; // 用于显示路线详情的高亮
   final TimerFlag? timerFlag;
 
@@ -177,7 +178,10 @@ class _RoutePlanningPanelState extends State<RoutePlanningPanel> {
         return;
     }
 
-    widget.onPointSelected(coordinates, name, type);
+    // 传递途径点索引：编辑现有途径点时使用 _editingStopoverIndex，新增时使用 -1
+    final stopoverIndex =
+        _editingType == EditingPointType.stopover ? _editingStopoverIndex : -1;
+    widget.onPointSelected(coordinates, name, type, stopoverIndex);
 
     // 重置编辑状态
     setState(() {
@@ -198,8 +202,8 @@ class _RoutePlanningPanelState extends State<RoutePlanningPanel> {
       _searchResults = [];
       _isSearching = false;
     });
-    // 通知父组件当前编辑类型
-    widget.onEditingTypeChanged?.call(type);
+    // 通知父组件当前编辑类型和索引
+    widget.onEditingTypeChanged?.call(type, stopoverIndex);
   }
 
   void _cancelEditing() {
@@ -212,7 +216,7 @@ class _RoutePlanningPanelState extends State<RoutePlanningPanel> {
       _isSearching = false;
     });
     // 通知父组件编辑已取消
-    widget.onEditingTypeChanged?.call(EditingPointType.none);
+    widget.onEditingTypeChanged?.call(EditingPointType.none, -1);
   }
 
   @override

@@ -139,6 +139,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
   bool _isAddingStopover = false; // 是否正在添加途径点
   RoutePointType? _pendingPhotoPointType; // 从图片选择位置时的目标点位类型
   EditingPointType _currentEditingType = EditingPointType.none; // 当前路线规划面板编辑类型
+  int _editingStopoverIndex = -1; // 正在编辑的途径点索引 (-1 表示新增)
 
   // 当前位置标记
   Circle? _myLocationCircle; // 位置圆点
@@ -953,8 +954,9 @@ class _GeneratorPageState extends State<GeneratorPage> {
         _setRouteCoordinates(startCoordinate!, endCoordinate!,
             stopovers: stopovers);
 
-        // 生成路线
-        _generateRoute(startCoordinate!, endCoordinate!, stopovers: stopovers);
+        // 生成路线（等待完成以确保 route 变量被设置）
+        await _generateRoute(startCoordinate!, endCoordinate!,
+            stopovers: stopovers);
 
         // 同时设置路线规划面板数据并显示
         _populateRoutePlanningPanelFromSharedRoute();
@@ -1263,7 +1265,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
     return uri.toString();
   }
 
-  void _generateRoute(LatLng startCoordinate, LatLng endCoordinate,
+  Future<void> _generateRoute(LatLng startCoordinate, LatLng endCoordinate,
       {List<LatLng>? stopovers}) async {
     re.Route? newRoute = await routeEngine.generateRoute(
       startCoordinate: startCoordinate,
@@ -1514,8 +1516,10 @@ class _GeneratorPageState extends State<GeneratorPage> {
   }
 
   /// 处理路线规划面板中选择的点位
+  /// stopoverIndex: 编辑现有途径点时的索引，-1 表示新增
   void _handleRoutePlanningPointSelected(
-      LatLng coordinates, String name, RoutePointType type) {
+      LatLng coordinates, String name, RoutePointType type,
+      [int stopoverIndex = -1]) {
     setState(() {
       switch (type) {
         case RoutePointType.origin:
@@ -1535,12 +1539,25 @@ class _GeneratorPageState extends State<GeneratorPage> {
           ));
           break;
         case RoutePointType.stopover:
-          _routePlanningData.addStopover(RoutePoint(
-            id: 'stopover_${_routePlanningData.stopovers.length}',
-            name: name,
-            coordinates: coordinates,
-            type: RoutePointType.stopover,
-          ));
+          // 如果 stopoverIndex >= 0，替换现有途径点，否则添加新途径点
+          if (stopoverIndex >= 0 &&
+              stopoverIndex < _routePlanningData.stopovers.length) {
+            _routePlanningData.replaceStopover(
+                stopoverIndex,
+                RoutePoint(
+                  id: 'stopover_$stopoverIndex',
+                  name: name,
+                  coordinates: coordinates,
+                  type: RoutePointType.stopover,
+                ));
+          } else {
+            _routePlanningData.addStopover(RoutePoint(
+              id: 'stopover_${_routePlanningData.stopovers.length}',
+              name: name,
+              coordinates: coordinates,
+              type: RoutePointType.stopover,
+            ));
+          }
           break;
       }
     });
@@ -1566,6 +1583,25 @@ class _GeneratorPageState extends State<GeneratorPage> {
     });
     _updateRoutePlanningMarkers();
     // 重新算路
+    _autoGenerateRouteIfReady();
+  }
+
+  /// 替换指定索引的途径点
+  void _replaceRoutePlanningStopover(
+      int index, LatLng coordinates, String name) {
+    if (index < 0 || index >= _routePlanningData.stopovers.length) return;
+
+    setState(() {
+      _routePlanningData.replaceStopover(
+          index,
+          RoutePoint(
+            id: 'stopover_$index',
+            name: name,
+            coordinates: coordinates,
+            type: RoutePointType.stopover,
+          ));
+    });
+    _updateRoutePlanningMarkers();
     _autoGenerateRouteIfReady();
   }
 
@@ -1699,10 +1735,11 @@ class _GeneratorPageState extends State<GeneratorPage> {
           return 'setOrigin'; // 正在编辑起点
         } else if (_currentEditingType == EditingPointType.destination) {
           return 'setDestination'; // 正在编辑终点
+        } else if (_currentEditingType == EditingPointType.stopover) {
+          return 'setStopover'; // 正在编辑现有途径点（替换）
         } else if (_isAddingStopover ||
-            _currentEditingType == EditingPointType.stopover ||
             _currentEditingType == EditingPointType.newStopover) {
-          return 'addStopover'; // 正在添加/编辑途径点
+          return 'addStopover'; // 正在添加新途径点
         }
         return 'planning'; // 默认规划模式，显示添加途径点
     }
@@ -1834,6 +1871,30 @@ class _GeneratorPageState extends State<GeneratorPage> {
               ),
             ),
           ),
+        ] else if (buttonType == 'setStopover') ...[
+          // 正在编辑现有途径点（替换）
+          GestureDetector(
+            onTapDown: (_) => isUiOpen.flag = true,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                isUiOpen.flag = true;
+                Navigator.pop(context);
+                _removePhoto();
+                _handleRoutePlanningPointSelected(coordinates, locationName,
+                    RoutePointType.stopover, _editingStopoverIndex);
+                setState(() {
+                  _currentEditingType = EditingPointType.none;
+                  _editingStopoverIndex = -1;
+                });
+              },
+              icon: Icon(Icons.edit_location),
+              label: Text("设为途径点"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ),
         ] else if (buttonType == 'addStopover' || buttonType == 'planning') ...[
           // 添加途径点模式 或 规划模式（从地图添加途径点）
           GestureDetector(
@@ -1843,8 +1904,12 @@ class _GeneratorPageState extends State<GeneratorPage> {
                 isUiOpen.flag = true;
                 Navigator.pop(context);
                 _removePhoto();
-                _addRoutePlanningStopover(coordinates, locationName);
-                setState(() => _currentEditingType = EditingPointType.none);
+                _handleRoutePlanningPointSelected(
+                    coordinates, locationName, RoutePointType.stopover, -1);
+                setState(() {
+                  _currentEditingType = EditingPointType.none;
+                  _editingStopoverIndex = -1;
+                });
               },
               icon: Icon(Icons.add_location),
               label: Text("添加途径点"),
@@ -3198,10 +3263,10 @@ class _GeneratorPageState extends State<GeneratorPage> {
                       isUiOpen.flag = true;
                       _exitRoutePlanning();
                     },
-                    onPointSelected: (coordinates, name, type) {
+                    onPointSelected: (coordinates, name, type, stopoverIndex) {
                       isUiOpen.flag = true;
                       _handleRoutePlanningPointSelected(
-                          coordinates, name, type);
+                          coordinates, name, type, stopoverIndex);
                     },
                     onRemovePoint: (index) {
                       isUiOpen.flag = true;
@@ -3219,9 +3284,10 @@ class _GeneratorPageState extends State<GeneratorPage> {
                       isUiOpen.flag = true;
                       _useCurrentLocationForRoutePlanning(type);
                     },
-                    onEditingTypeChanged: (type) {
+                    onEditingTypeChanged: (type, stopoverIndex) {
                       setState(() {
                         _currentEditingType = type;
+                        _editingStopoverIndex = stopoverIndex;
                       });
                     },
                   ),
