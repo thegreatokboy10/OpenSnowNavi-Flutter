@@ -27,9 +27,11 @@ import 'widgets/lift_info_panel.dart';
 import 'widgets/piste_info_panel.dart';
 import 'widgets/route_instruction_panel.dart'; // Add this for opening URLs
 import 'widgets/team_panel.dart';
+import 'widgets/route_planning_panel.dart';
 import 'team/team_service.dart';
 import 'meeting_point/meeting_point_model.dart';
 import 'meeting_point/meeting_point_service.dart';
+import 'route_planning/route_planning_state.dart';
 
 class GeneratorPage extends StatefulWidget {
   final List<List<double>>? coordinates; // List of lat-lng pairs
@@ -130,6 +132,11 @@ class _GeneratorPageState extends State<GeneratorPage> {
   List<Symbol> _meetingPointNameSymbols = []; // 所有集合点的名称标记
   List<Map<String, dynamic>> _meetingPointCircleFeatures =
       []; // 集合点圆圈 features（用于清理）
+
+  // 路线规划流程状态
+  final RoutePlanningData _routePlanningData = RoutePlanningData();
+  bool _showRoutePlanningPanel = false; // 是否显示路线规划面板
+  bool _isAddingStopover = false; // 是否正在添加途径点
 
   // 当前位置标记
   Circle? _myLocationCircle; // 位置圆点
@@ -1384,86 +1391,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
                     ),
                     SizedBox(height: 16.0),
 
-                    // Buttons with GestureDetector
-                    Wrap(
-                      alignment: WrapAlignment.center,
-                      spacing: 8.0,
-                      runSpacing: 8.0,
-                      children: [
-                        // Add as Stopover Button
-                        GestureDetector(
-                          onTapDown: (details) {
-                            isUiOpen.flag = true;
-                            print(
-                                "Add to Route button tapped, isUiOpen set to true");
-                          },
-                          child: ElevatedButton.icon(
-                            onPressed: () {
-                              isUiOpen.flag = true;
-                              Navigator.pop(context); // Close bottom sheet
-                              _removePhoto();
-                              WebTitleHelper.updateTitle(
-                                  'Route planning: ${coordinates.latitude}, ${coordinates.longitude} added to route');
-                              _handleAddToRoute(coordinates);
-                            },
-                            icon: Icon(Icons.add_location_alt),
-                            label: Text("Add to Route"),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: Colors.black,
-                            ),
-                          ),
-                        ),
-
-                        // Go Button (Set as Destination)
-                        GestureDetector(
-                          onTapDown: (details) {
-                            isUiOpen.flag = true;
-                            print("Go button tapped, isUiOpen set to true");
-                          },
-                          child: ElevatedButton.icon(
-                            onPressed: () {
-                              isUiOpen.flag = true;
-                              Navigator.pop(context); // Close bottom sheet
-                              _removePhoto();
-                              _handleGoButton(coordinates);
-                            },
-                            icon: Icon(Icons.directions),
-                            label: Text("Go"),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Theme.of(context).primaryColor,
-                              foregroundColor: Colors.white,
-                            ),
-                          ),
-                        ),
-
-                        // Set as Meeting Point Button (only show when in a team)
-                        if (_teamService.currentTeam != null)
-                          GestureDetector(
-                            onTapDown: (details) {
-                              isUiOpen.flag = true;
-                              print("Set Meeting Point button tapped");
-                            },
-                            child: ElevatedButton.icon(
-                              onPressed: () {
-                                isUiOpen.flag = true;
-                                Navigator.pop(context); // Close bottom sheet
-                                _removePhoto();
-                                _handleSetMeetingPoint(
-                                  coordinates,
-                                  '集合点 ${coordinates.latitude.toStringAsFixed(4)}, ${coordinates.longitude.toStringAsFixed(4)}',
-                                );
-                              },
-                              icon: Icon(Icons.star),
-                              label: Text("添加集合点"),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.deepOrange,
-                                foregroundColor: Colors.white,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
+                    // 根据路线规划状态显示不同的按钮
+                    _buildLocationDetailButtons(context, coordinates),
                     SizedBox(height: 40.0),
                   ],
                 ),
@@ -1520,6 +1449,254 @@ class _GeneratorPageState extends State<GeneratorPage> {
     } else {
       print("No start point, waiting for further input.");
     }
+  }
+
+  // ========== 新的路线规划流程方法 ==========
+
+  /// 开始路线规划 - 设置终点
+  void _startRoutePlanning(LatLng coordinates, String name) {
+    setState(() {
+      _routePlanningData.setDestination(RoutePoint(
+        id: 'destination',
+        name: name,
+        coordinates: coordinates,
+        type: RoutePointType.destination,
+      ));
+      _showRoutePlanningPanel = true;
+      _isAddingStopover = false;
+    });
+    _updateRoutePlanningMarkers();
+  }
+
+  /// 设置起点
+  void _setRoutePlanningOrigin(LatLng coordinates, String name) {
+    setState(() {
+      _routePlanningData.setOrigin(RoutePoint(
+        id: 'origin',
+        name: name,
+        coordinates: coordinates,
+        type: RoutePointType.origin,
+      ));
+    });
+    _updateRoutePlanningMarkers();
+  }
+
+  /// 添加途径点
+  void _addRoutePlanningStopover(LatLng coordinates, String name) {
+    setState(() {
+      _routePlanningData.addStopover(RoutePoint(
+        id: 'stopover_${_routePlanningData.stopovers.length}',
+        name: name,
+        coordinates: coordinates,
+        type: RoutePointType.stopover,
+      ));
+      _isAddingStopover = false;
+    });
+    _updateRoutePlanningMarkers();
+  }
+
+  /// 开始添加途径点模式
+  void _startAddingStopover() {
+    setState(() {
+      _isAddingStopover = true;
+    });
+  }
+
+  /// 删除途径点
+  void _removeRoutePlanningStopover(int index) {
+    setState(() {
+      _routePlanningData.removeStopover(index);
+    });
+    _updateRoutePlanningMarkers();
+  }
+
+  /// 重新排序途径点
+  void _reorderRoutePlanningStopover(int oldIndex, int newIndex) {
+    setState(() {
+      _routePlanningData.reorderStopovers(oldIndex, newIndex);
+    });
+    _updateRoutePlanningMarkers();
+  }
+
+  /// 生成路线
+  void _generateRoutePlanningRoute() {
+    if (!_routePlanningData.canGenerateRoute) return;
+
+    // 转换为旧的路线生成格式
+    startCoordinate = _routePlanningData.origin!.coordinates;
+    endCoordinate = _routePlanningData.destination!.coordinates;
+    stopovers = _routePlanningData.stopovers.map((s) => s.coordinates).toList();
+
+    // 设置标记
+    _setRouteCoordinates(startCoordinate!, endCoordinate!,
+        stopovers: stopovers);
+
+    // 生成路线
+    _generateRoute(startCoordinate!, endCoordinate!, stopovers: stopovers);
+  }
+
+  /// 退出路线规划
+  void _exitRoutePlanning() {
+    setState(() {
+      _routePlanningData.reset();
+      _showRoutePlanningPanel = false;
+      _isAddingStopover = false;
+    });
+    _clearAllCirclesWithText();
+    _removeExistingRoute();
+    _removeStopOvers();
+  }
+
+  /// 更新路线规划的地图标记
+  void _updateRoutePlanningMarkers() {
+    _clearAllCirclesWithText();
+
+    // 添加起点标记
+    if (_routePlanningData.origin != null) {
+      _addCircleWithText(
+        _routePlanningData.origin!.coordinates,
+        circleColor: "#00FF00",
+        text: "A",
+      );
+    }
+
+    // 添加途径点标记
+    for (int i = 0; i < _routePlanningData.stopovers.length; i++) {
+      _addCircleWithText(
+        _routePlanningData.stopovers[i].coordinates,
+        circleColor: "#FFA500",
+        text: "${i + 1}",
+      );
+    }
+
+    // 添加终点标记
+    if (_routePlanningData.destination != null) {
+      _addCircleWithText(
+        _routePlanningData.destination!.coordinates,
+        circleColor: "#0000FF",
+        text: "B",
+      );
+    }
+  }
+
+  /// 获取当前 POI 详情面板应该显示的按钮类型
+  String _getPoiDetailButtonType() {
+    switch (_routePlanningData.mode) {
+      case RoutePlanningMode.idle:
+        return 'initial'; // 显示"路线"和"添加集合点"
+      case RoutePlanningMode.selectingOrigin:
+        return 'selectOrigin'; // 显示"设为起点"和"添加途径点"
+      case RoutePlanningMode.planning:
+        return _isAddingStopover ? 'addStopover' : 'planning';
+    }
+  }
+
+  /// 构建位置详情面板的按钮
+  Widget _buildLocationDetailButtons(BuildContext context, LatLng coordinates) {
+    final buttonType = _getPoiDetailButtonType();
+    final locationName =
+        '${coordinates.latitude.toStringAsFixed(4)}, ${coordinates.longitude.toStringAsFixed(4)}';
+
+    return Wrap(
+      alignment: WrapAlignment.center,
+      spacing: 8.0,
+      runSpacing: 8.0,
+      children: [
+        if (buttonType == 'initial') ...[
+          // 初始状态：显示"路线"和"添加集合点"
+          GestureDetector(
+            onTapDown: (_) => isUiOpen.flag = true,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                isUiOpen.flag = true;
+                Navigator.pop(context);
+                _removePhoto();
+                _startRoutePlanning(coordinates, locationName);
+              },
+              icon: Icon(Icons.directions),
+              label: Text("路线"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).primaryColor,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ),
+          if (_teamService.currentTeam != null)
+            GestureDetector(
+              onTapDown: (_) => isUiOpen.flag = true,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  isUiOpen.flag = true;
+                  Navigator.pop(context);
+                  _removePhoto();
+                  _handleSetMeetingPoint(coordinates, '集合点 $locationName');
+                },
+                icon: Icon(Icons.star),
+                label: Text("添加集合点"),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.deepOrange,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ),
+        ] else if (buttonType == 'selectOrigin') ...[
+          // 选择起点状态：显示"设为起点"和"添加途径点"
+          GestureDetector(
+            onTapDown: (_) => isUiOpen.flag = true,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                isUiOpen.flag = true;
+                Navigator.pop(context);
+                _removePhoto();
+                _setRoutePlanningOrigin(coordinates, locationName);
+              },
+              icon: Icon(Icons.trip_origin),
+              label: Text("设为起点"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ),
+          GestureDetector(
+            onTapDown: (_) => isUiOpen.flag = true,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                isUiOpen.flag = true;
+                Navigator.pop(context);
+                _removePhoto();
+                _addRoutePlanningStopover(coordinates, locationName);
+              },
+              icon: Icon(Icons.add_location),
+              label: Text("添加途径点"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ),
+        ] else if (buttonType == 'addStopover') ...[
+          // 添加途径点模式
+          GestureDetector(
+            onTapDown: (_) => isUiOpen.flag = true,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                isUiOpen.flag = true;
+                Navigator.pop(context);
+                _removePhoto();
+                _addRoutePlanningStopover(coordinates, locationName);
+              },
+              icon: Icon(Icons.add_location),
+              label: Text("添加途径点"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
   }
 
   /// 处理设置集合点
@@ -2773,6 +2950,39 @@ class _GeneratorPageState extends State<GeneratorPage> {
                     });
                     _updateMeetingPointsLayer();
                   },
+                ),
+              ),
+            // Route Planning Panel
+            if (_showRoutePlanningPanel)
+              Positioned(
+                top: 70,
+                left: 20,
+                child: GestureDetector(
+                  onTapDown: (_) => isUiOpen.flag = true,
+                  child: RoutePlanningPanel(
+                    data: _routePlanningData,
+                    timerFlag: isUiOpen,
+                    onClose: () {
+                      isUiOpen.flag = true;
+                      _exitRoutePlanning();
+                    },
+                    onGenerateRoute: () {
+                      isUiOpen.flag = true;
+                      _generateRoutePlanningRoute();
+                    },
+                    onAddStopover: () {
+                      isUiOpen.flag = true;
+                      _startAddingStopover();
+                    },
+                    onRemoveStopover: (index) {
+                      isUiOpen.flag = true;
+                      _removeRoutePlanningStopover(index);
+                    },
+                    onReorderStopovers: (oldIndex, newIndex) {
+                      isUiOpen.flag = true;
+                      _reorderRoutePlanningStopover(oldIndex, newIndex);
+                    },
+                  ),
                 ),
               ),
             // Dropdown for selecting ski resort
