@@ -19,7 +19,7 @@ class RoutePlanningPanel extends StatefulWidget {
       onPointSelected; // 选择点位回调
   final Function(int) onRemovePoint; // 删除点位回调（支持起点、终点、途径点）
   final Function(int, int) onReorderPoints; // 重新排序回调
-  final Function(LatLng coordinates) onPickPhoto; // 从图片选择位置回调
+  final Function(RoutePointType type) onPickPhoto; // 从图片选择位置回调，传递当前编辑的类型
   final MapboxMapController? mapController; // 用于显示路线详情的高亮
   final TimerFlag? timerFlag;
 
@@ -65,6 +65,52 @@ class _RoutePlanningPanelState extends State<RoutePlanningPanel> {
   void _setTimerFlag() {
     if (widget.timerFlag != null) {
       widget.timerFlag!.flag = true;
+    }
+  }
+
+  /// 格式化时间
+  String _formatDuration(double seconds) {
+    int minutes = (seconds ~/ 60);
+    int remainingSeconds = (seconds % 60).round();
+
+    if (minutes > 0) {
+      return "$minutes min ${remainingSeconds}s";
+    } else {
+      return "$remainingSeconds sec";
+    }
+  }
+
+  /// 获取导航图标
+  IconData _getManeuverIcon(String type, String? modifier) {
+    switch (type) {
+      case 'depart':
+        return Icons.straight;
+      case 'arrive':
+        return Icons.flag;
+      default:
+        return _getTurnIcon(modifier);
+    }
+  }
+
+  /// 获取转向图标
+  IconData _getTurnIcon(String? modifier) {
+    switch (modifier) {
+      case 'left':
+        return Icons.turn_left;
+      case 'right':
+        return Icons.turn_right;
+      case 'slight left':
+        return Icons.turn_slight_left;
+      case 'slight right':
+        return Icons.turn_slight_right;
+      case 'sharp left':
+        return Icons.turn_sharp_left;
+      case 'sharp right':
+        return Icons.turn_sharp_right;
+      case 'uturn':
+        return Icons.u_turn_left;
+      default:
+        return Icons.straight;
     }
   }
 
@@ -446,7 +492,23 @@ class _RoutePlanningPanelState extends State<RoutePlanningPanel> {
           OutlinedButton.icon(
             onPressed: () {
               _setTimerFlag();
-              // TODO: 实现图片选择后回调
+              // 根据当前编辑类型调用图片选择
+              RoutePointType type;
+              switch (_editingType) {
+                case EditingPointType.origin:
+                  type = RoutePointType.origin;
+                  break;
+                case EditingPointType.destination:
+                  type = RoutePointType.destination;
+                  break;
+                case EditingPointType.stopover:
+                case EditingPointType.newStopover:
+                  type = RoutePointType.stopover;
+                  break;
+                default:
+                  return;
+              }
+              widget.onPickPhoto(type);
             },
             icon: Icon(Icons.photo_camera, size: 16),
             label: Text('从图片读取位置'),
@@ -470,18 +532,40 @@ class _RoutePlanningPanelState extends State<RoutePlanningPanel> {
                 itemCount: _searchResults.length,
                 itemBuilder: (context, index) {
                   final poi = _searchResults[index];
+                  // 完整名称包含地址
+                  final fullName = poi['name'].toString();
+                  // 第一部分作为标题
+                  final displayName = fullName.split(',').first;
+                  // 距离信息
+                  final distance = '${poi['distance'].toStringAsFixed(2)} km';
+
                   return ListTile(
                     dense: true,
                     title: Text(
-                      poi['name'].toString().split(',').first,
-                      style: TextStyle(fontSize: 13),
+                      displayName,
+                      style:
+                          TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    subtitle: Text(
-                      '${poi['distance'].toStringAsFixed(2)} km',
-                      style: TextStyle(fontSize: 11),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (fullName.contains(','))
+                          Text(
+                            fullName.substring(displayName.length + 1).trim(),
+                            style: TextStyle(
+                                fontSize: 11, color: Colors.grey.shade600),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        Text(
+                          distance,
+                          style: TextStyle(fontSize: 11, color: Colors.grey),
+                        ),
+                      ],
                     ),
+                    isThreeLine: fullName.contains(','),
                     onTap: () => _selectSearchResult(poi),
                   );
                 },
@@ -581,14 +665,21 @@ class _RoutePlanningPanelState extends State<RoutePlanningPanel> {
                       ),
                     ),
                     title: Text(
-                      step.name.isNotEmpty ? step.name : 'Unnamed',
-                      style: TextStyle(fontSize: 13),
+                      step.name.isNotEmpty ? step.name : 'Unnamed Piste',
+                      style:
+                          TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     subtitle: Text(
-                      '${step.distance.toStringAsFixed(0)} m',
+                      '${step.distance.toStringAsFixed(0)} m • ${_formatDuration(step.duration)}',
                       style: TextStyle(fontSize: 11),
+                    ),
+                    trailing: Icon(
+                      _getManeuverIcon(
+                          step.maneuver.type, step.maneuver.modifier),
+                      color: Theme.of(context).primaryColor,
+                      size: 20,
                     ),
                     onTap: () {
                       _setTimerFlag();

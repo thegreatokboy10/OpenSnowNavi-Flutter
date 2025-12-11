@@ -137,6 +137,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
   final RoutePlanningData _routePlanningData = RoutePlanningData();
   bool _showRoutePlanningPanel = false; // 是否显示路线规划面板
   bool _isAddingStopover = false; // 是否正在添加途径点
+  RoutePointType? _pendingPhotoPointType; // 从图片选择位置时的目标点位类型
 
   // 当前位置标记
   Circle? _myLocationCircle; // 位置圆点
@@ -383,32 +384,40 @@ class _GeneratorPageState extends State<GeneratorPage> {
         (point.longitude - endCoordinate!.longitude).abs() < epsilon;
   }
 
-  /// 自动规划到集合点的路线
+  /// 自动规划到集合点的路线（使用路线规划面板）
   Future<void> _planRouteToMeetingPoint(MeetingPoint meetingPoint) async {
     try {
       // 获取当前位置
       final location = await _locationService.getCurrentLocation();
       final currentLatLng = LatLng(location['latitude'], location['longitude']);
 
-      // 设置起点和终点
-      startCoordinate = currentLatLng;
-      endCoordinate = meetingPoint.latLng;
-
-      // 清除之前的路线标记
+      // 清除之前的路线
+      await _removeExistingRoute();
       _clearAllCirclesWithText();
 
-      // 添加起点标记
-      _addCircleWithText(
-        currentLatLng,
-        circleColor: "#00FF00", // 绿色
-        text: "A",
-      );
+      // 设置路线规划数据
+      setState(() {
+        _routePlanningData.reset();
+        _routePlanningData.setOrigin(RoutePoint(
+          id: 'origin',
+          name: '我的位置',
+          coordinates: currentLatLng,
+          type: RoutePointType.origin,
+        ));
+        _routePlanningData.setDestination(RoutePoint(
+          id: 'destination',
+          name: meetingPoint.name,
+          coordinates: meetingPoint.latLng,
+          type: RoutePointType.destination,
+        ));
+        _showRoutePlanningPanel = true;
+      });
 
-      // 终点不添加常规标记，由集合点图层显示
-      // _addCircleWithText(meetingPoint.latLng, circleColor: "#FF6600", text: "B");
+      // 更新标记
+      _updateRoutePlanningMarkers();
 
-      // 生成路线
-      _generateRoute(startCoordinate!, endCoordinate!, stopovers: stopovers);
+      // 自动算路
+      _autoGenerateRouteIfReady();
 
       // 更新集合点图层以显示终点标记
       await _updateMeetingPointsLayer();
@@ -1479,6 +1488,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
       ));
     });
     _updateRoutePlanningMarkers();
+    // 自动算路
+    _autoGenerateRouteIfReady();
   }
 
   /// 添加途径点
@@ -1493,6 +1504,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
       _isAddingStopover = false;
     });
     _updateRoutePlanningMarkers();
+    // 自动算路
+    _autoGenerateRouteIfReady();
   }
 
   /// 处理路线规划面板中选择的点位
@@ -1715,8 +1728,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
               ),
             ),
           ),
-        ] else if (buttonType == 'addStopover') ...[
-          // 添加途径点模式
+        ] else if (buttonType == 'addStopover' || buttonType == 'planning') ...[
+          // 添加途径点模式 或 规划模式（从地图添加途径点）
           GestureDetector(
             onTapDown: (_) => isUiOpen.flag = true,
             child: ElevatedButton.icon(
@@ -2310,7 +2323,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
     );
   }
 
-  /// 开始导航到成员位置
+  /// 开始导航到成员位置（使用路线规划面板）
   Future<void> _startRouteToMember(MemberLocation member) async {
     isUiOpen.flag = true;
 
@@ -2324,27 +2337,29 @@ class _GeneratorPageState extends State<GeneratorPage> {
       await _removeExistingRoute();
       _clearAllCirclesWithText();
 
-      // 设置起点和终点
-      startCoordinate = currentLocation;
-      endCoordinate = member.location;
-      stopovers.clear();
+      // 设置路线规划数据
+      setState(() {
+        _routePlanningData.reset();
+        _routePlanningData.setOrigin(RoutePoint(
+          id: 'origin',
+          name: '我的位置',
+          coordinates: currentLocation,
+          type: RoutePointType.origin,
+        ));
+        _routePlanningData.setDestination(RoutePoint(
+          id: 'destination',
+          name: member.nickname,
+          coordinates: member.location,
+          type: RoutePointType.destination,
+        ));
+        _showRoutePlanningPanel = true;
+      });
 
-      // 添加起点标记
-      _addCircleWithText(
-        currentLocation,
-        circleColor: "#00FF00",
-        text: "A",
-      );
+      // 更新标记
+      _updateRoutePlanningMarkers();
 
-      // 添加终点标记
-      _addCircleWithText(
-        member.location,
-        circleColor: "#0000FF",
-        text: "B",
-      );
-
-      // 生成路线
-      _generateRoute(startCoordinate!, endCoordinate!, stopovers: stopovers);
+      // 自动算路
+      _autoGenerateRouteIfReady();
 
       // 显示提示
       if (mounted) {
@@ -2503,11 +2518,13 @@ class _GeneratorPageState extends State<GeneratorPage> {
       _onMapClick(Point(0, 0), _photoLocation!);
     } else {
       print("No GPS data found in image.");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content:
-                Text("Unable to find the location, please try another photo.")),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(
+                  "Unable to find the location, please try another photo.")),
+        );
+      }
       WebTitleHelper.updateTitle(
           "No location found from photo - ${GlobalConstants.defaultTitle}");
       WebTitleHelper.resetTitle();
@@ -2515,6 +2532,52 @@ class _GeneratorPageState extends State<GeneratorPage> {
 
     // Update UI
     setState(() {});
+  }
+
+  /// 路线规划面板的图片选择
+  Future<void> _pickPhotoForRoutePlanning(RoutePointType type) async {
+    isUiOpen.flag = true;
+    _pendingPhotoPointType = type;
+
+    WebTitleHelper.updateTitle(
+        "Using photo to plan your ski trip - ${GlobalConstants.defaultTitle}");
+
+    // Pick image from web
+    Uint8List? imageBytes = await ImagePickerWeb.getImageAsBytes();
+
+    if (imageBytes == null) {
+      _pendingPhotoPointType = null;
+      return; // User canceled
+    }
+
+    // Extract GPS metadata
+    LatLng? gpsCoordinates = await _extractGpsCoordinates(imageBytes);
+    if (gpsCoordinates != null) {
+      print(
+          "Extracted GPS: ${gpsCoordinates.latitude}, ${gpsCoordinates.longitude}");
+      WebTitleHelper.updateTitle(
+          "Find location from photo - ${GlobalConstants.defaultTitle}");
+
+      // 使用坐标设置路线规划点位
+      final name =
+          '图片位置 (${gpsCoordinates.latitude.toStringAsFixed(4)}, ${gpsCoordinates.longitude.toStringAsFixed(4)})';
+      _handleRoutePlanningPointSelected(gpsCoordinates, name, type);
+
+      // 移动地图到该位置
+      mapController?.animateCamera(
+        CameraUpdate.newLatLngZoom(gpsCoordinates, 16),
+      );
+    } else {
+      print("No GPS data found in image.");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("无法从图片中读取位置信息，请尝试其他图片")),
+        );
+      }
+    }
+
+    _pendingPhotoPointType = null;
+    WebTitleHelper.resetTitle();
   }
 
   void _removePhoto() {
@@ -2714,15 +2777,15 @@ class _GeneratorPageState extends State<GeneratorPage> {
               ),
             ],
             // Floating Route Panel (Between Search Box & Filter Button)
-            if (route != null)
-              FloatingRouteInstructionPanel(
-                key: _childWidgetKeys[0],
-                route: route!,
-                onClose: _handleRouteClose,
-                panelWidth: GlobalConstants.searchboxWidth,
-                timerFlag: isUiOpen,
-                mapController: mapController!,
-              ),
+            // if (route != null)
+            //   FloatingRouteInstructionPanel(
+            //     key: _childWidgetKeys[0],
+            //     route: route!,
+            //     onClose: _handleRouteClose,
+            //     panelWidth: GlobalConstants.searchboxWidth,
+            //     timerFlag: isUiOpen,
+            //     mapController: mapController!,
+            //   ),
             // Attribution
             Positioned(
               bottom: 5,
@@ -3012,9 +3075,9 @@ class _GeneratorPageState extends State<GeneratorPage> {
                       isUiOpen.flag = true;
                       _handleRoutePlanningReorderPoints(oldIndex, newIndex);
                     },
-                    onPickPhoto: (coordinates) {
+                    onPickPhoto: (type) {
                       isUiOpen.flag = true;
-                      // 图片选择后的坐标处理
+                      _pickPhotoForRoutePlanning(type);
                     },
                   ),
                 ),
