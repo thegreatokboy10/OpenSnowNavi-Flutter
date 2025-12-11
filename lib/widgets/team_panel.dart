@@ -12,6 +12,7 @@ class TeamPanel extends StatefulWidget {
   final Function(List<MemberLocation>)? onMemberLocationsUpdate;
   final Function(MemberLocation)? onMemberTapped; // 成员点击回调
   final Function(bool)? onShowMeetingPointsLayerChanged; // 集合点图层显示回调
+  final VoidCallback? onTeamJoined; // 团队加入成功回调，用于初始化集合点服务
   final TimerFlag timerFlag;
 
   const TeamPanel({
@@ -22,6 +23,7 @@ class TeamPanel extends StatefulWidget {
     this.onMemberLocationsUpdate,
     this.onMemberTapped,
     this.onShowMeetingPointsLayerChanged,
+    this.onTeamJoined,
   });
 
   @override
@@ -287,6 +289,8 @@ class _TeamPanelState extends State<TeamPanel> {
       );
       if (result.success) {
         setState(() => _errorMessage = null);
+        // 通知父组件初始化集合点服务
+        widget.onTeamJoined?.call();
       } else {
         setState(() => _errorMessage = result.error ?? '创建失败');
       }
@@ -362,6 +366,8 @@ class _TeamPanelState extends State<TeamPanel> {
 
       if (result.success) {
         setState(() => _errorMessage = null);
+        // 通知父组件初始化集合点服务
+        widget.onTeamJoined?.call();
       } else {
         setState(() => _errorMessage = result.error ?? '加入失败');
       }

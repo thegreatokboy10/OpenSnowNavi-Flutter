@@ -20,6 +20,8 @@ class RoutePlanningPanel extends StatefulWidget {
   final Function(int) onRemovePoint; // 删除点位回调（支持起点、终点、途径点）
   final Function(int, int) onReorderPoints; // 重新排序回调
   final Function(RoutePointType type) onPickPhoto; // 从图片选择位置回调，传递当前编辑的类型
+  final Function(RoutePointType type) onUseCurrentLocation; // 使用当前位置回调
+  final Function(EditingPointType type)? onEditingTypeChanged; // 编辑类型变化回调
   final MapboxMapController? mapController; // 用于显示路线详情的高亮
   final TimerFlag? timerFlag;
 
@@ -33,6 +35,8 @@ class RoutePlanningPanel extends StatefulWidget {
     required this.onRemovePoint,
     required this.onReorderPoints,
     required this.onPickPhoto,
+    required this.onUseCurrentLocation,
+    this.onEditingTypeChanged,
     this.mapController,
     this.timerFlag,
   }) : super(key: key);
@@ -65,6 +69,21 @@ class _RoutePlanningPanelState extends State<RoutePlanningPanel> {
   void _setTimerFlag() {
     if (widget.timerFlag != null) {
       widget.timerFlag!.flag = true;
+    }
+  }
+
+  /// 根据当前编辑类型获取 RoutePointType
+  RoutePointType _getRoutePointType() {
+    switch (_editingType) {
+      case EditingPointType.origin:
+        return RoutePointType.origin;
+      case EditingPointType.destination:
+        return RoutePointType.destination;
+      case EditingPointType.stopover:
+      case EditingPointType.newStopover:
+        return RoutePointType.stopover;
+      default:
+        return RoutePointType.stopover;
     }
   }
 
@@ -179,6 +198,8 @@ class _RoutePlanningPanelState extends State<RoutePlanningPanel> {
       _searchResults = [];
       _isSearching = false;
     });
+    // 通知父组件当前编辑类型
+    widget.onEditingTypeChanged?.call(type);
   }
 
   void _cancelEditing() {
@@ -190,6 +211,8 @@ class _RoutePlanningPanelState extends State<RoutePlanningPanel> {
       _searchResults = [];
       _isSearching = false;
     });
+    // 通知父组件编辑已取消
+    widget.onEditingTypeChanged?.call(EditingPointType.none);
   }
 
   @override
@@ -488,34 +511,44 @@ class _RoutePlanningPanelState extends State<RoutePlanningPanel> {
             style: TextStyle(fontSize: 14),
           ),
           SizedBox(height: 8),
-          // 从图片选择按钮
-          OutlinedButton.icon(
-            onPressed: () {
-              _setTimerFlag();
-              // 根据当前编辑类型调用图片选择
-              RoutePointType type;
-              switch (_editingType) {
-                case EditingPointType.origin:
-                  type = RoutePointType.origin;
-                  break;
-                case EditingPointType.destination:
-                  type = RoutePointType.destination;
-                  break;
-                case EditingPointType.stopover:
-                case EditingPointType.newStopover:
-                  type = RoutePointType.stopover;
-                  break;
-                default:
-                  return;
-              }
-              widget.onPickPhoto(type);
-            },
-            icon: Icon(Icons.photo_camera, size: 16),
-            label: Text('从图片读取位置'),
-            style: OutlinedButton.styleFrom(
-              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              minimumSize: Size(0, 32),
-            ),
+          // 按钮行：使用当前位置 + 从图片选择
+          Row(
+            children: [
+              // 使用当前位置按钮
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    _setTimerFlag();
+                    RoutePointType type = _getRoutePointType();
+                    widget.onUseCurrentLocation(type);
+                    _cancelEditing();
+                  },
+                  icon: Icon(Icons.my_location, size: 16),
+                  label: Text('当前位置'),
+                  style: OutlinedButton.styleFrom(
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    minimumSize: Size(0, 32),
+                  ),
+                ),
+              ),
+              SizedBox(width: 8),
+              // 从图片选择按钮
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    _setTimerFlag();
+                    RoutePointType type = _getRoutePointType();
+                    widget.onPickPhoto(type);
+                  },
+                  icon: Icon(Icons.photo_camera, size: 16),
+                  label: Text('从图片'),
+                  style: OutlinedButton.styleFrom(
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    minimumSize: Size(0, 32),
+                  ),
+                ),
+              ),
+            ],
           ),
           // 搜索结果列表
           if (_searchResults.isNotEmpty)
