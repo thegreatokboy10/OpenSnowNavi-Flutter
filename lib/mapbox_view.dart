@@ -950,21 +950,23 @@ class _GeneratorPageState extends State<GeneratorPage> {
 
       // 安全地处理起点和终点
       if (startCoordinate != null && endCoordinate != null) {
-        // 设置起点和终点
-        _setRouteCoordinates(startCoordinate!, endCoordinate!,
-            stopovers: stopovers);
+        // 先标记为已恢复，防止其他回调干扰
+        needRestore = false;
 
-        // 生成路线（等待完成以确保 route 变量被设置）
+        // 设置路线规划面板数据
+        _populateRoutePlanningPanelFromSharedRoute();
+
+        // 生成路线（这会设置 route 变量和绘制路线）
         await _generateRoute(startCoordinate!, endCoordinate!,
             stopovers: stopovers);
 
-        // 同时设置路线规划面板数据并显示
-        _populateRoutePlanningPanelFromSharedRoute();
+        // 更新地图标记（确保 markers 正确显示）
+        _updateRoutePlanningMarkers();
 
-        // 标记为已恢复
-        needRestore = false;
+        print("Route restored successfully with markers");
       } else {
         print("Start or end coordinate is null, cannot restore route.");
+        needRestore = false;
       }
     }
 
@@ -972,6 +974,9 @@ class _GeneratorPageState extends State<GeneratorPage> {
     if (_teamService.currentTeam != null) {
       print('[MapboxView] Style loaded, updating team member markers');
       await _updateTeamMemberMarkers();
+
+      // 恢复集合点图层（可能被路线恢复时清除）
+      await _updateMeetingPointsLayer();
     }
 
     setState(() {
@@ -2262,13 +2267,17 @@ class _GeneratorPageState extends State<GeneratorPage> {
   void _clearAllCirclesWithText() {
     if (mapController == null) return;
 
-    // Remove the GeoJSON source if it exists
-    mapController?.removeSource('circle-text-source');
+    // 必须先移除 layer，再移除 source（layer 依赖于 source）
+    try {
+      mapController?.removeLayer('circle-text-layer');
+      mapController?.removeLayer('circle-layer');
+      mapController?.removeSource('circle-text-source');
+    } catch (e) {
+      print("Error clearing circles: $e");
+    }
 
-    // Remove the layer that displays the circles & text
-    mapController?.removeLayer('circle-text-layer');
-    mapController?.removeLayer('circle-layer');
     _circleTextFeatures.clear();
+    _meetingPointCircleFeatures.clear(); // 也清除集合点 features 引用
     _circleTextSourceExists = false;
 
     print("Cleared all circles with text.");
