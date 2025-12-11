@@ -28,6 +28,8 @@ import 'widgets/piste_info_panel.dart';
 import 'widgets/route_instruction_panel.dart'; // Add this for opening URLs
 import 'widgets/team_panel.dart';
 import 'team/team_service.dart';
+import 'meeting_point/meeting_point_model.dart';
+import 'meeting_point/meeting_point_service.dart';
 
 class GeneratorPage extends StatefulWidget {
   final List<List<double>>? coordinates; // List of lat-lng pairs
@@ -121,6 +123,14 @@ class _GeneratorPageState extends State<GeneratorPage> {
   Map<String, String> _memberSymbolToDeviceId = {}; // Symbol ID -> Device ID 映射
   Set<String> _addedMemberIconImages = {}; // 已添加的成员图标图片名称
 
+  // Meeting point feature
+  bool _showMeetingPointPanel = false;
+  bool _showMeetingPointsLayer = true; // 是否显示集合点图层
+  final MeetingPointService _meetingPointService = MeetingPointService.instance;
+  List<Symbol> _meetingPointNameSymbols = []; // 所有集合点的名称标记
+  List<Map<String, dynamic>> _meetingPointCircleFeatures =
+      []; // 集合点圆圈 features（用于清理）
+
   // 当前位置标记
   Circle? _myLocationCircle; // 位置圆点
   Circle? _myLocationPulseCircle; // 呼吸动画圆圈
@@ -208,6 +218,9 @@ class _GeneratorPageState extends State<GeneratorPage> {
       print(
           '[MapboxView] Team restored, will update markers when map is ready');
 
+      // 初始化集合点服务
+      _initializeMeetingPointService();
+
       // 自动定位到当前设备位置
       try {
         final location = await _locationService.getCurrentLocation();
@@ -222,6 +235,181 @@ class _GeneratorPageState extends State<GeneratorPage> {
       } catch (e) {
         print('[MapboxView] Failed to get current location: $e');
       }
+    }
+  }
+
+  /// 初始化集合点服务
+  void _initializeMeetingPointService() {
+    final team = _teamService.currentTeam;
+    if (team == null) return;
+
+    final deviceId = _teamService.deviceId;
+    final currentMember = _teamService.currentMember;
+    final nickname = currentMember?.nickname ?? '未知';
+
+    _meetingPointService.setContext(
+      teamId: team.id,
+      deviceId: deviceId,
+      nickname: nickname,
+    );
+
+    // 设置回调 - 集合点列表更新时刷新图层
+    _meetingPointService.onMeetingPointsUpdated = (points) {
+      _updateMeetingPointsLayer();
+    };
+
+    // 设置回调 - 活动集合点变化时更新图层和规划路线
+    _meetingPointService.onActiveMeetingPointChanged = (activePoint) {
+      _updateMeetingPointsLayer();
+      // 如果有活动集合点，自动规划路线
+      if (activePoint != null) {
+        _planRouteToMeetingPoint(activePoint);
+      }
+    };
+
+    // 加载集合点
+    _meetingPointService.loadMeetingPoints();
+  }
+
+  /// 更新所有集合点图层（使用与路线标记相同的 circle-text-source）
+  Future<void> _updateMeetingPointsLayer() async {
+    if (mapController == null) return;
+
+    // 确保 source 已初始化
+    if (!_circleTextSourceExists) {
+      _initializeCircleTextSource();
+    }
+
+    // 先移除名称 symbols
+    for (final symbol in _meetingPointNameSymbols) {
+      await mapController!.removeSymbol(symbol);
+    }
+    _meetingPointNameSymbols.clear();
+
+    // 从 _circleTextFeatures 中移除之前的集合点圆圈
+    for (final feature in _meetingPointCircleFeatures) {
+      _circleTextFeatures.remove(feature);
+    }
+    _meetingPointCircleFeatures.clear();
+
+    // 如果图层被关闭，更新 source 后返回
+    if (!_showMeetingPointsLayer) {
+      mapController?.setGeoJsonSource(
+        'circle-text-source',
+        {"type": "FeatureCollection", "features": _circleTextFeatures},
+      );
+      print('[MapboxView] Meeting points layer is hidden');
+      return;
+    }
+
+    // 获取所有集合点
+    final points = _meetingPointService.meetingPoints;
+    if (points.isEmpty) {
+      mapController?.setGeoJsonSource(
+        'circle-text-source',
+        {"type": "FeatureCollection", "features": _circleTextFeatures},
+      );
+      print('[MapboxView] No meeting points to display');
+      return;
+    }
+
+    // 添加所有集合点标记
+    for (final point in points) {
+      // 判断是否是当前路线的终点
+      final isRouteEndpoint = _isPointRouteEndpoint(point.latLng);
+
+      // 如果是路线终点且非active，跳过（会用路线终点标记）
+      if (isRouteEndpoint && !point.isActive) {
+        continue;
+      }
+
+      // 创建集合点圆圈 feature
+      Map<String, dynamic> circleFeature = {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [point.latLng.longitude, point.latLng.latitude],
+        },
+        "properties": {
+          "color": "#FF5722", // deepOrange
+          "text": point.isActive ? "★" : "", // active显示★，否则不显示
+          "textColor": "#FFFFFF",
+        },
+      };
+
+      // 添加到 _circleTextFeatures 和 _meetingPointCircleFeatures
+      _circleTextFeatures.add(circleFeature);
+      _meetingPointCircleFeatures.add(circleFeature);
+
+      // 添加名称 symbol（显示在圆圈下方）
+      final nameSymbol = await mapController!.addSymbol(
+        SymbolOptions(
+          geometry: point.latLng,
+          textField: point.name,
+          textOffset: Offset(0, 1.8),
+          textColor: '#FF5722',
+          textSize: 12,
+          textHaloColor: '#FFFFFF',
+          textHaloWidth: 1.5,
+          textAnchor: 'top',
+        ),
+      );
+      _meetingPointNameSymbols.add(nameSymbol);
+    }
+
+    // 更新 GeoJSON source
+    mapController?.setGeoJsonSource(
+      'circle-text-source',
+      {"type": "FeatureCollection", "features": _circleTextFeatures},
+    );
+
+    print(
+        '[MapboxView] Updated meeting points layer: ${_meetingPointNameSymbols.length} points');
+  }
+
+  /// 判断某个点是否是当前路线的终点
+  bool _isPointRouteEndpoint(LatLng point) {
+    if (endCoordinate == null) return false;
+    // 使用较小的误差范围判断是否是同一点
+    const epsilon = 0.0001;
+    return (point.latitude - endCoordinate!.latitude).abs() < epsilon &&
+        (point.longitude - endCoordinate!.longitude).abs() < epsilon;
+  }
+
+  /// 自动规划到集合点的路线
+  Future<void> _planRouteToMeetingPoint(MeetingPoint meetingPoint) async {
+    try {
+      // 获取当前位置
+      final location = await _locationService.getCurrentLocation();
+      final currentLatLng = LatLng(location['latitude'], location['longitude']);
+
+      // 设置起点和终点
+      startCoordinate = currentLatLng;
+      endCoordinate = meetingPoint.latLng;
+
+      // 清除之前的路线标记
+      _clearAllCirclesWithText();
+
+      // 添加起点标记
+      _addCircleWithText(
+        currentLatLng,
+        circleColor: "#00FF00", // 绿色
+        text: "A",
+      );
+
+      // 终点不添加常规标记，由集合点图层显示
+      // _addCircleWithText(meetingPoint.latLng, circleColor: "#FF6600", text: "B");
+
+      // 生成路线
+      _generateRoute(startCoordinate!, endCoordinate!, stopovers: stopovers);
+
+      // 更新集合点图层以显示终点标记
+      await _updateMeetingPointsLayer();
+
+      print(
+          '[MapboxView] Auto-planned route to meeting point: ${meetingPoint.name}');
+    } catch (e) {
+      print('[MapboxView] Failed to plan route to meeting point: $e');
     }
   }
 
@@ -1197,8 +1385,10 @@ class _GeneratorPageState extends State<GeneratorPage> {
                     SizedBox(height: 16.0),
 
                     // Buttons with GestureDetector
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: 8.0,
+                      runSpacing: 8.0,
                       children: [
                         // Add as Stopover Button
                         GestureDetector(
@@ -1246,6 +1436,32 @@ class _GeneratorPageState extends State<GeneratorPage> {
                             ),
                           ),
                         ),
+
+                        // Set as Meeting Point Button (only show when in a team)
+                        if (_teamService.currentTeam != null)
+                          GestureDetector(
+                            onTapDown: (details) {
+                              isUiOpen.flag = true;
+                              print("Set Meeting Point button tapped");
+                            },
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                isUiOpen.flag = true;
+                                Navigator.pop(context); // Close bottom sheet
+                                _removePhoto();
+                                _handleSetMeetingPoint(
+                                  coordinates,
+                                  '集合点 ${coordinates.latitude.toStringAsFixed(4)}, ${coordinates.longitude.toStringAsFixed(4)}',
+                                );
+                              },
+                              icon: Icon(Icons.star),
+                              label: Text("添加集合点"),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.deepOrange,
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
+                          ),
                       ],
                     ),
                     SizedBox(height: 40.0),
@@ -1303,6 +1519,56 @@ class _GeneratorPageState extends State<GeneratorPage> {
       _generateRoute(startCoordinate!, endCoordinate!, stopovers: stopovers);
     } else {
       print("No start point, waiting for further input.");
+    }
+  }
+
+  /// 处理设置集合点
+  Future<void> _handleSetMeetingPoint(
+      LatLng coordinates, String defaultName) async {
+    // 弹出对话框让用户输入集合点名称
+    final controller = TextEditingController(text: defaultName);
+
+    final name = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('添加集合点'),
+        content: TextField(
+          controller: controller,
+          decoration: InputDecoration(
+            labelText: '集合点名称',
+            border: OutlineInputBorder(),
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('取消'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, controller.text),
+            child: Text('添加'),
+          ),
+        ],
+      ),
+    );
+
+    if (name != null && name.isNotEmpty) {
+      final point = await _meetingPointService.addMeetingPoint(
+        name: name,
+        latitude: coordinates.latitude,
+        longitude: coordinates.longitude,
+      );
+
+      if (point != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('集合点 "$name" 已添加')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('添加集合点失败')),
+        );
+      }
     }
   }
 
@@ -2500,6 +2766,12 @@ class _GeneratorPageState extends State<GeneratorPage> {
                     );
                     // 然后显示成员信息弹窗
                     _showTeamMemberInfoDialog(member);
+                  },
+                  onShowMeetingPointsLayerChanged: (show) {
+                    setState(() {
+                      _showMeetingPointsLayer = show;
+                    });
+                    _updateMeetingPointsLayer();
                   },
                 ),
               ),
