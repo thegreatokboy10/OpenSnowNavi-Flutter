@@ -27,9 +27,11 @@ import 'widgets/lift_info_panel.dart';
 import 'widgets/piste_info_panel.dart';
 import 'widgets/route_instruction_panel.dart'; // Add this for opening URLs
 import 'widgets/team_panel.dart';
+import 'widgets/route_planning_panel.dart';
 import 'team/team_service.dart';
 import 'meeting_point/meeting_point_model.dart';
 import 'meeting_point/meeting_point_service.dart';
+import 'route_planning/route_planning_state.dart';
 
 class GeneratorPage extends StatefulWidget {
   final List<List<double>>? coordinates; // List of lat-lng pairs
@@ -130,6 +132,14 @@ class _GeneratorPageState extends State<GeneratorPage> {
   List<Symbol> _meetingPointNameSymbols = []; // 所有集合点的名称标记
   List<Map<String, dynamic>> _meetingPointCircleFeatures =
       []; // 集合点圆圈 features（用于清理）
+
+  // 路线规划流程状态
+  final RoutePlanningData _routePlanningData = RoutePlanningData();
+  bool _showRoutePlanningPanel = false; // 是否显示路线规划面板
+  bool _isAddingStopover = false; // 是否正在添加途径点
+  RoutePointType? _pendingPhotoPointType; // 从图片选择位置时的目标点位类型
+  EditingPointType _currentEditingType = EditingPointType.none; // 当前路线规划面板编辑类型
+  int _editingStopoverIndex = -1; // 正在编辑的途径点索引 (-1 表示新增)
 
   // 当前位置标记
   Circle? _myLocationCircle; // 位置圆点
@@ -262,7 +272,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
     _meetingPointService.onActiveMeetingPointChanged = (activePoint) {
       _updateMeetingPointsLayer();
       // 如果有活动集合点，自动规划路线
-      if (activePoint != null) {
+      // 但如果是从路线共享链接进入的，不要覆盖共享的路线
+      if (activePoint != null && !needRestore && route == null) {
         _planRouteToMeetingPoint(activePoint);
       }
     };
@@ -376,32 +387,40 @@ class _GeneratorPageState extends State<GeneratorPage> {
         (point.longitude - endCoordinate!.longitude).abs() < epsilon;
   }
 
-  /// 自动规划到集合点的路线
+  /// 自动规划到集合点的路线（使用路线规划面板）
   Future<void> _planRouteToMeetingPoint(MeetingPoint meetingPoint) async {
     try {
       // 获取当前位置
       final location = await _locationService.getCurrentLocation();
       final currentLatLng = LatLng(location['latitude'], location['longitude']);
 
-      // 设置起点和终点
-      startCoordinate = currentLatLng;
-      endCoordinate = meetingPoint.latLng;
-
-      // 清除之前的路线标记
+      // 清除之前的路线
+      await _removeExistingRoute();
       _clearAllCirclesWithText();
 
-      // 添加起点标记
-      _addCircleWithText(
-        currentLatLng,
-        circleColor: "#00FF00", // 绿色
-        text: "A",
-      );
+      // 设置路线规划数据
+      setState(() {
+        _routePlanningData.reset();
+        _routePlanningData.setOrigin(RoutePoint(
+          id: 'origin',
+          name: '我的位置',
+          coordinates: currentLatLng,
+          type: RoutePointType.origin,
+        ));
+        _routePlanningData.setDestination(RoutePoint(
+          id: 'destination',
+          name: meetingPoint.name,
+          coordinates: meetingPoint.latLng,
+          type: RoutePointType.destination,
+        ));
+        _showRoutePlanningPanel = true;
+      });
 
-      // 终点不添加常规标记，由集合点图层显示
-      // _addCircleWithText(meetingPoint.latLng, circleColor: "#FF6600", text: "B");
+      // 更新标记
+      _updateRoutePlanningMarkers();
 
-      // 生成路线
-      _generateRoute(startCoordinate!, endCoordinate!, stopovers: stopovers);
+      // 自动算路
+      _autoGenerateRouteIfReady();
 
       // 更新集合点图层以显示终点标记
       await _updateMeetingPointsLayer();
@@ -931,17 +950,23 @@ class _GeneratorPageState extends State<GeneratorPage> {
 
       // 安全地处理起点和终点
       if (startCoordinate != null && endCoordinate != null) {
-        // 设置起点和终点
-        _setRouteCoordinates(startCoordinate!, endCoordinate!,
+        // 先标记为已恢复，防止其他回调干扰
+        needRestore = false;
+
+        // 设置路线规划面板数据
+        _populateRoutePlanningPanelFromSharedRoute();
+
+        // 生成路线（这会设置 route 变量和绘制路线）
+        await _generateRoute(startCoordinate!, endCoordinate!,
             stopovers: stopovers);
 
-        // 生成路线
-        _generateRoute(startCoordinate!, endCoordinate!, stopovers: stopovers);
+        // 更新地图标记（确保 markers 正确显示）
+        _updateRoutePlanningMarkers();
 
-        // 标记为已恢复
-        needRestore = false;
+        print("Route restored successfully with markers");
       } else {
         print("Start or end coordinate is null, cannot restore route.");
+        needRestore = false;
       }
     }
 
@@ -949,6 +974,9 @@ class _GeneratorPageState extends State<GeneratorPage> {
     if (_teamService.currentTeam != null) {
       print('[MapboxView] Style loaded, updating team member markers');
       await _updateTeamMemberMarkers();
+
+      // 恢复集合点图层（可能被路线恢复时清除）
+      await _updateMeetingPointsLayer();
     }
 
     setState(() {
@@ -1242,7 +1270,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
     return uri.toString();
   }
 
-  void _generateRoute(LatLng startCoordinate, LatLng endCoordinate,
+  Future<void> _generateRoute(LatLng startCoordinate, LatLng endCoordinate,
       {List<LatLng>? stopovers}) async {
     re.Route? newRoute = await routeEngine.generateRoute(
       startCoordinate: startCoordinate,
@@ -1384,86 +1412,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
                     ),
                     SizedBox(height: 16.0),
 
-                    // Buttons with GestureDetector
-                    Wrap(
-                      alignment: WrapAlignment.center,
-                      spacing: 8.0,
-                      runSpacing: 8.0,
-                      children: [
-                        // Add as Stopover Button
-                        GestureDetector(
-                          onTapDown: (details) {
-                            isUiOpen.flag = true;
-                            print(
-                                "Add to Route button tapped, isUiOpen set to true");
-                          },
-                          child: ElevatedButton.icon(
-                            onPressed: () {
-                              isUiOpen.flag = true;
-                              Navigator.pop(context); // Close bottom sheet
-                              _removePhoto();
-                              WebTitleHelper.updateTitle(
-                                  'Route planning: ${coordinates.latitude}, ${coordinates.longitude} added to route');
-                              _handleAddToRoute(coordinates);
-                            },
-                            icon: Icon(Icons.add_location_alt),
-                            label: Text("Add to Route"),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: Colors.black,
-                            ),
-                          ),
-                        ),
-
-                        // Go Button (Set as Destination)
-                        GestureDetector(
-                          onTapDown: (details) {
-                            isUiOpen.flag = true;
-                            print("Go button tapped, isUiOpen set to true");
-                          },
-                          child: ElevatedButton.icon(
-                            onPressed: () {
-                              isUiOpen.flag = true;
-                              Navigator.pop(context); // Close bottom sheet
-                              _removePhoto();
-                              _handleGoButton(coordinates);
-                            },
-                            icon: Icon(Icons.directions),
-                            label: Text("Go"),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Theme.of(context).primaryColor,
-                              foregroundColor: Colors.white,
-                            ),
-                          ),
-                        ),
-
-                        // Set as Meeting Point Button (only show when in a team)
-                        if (_teamService.currentTeam != null)
-                          GestureDetector(
-                            onTapDown: (details) {
-                              isUiOpen.flag = true;
-                              print("Set Meeting Point button tapped");
-                            },
-                            child: ElevatedButton.icon(
-                              onPressed: () {
-                                isUiOpen.flag = true;
-                                Navigator.pop(context); // Close bottom sheet
-                                _removePhoto();
-                                _handleSetMeetingPoint(
-                                  coordinates,
-                                  '集合点 ${coordinates.latitude.toStringAsFixed(4)}, ${coordinates.longitude.toStringAsFixed(4)}',
-                                );
-                              },
-                              icon: Icon(Icons.star),
-                              label: Text("添加集合点"),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.deepOrange,
-                                foregroundColor: Colors.white,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
+                    // 根据路线规划状态显示不同的按钮
+                    _buildLocationDetailButtons(context, coordinates),
                     SizedBox(height: 40.0),
                   ],
                 ),
@@ -1520,6 +1470,463 @@ class _GeneratorPageState extends State<GeneratorPage> {
     } else {
       print("No start point, waiting for further input.");
     }
+  }
+
+  // ========== 新的路线规划流程方法 ==========
+
+  /// 开始路线规划 - 设置终点
+  void _startRoutePlanning(LatLng coordinates, String name) {
+    setState(() {
+      _routePlanningData.setDestination(RoutePoint(
+        id: 'destination',
+        name: name,
+        coordinates: coordinates,
+        type: RoutePointType.destination,
+      ));
+      _showRoutePlanningPanel = true;
+      _isAddingStopover = false;
+    });
+    _updateRoutePlanningMarkers();
+  }
+
+  /// 设置起点
+  void _setRoutePlanningOrigin(LatLng coordinates, String name) {
+    setState(() {
+      _routePlanningData.setOrigin(RoutePoint(
+        id: 'origin',
+        name: name,
+        coordinates: coordinates,
+        type: RoutePointType.origin,
+      ));
+    });
+    _updateRoutePlanningMarkers();
+    // 自动算路
+    _autoGenerateRouteIfReady();
+  }
+
+  /// 添加途径点
+  void _addRoutePlanningStopover(LatLng coordinates, String name) {
+    setState(() {
+      _routePlanningData.addStopover(RoutePoint(
+        id: 'stopover_${_routePlanningData.stopovers.length}',
+        name: name,
+        coordinates: coordinates,
+        type: RoutePointType.stopover,
+      ));
+      _isAddingStopover = false;
+    });
+    _updateRoutePlanningMarkers();
+    // 自动算路
+    _autoGenerateRouteIfReady();
+  }
+
+  /// 处理路线规划面板中选择的点位
+  /// stopoverIndex: 编辑现有途径点时的索引，-1 表示新增
+  void _handleRoutePlanningPointSelected(
+      LatLng coordinates, String name, RoutePointType type,
+      [int stopoverIndex = -1]) {
+    setState(() {
+      switch (type) {
+        case RoutePointType.origin:
+          _routePlanningData.setOrigin(RoutePoint(
+            id: 'origin',
+            name: name,
+            coordinates: coordinates,
+            type: RoutePointType.origin,
+          ));
+          break;
+        case RoutePointType.destination:
+          _routePlanningData.setDestination(RoutePoint(
+            id: 'destination',
+            name: name,
+            coordinates: coordinates,
+            type: RoutePointType.destination,
+          ));
+          break;
+        case RoutePointType.stopover:
+          // 如果 stopoverIndex >= 0，替换现有途径点，否则添加新途径点
+          if (stopoverIndex >= 0 &&
+              stopoverIndex < _routePlanningData.stopovers.length) {
+            _routePlanningData.replaceStopover(
+                stopoverIndex,
+                RoutePoint(
+                  id: 'stopover_$stopoverIndex',
+                  name: name,
+                  coordinates: coordinates,
+                  type: RoutePointType.stopover,
+                ));
+          } else {
+            _routePlanningData.addStopover(RoutePoint(
+              id: 'stopover_${_routePlanningData.stopovers.length}',
+              name: name,
+              coordinates: coordinates,
+              type: RoutePointType.stopover,
+            ));
+          }
+          break;
+      }
+    });
+    _updateRoutePlanningMarkers();
+    // 自动算路
+    _autoGenerateRouteIfReady();
+  }
+
+  /// 处理删除点位
+  void _handleRoutePlanningRemovePoint(int index) {
+    setState(() {
+      _routePlanningData.removePointAt(index);
+    });
+    _updateRoutePlanningMarkers();
+    // 如果删除后仍可算路，重新算路
+    _autoGenerateRouteIfReady();
+  }
+
+  /// 处理重新排序点位
+  void _handleRoutePlanningReorderPoints(int oldIndex, int newIndex) {
+    setState(() {
+      _routePlanningData.reorderAllPoints(oldIndex, newIndex);
+    });
+    _updateRoutePlanningMarkers();
+    // 重新算路
+    _autoGenerateRouteIfReady();
+  }
+
+  /// 替换指定索引的途径点
+  void _replaceRoutePlanningStopover(
+      int index, LatLng coordinates, String name) {
+    if (index < 0 || index >= _routePlanningData.stopovers.length) return;
+
+    setState(() {
+      _routePlanningData.replaceStopover(
+          index,
+          RoutePoint(
+            id: 'stopover_$index',
+            name: name,
+            coordinates: coordinates,
+            type: RoutePointType.stopover,
+          ));
+    });
+    _updateRoutePlanningMarkers();
+    _autoGenerateRouteIfReady();
+  }
+
+  /// 自动算路（如果起点和终点都存在）
+  void _autoGenerateRouteIfReady() {
+    if (_routePlanningData.canGenerateRoute) {
+      _generateRoutePlanningRoute();
+    }
+  }
+
+  /// 生成路线
+  void _generateRoutePlanningRoute() {
+    if (!_routePlanningData.canGenerateRoute) return;
+
+    // 转换为旧的路线生成格式
+    startCoordinate = _routePlanningData.origin!.coordinates;
+    endCoordinate = _routePlanningData.destination!.coordinates;
+    stopovers = _routePlanningData.stopovers.map((s) => s.coordinates).toList();
+
+    // 设置标记
+    _setRouteCoordinates(startCoordinate!, endCoordinate!,
+        stopovers: stopovers);
+
+    // 生成路线
+    _generateRoute(startCoordinate!, endCoordinate!, stopovers: stopovers);
+  }
+
+  /// 退出路线规划
+  /// 从共享路线链接填充路线规划面板
+  void _populateRoutePlanningPanelFromSharedRoute() {
+    setState(() {
+      _routePlanningData.reset();
+
+      // 设置起点
+      if (startCoordinate != null) {
+        final originName =
+            '${startCoordinate!.latitude.toStringAsFixed(4)}, ${startCoordinate!.longitude.toStringAsFixed(4)}';
+        _routePlanningData.setOrigin(RoutePoint(
+          id: 'origin',
+          name: '起点 ($originName)',
+          coordinates: startCoordinate!,
+          type: RoutePointType.origin,
+        ));
+      }
+
+      // 设置终点
+      if (endCoordinate != null) {
+        final destName =
+            '${endCoordinate!.latitude.toStringAsFixed(4)}, ${endCoordinate!.longitude.toStringAsFixed(4)}';
+        _routePlanningData.setDestination(RoutePoint(
+          id: 'destination',
+          name: '终点 ($destName)',
+          coordinates: endCoordinate!,
+          type: RoutePointType.destination,
+        ));
+      }
+
+      // 设置途径点
+      if (stopovers != null && stopovers!.isNotEmpty) {
+        for (int i = 0; i < stopovers!.length; i++) {
+          final stopoverName =
+              '${stopovers![i].latitude.toStringAsFixed(4)}, ${stopovers![i].longitude.toStringAsFixed(4)}';
+          _routePlanningData.addStopover(RoutePoint(
+            id: 'stopover_$i',
+            name: '途径点 ${i + 1} ($stopoverName)',
+            coordinates: stopovers![i],
+            type: RoutePointType.stopover,
+          ));
+        }
+      }
+
+      // 设置为规划模式并显示面板
+      _routePlanningData.mode = RoutePlanningMode.planning;
+      _showRoutePlanningPanel = true;
+    });
+  }
+
+  void _exitRoutePlanning() {
+    setState(() {
+      _routePlanningData.reset();
+      _showRoutePlanningPanel = false;
+      _isAddingStopover = false;
+    });
+    _clearAllCirclesWithText();
+    _removeExistingRoute();
+    _removeStopOvers();
+  }
+
+  /// 更新路线规划的地图标记
+  void _updateRoutePlanningMarkers() {
+    _clearAllCirclesWithText();
+
+    // 添加起点标记
+    if (_routePlanningData.origin != null) {
+      _addCircleWithText(
+        _routePlanningData.origin!.coordinates,
+        circleColor: "#00FF00",
+        text: "A",
+      );
+    }
+
+    // 添加途径点标记
+    for (int i = 0; i < _routePlanningData.stopovers.length; i++) {
+      _addCircleWithText(
+        _routePlanningData.stopovers[i].coordinates,
+        circleColor: "#FFA500",
+        text: "${i + 1}",
+      );
+    }
+
+    // 添加终点标记
+    if (_routePlanningData.destination != null) {
+      _addCircleWithText(
+        _routePlanningData.destination!.coordinates,
+        circleColor: "#0000FF",
+        text: "B",
+      );
+    }
+  }
+
+  /// 获取当前 POI 详情面板应该显示的按钮类型
+  String _getPoiDetailButtonType() {
+    switch (_routePlanningData.mode) {
+      case RoutePlanningMode.idle:
+        return 'initial'; // 显示"路线"和"添加集合点"
+      case RoutePlanningMode.selectingOrigin:
+        return 'selectOrigin'; // 显示"设为起点"和"添加途径点"
+      case RoutePlanningMode.planning:
+        // 根据路线规划面板当前编辑的点位类型返回不同的按钮类型
+        if (_currentEditingType == EditingPointType.origin) {
+          return 'setOrigin'; // 正在编辑起点
+        } else if (_currentEditingType == EditingPointType.destination) {
+          return 'setDestination'; // 正在编辑终点
+        } else if (_currentEditingType == EditingPointType.stopover) {
+          return 'setStopover'; // 正在编辑现有途径点（替换）
+        } else if (_isAddingStopover ||
+            _currentEditingType == EditingPointType.newStopover) {
+          return 'addStopover'; // 正在添加新途径点
+        }
+        return 'planning'; // 默认规划模式，显示添加途径点
+    }
+  }
+
+  /// 构建位置详情面板的按钮
+  Widget _buildLocationDetailButtons(BuildContext context, LatLng coordinates) {
+    final buttonType = _getPoiDetailButtonType();
+    final locationName =
+        '${coordinates.latitude.toStringAsFixed(4)}, ${coordinates.longitude.toStringAsFixed(4)}';
+
+    return Wrap(
+      alignment: WrapAlignment.center,
+      spacing: 8.0,
+      runSpacing: 8.0,
+      children: [
+        if (buttonType == 'initial') ...[
+          // 初始状态：显示"路线"和"添加集合点"
+          GestureDetector(
+            onTapDown: (_) => isUiOpen.flag = true,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                isUiOpen.flag = true;
+                Navigator.pop(context);
+                _removePhoto();
+                _startRoutePlanning(coordinates, locationName);
+              },
+              icon: Icon(Icons.directions),
+              label: Text("路线"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).primaryColor,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ),
+          if (_teamService.currentTeam != null)
+            GestureDetector(
+              onTapDown: (_) => isUiOpen.flag = true,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  isUiOpen.flag = true;
+                  Navigator.pop(context);
+                  _removePhoto();
+                  _handleSetMeetingPoint(coordinates, '集合点 $locationName');
+                },
+                icon: Icon(Icons.star),
+                label: Text("添加集合点"),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.deepOrange,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ),
+        ] else if (buttonType == 'selectOrigin') ...[
+          // 选择起点状态：显示"设为起点"和"添加途径点"
+          GestureDetector(
+            onTapDown: (_) => isUiOpen.flag = true,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                isUiOpen.flag = true;
+                Navigator.pop(context);
+                _removePhoto();
+                _setRoutePlanningOrigin(coordinates, locationName);
+              },
+              icon: Icon(Icons.trip_origin),
+              label: Text("设为起点"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ),
+          GestureDetector(
+            onTapDown: (_) => isUiOpen.flag = true,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                isUiOpen.flag = true;
+                Navigator.pop(context);
+                _removePhoto();
+                _addRoutePlanningStopover(coordinates, locationName);
+              },
+              icon: Icon(Icons.add_location),
+              label: Text("添加途径点"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ),
+        ] else if (buttonType == 'setOrigin') ...[
+          // 正在编辑起点
+          GestureDetector(
+            onTapDown: (_) => isUiOpen.flag = true,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                isUiOpen.flag = true;
+                Navigator.pop(context);
+                _removePhoto();
+                _handleRoutePlanningPointSelected(
+                    coordinates, locationName, RoutePointType.origin);
+                setState(() => _currentEditingType = EditingPointType.none);
+              },
+              icon: Icon(Icons.trip_origin),
+              label: Text("设为起点"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ),
+        ] else if (buttonType == 'setDestination') ...[
+          // 正在编辑终点
+          GestureDetector(
+            onTapDown: (_) => isUiOpen.flag = true,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                isUiOpen.flag = true;
+                Navigator.pop(context);
+                _removePhoto();
+                _handleRoutePlanningPointSelected(
+                    coordinates, locationName, RoutePointType.destination);
+                setState(() => _currentEditingType = EditingPointType.none);
+              },
+              icon: Icon(Icons.location_on),
+              label: Text("设为终点"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ),
+        ] else if (buttonType == 'setStopover') ...[
+          // 正在编辑现有途径点（替换）
+          GestureDetector(
+            onTapDown: (_) => isUiOpen.flag = true,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                isUiOpen.flag = true;
+                Navigator.pop(context);
+                _removePhoto();
+                _handleRoutePlanningPointSelected(coordinates, locationName,
+                    RoutePointType.stopover, _editingStopoverIndex);
+                setState(() {
+                  _currentEditingType = EditingPointType.none;
+                  _editingStopoverIndex = -1;
+                });
+              },
+              icon: Icon(Icons.edit_location),
+              label: Text("设为途径点"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ),
+        ] else if (buttonType == 'addStopover' || buttonType == 'planning') ...[
+          // 添加途径点模式 或 规划模式（从地图添加途径点）
+          GestureDetector(
+            onTapDown: (_) => isUiOpen.flag = true,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                isUiOpen.flag = true;
+                Navigator.pop(context);
+                _removePhoto();
+                _handleRoutePlanningPointSelected(
+                    coordinates, locationName, RoutePointType.stopover, -1);
+                setState(() {
+                  _currentEditingType = EditingPointType.none;
+                  _editingStopoverIndex = -1;
+                });
+              },
+              icon: Icon(Icons.add_location),
+              label: Text("添加途径点"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
   }
 
   /// 处理设置集合点
@@ -1860,13 +2267,17 @@ class _GeneratorPageState extends State<GeneratorPage> {
   void _clearAllCirclesWithText() {
     if (mapController == null) return;
 
-    // Remove the GeoJSON source if it exists
-    mapController?.removeSource('circle-text-source');
+    // 必须先移除 layer，再移除 source（layer 依赖于 source）
+    try {
+      mapController?.removeLayer('circle-text-layer');
+      mapController?.removeLayer('circle-layer');
+      mapController?.removeSource('circle-text-source');
+    } catch (e) {
+      print("Error clearing circles: $e");
+    }
 
-    // Remove the layer that displays the circles & text
-    mapController?.removeLayer('circle-text-layer');
-    mapController?.removeLayer('circle-layer');
     _circleTextFeatures.clear();
+    _meetingPointCircleFeatures.clear(); // 也清除集合点 features 引用
     _circleTextSourceExists = false;
 
     print("Cleared all circles with text.");
@@ -2093,7 +2504,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
     );
   }
 
-  /// 开始导航到成员位置
+  /// 开始导航到成员位置（使用路线规划面板）
   Future<void> _startRouteToMember(MemberLocation member) async {
     isUiOpen.flag = true;
 
@@ -2107,27 +2518,29 @@ class _GeneratorPageState extends State<GeneratorPage> {
       await _removeExistingRoute();
       _clearAllCirclesWithText();
 
-      // 设置起点和终点
-      startCoordinate = currentLocation;
-      endCoordinate = member.location;
-      stopovers.clear();
+      // 设置路线规划数据
+      setState(() {
+        _routePlanningData.reset();
+        _routePlanningData.setOrigin(RoutePoint(
+          id: 'origin',
+          name: '我的位置',
+          coordinates: currentLocation,
+          type: RoutePointType.origin,
+        ));
+        _routePlanningData.setDestination(RoutePoint(
+          id: 'destination',
+          name: member.nickname,
+          coordinates: member.location,
+          type: RoutePointType.destination,
+        ));
+        _showRoutePlanningPanel = true;
+      });
 
-      // 添加起点标记
-      _addCircleWithText(
-        currentLocation,
-        circleColor: "#00FF00",
-        text: "A",
-      );
+      // 更新标记
+      _updateRoutePlanningMarkers();
 
-      // 添加终点标记
-      _addCircleWithText(
-        member.location,
-        circleColor: "#0000FF",
-        text: "B",
-      );
-
-      // 生成路线
-      _generateRoute(startCoordinate!, endCoordinate!, stopovers: stopovers);
+      // 自动算路
+      _autoGenerateRouteIfReady();
 
       // 显示提示
       if (mounted) {
@@ -2286,11 +2699,13 @@ class _GeneratorPageState extends State<GeneratorPage> {
       _onMapClick(Point(0, 0), _photoLocation!);
     } else {
       print("No GPS data found in image.");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content:
-                Text("Unable to find the location, please try another photo.")),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(
+                  "Unable to find the location, please try another photo.")),
+        );
+      }
       WebTitleHelper.updateTitle(
           "No location found from photo - ${GlobalConstants.defaultTitle}");
       WebTitleHelper.resetTitle();
@@ -2298,6 +2713,77 @@ class _GeneratorPageState extends State<GeneratorPage> {
 
     // Update UI
     setState(() {});
+  }
+
+  /// 路线规划面板的图片选择
+  Future<void> _pickPhotoForRoutePlanning(RoutePointType type) async {
+    isUiOpen.flag = true;
+    _pendingPhotoPointType = type;
+
+    WebTitleHelper.updateTitle(
+        "Using photo to plan your ski trip - ${GlobalConstants.defaultTitle}");
+
+    // Pick image from web
+    Uint8List? imageBytes = await ImagePickerWeb.getImageAsBytes();
+
+    if (imageBytes == null) {
+      _pendingPhotoPointType = null;
+      return; // User canceled
+    }
+
+    // Extract GPS metadata
+    LatLng? gpsCoordinates = await _extractGpsCoordinates(imageBytes);
+    if (gpsCoordinates != null) {
+      print(
+          "Extracted GPS: ${gpsCoordinates.latitude}, ${gpsCoordinates.longitude}");
+      WebTitleHelper.updateTitle(
+          "Find location from photo - ${GlobalConstants.defaultTitle}");
+
+      // 使用坐标设置路线规划点位
+      final name =
+          '图片位置 (${gpsCoordinates.latitude.toStringAsFixed(4)}, ${gpsCoordinates.longitude.toStringAsFixed(4)})';
+      _handleRoutePlanningPointSelected(gpsCoordinates, name, type);
+
+      // 移动地图到该位置
+      mapController?.animateCamera(
+        CameraUpdate.newLatLngZoom(gpsCoordinates, 16),
+      );
+    } else {
+      print("No GPS data found in image.");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("无法从图片中读取位置信息，请尝试其他图片")),
+        );
+      }
+    }
+
+    _pendingPhotoPointType = null;
+    WebTitleHelper.resetTitle();
+  }
+
+  /// 使用当前位置设置路线规划点位
+  Future<void> _useCurrentLocationForRoutePlanning(RoutePointType type) async {
+    isUiOpen.flag = true;
+
+    try {
+      final location = await _locationService.getCurrentLocation();
+      final currentLatLng = LatLng(location['latitude'], location['longitude']);
+      final name = '我的位置';
+
+      _handleRoutePlanningPointSelected(currentLatLng, name, type);
+
+      // 移动地图到当前位置
+      mapController?.animateCamera(
+        CameraUpdate.newLatLngZoom(currentLatLng, 16),
+      );
+    } catch (e) {
+      print('Failed to get current location: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("无法获取当前位置，请检查定位权限")),
+        );
+      }
+    }
   }
 
   void _removePhoto() {
@@ -2497,15 +2983,15 @@ class _GeneratorPageState extends State<GeneratorPage> {
               ),
             ],
             // Floating Route Panel (Between Search Box & Filter Button)
-            if (route != null)
-              FloatingRouteInstructionPanel(
-                key: _childWidgetKeys[0],
-                route: route!,
-                onClose: _handleRouteClose,
-                panelWidth: GlobalConstants.searchboxWidth,
-                timerFlag: isUiOpen,
-                mapController: mapController!,
-              ),
+            // if (route != null)
+            //   FloatingRouteInstructionPanel(
+            //     key: _childWidgetKeys[0],
+            //     route: route!,
+            //     onClose: _handleRouteClose,
+            //     panelWidth: GlobalConstants.searchboxWidth,
+            //     timerFlag: isUiOpen,
+            //     mapController: mapController!,
+            //   ),
             // Attribution
             Positioned(
               bottom: 5,
@@ -2534,130 +3020,120 @@ class _GeneratorPageState extends State<GeneratorPage> {
                 ),
               ),
             ),
-            Positioned(
-              key: _childWidgetKeys[1],
-              top: 20,
-              left: 20,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Search Bar
-                  Row(
-                    children: [
+            // 搜索框和图片选择按钮（路线规划面板显示时隐藏）
+            if (!_showRoutePlanningPanel)
+              Positioned(
+                key: _childWidgetKeys[1],
+                top: 20,
+                left: 20,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Search Bar
+                    Row(
+                      children: [
+                        Container(
+                          width: GlobalConstants.searchboxWidth,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.6),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: TextField(
+                            controller: _searchController,
+                            onChanged: _onSearchChanged,
+                            onSubmitted: _onSearchSubmitted,
+                            decoration: InputDecoration(
+                              hintText: 'Search POI',
+                              prefixIcon: Icon(Icons.search),
+                              filled: true,
+                              fillColor: Colors.white.withOpacity(0.6),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: BorderSide.none,
+                              ),
+                              contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 15, vertical: 10),
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: 5),
+
+                        // Open Photo Button
+                        FloatingActionButton(
+                          backgroundColor: Colors.white.withOpacity(
+                              GlobalConstants.floatingbuttonopacity),
+                          mini: true,
+                          heroTag: "openPhotoButton",
+                          onPressed: _pickPhoto,
+                          tooltip: 'Open Photo',
+                          child: Icon(Icons.photo_library, color: Colors.black),
+                        ),
+                      ],
+                    ),
+                    if (poiResults.isNotEmpty)
                       Container(
-                        width: GlobalConstants.searchboxWidth,
+                        width: 250,
+                        height: 600,
+                        margin: EdgeInsets.only(top: 10),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.6),
+                          color: Colors.white,
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: TextField(
-                          controller: _searchController,
-                          onChanged: _onSearchChanged,
-                          onSubmitted: _onSearchSubmitted,
-                          decoration: InputDecoration(
-                            hintText: 'Search POI',
-                            prefixIcon: Icon(Icons.search),
-                            filled: true,
-                            fillColor: Colors.white.withOpacity(0.6),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: BorderSide.none,
-                            ),
-                            contentPadding: EdgeInsets.symmetric(
-                                horizontal: 15, vertical: 10),
+                        child: ListView.builder(
+                          itemCount: poiResults.length,
+                          itemBuilder: (context, index) {
+                            final poi = poiResults[index];
+                            return ListTile(
+                              title: Text(poi['name']),
+                              subtitle: Text(
+                                '${poi['distance'].toStringAsFixed(2)} km',
+                                style: TextStyle(
+                                    height:
+                                        1.5), // Adjust line spacing for readability
+                              ),
+                              isThreeLine:
+                                  true, // Allows multiple lines in the subtitle
+                              onTap: () {
+                                LatLng coord = LatLng(poi['lat'], poi['lng']);
+                                _onMapClick(Point(0, 0), coord);
+                                isUiOpen.flag = true;
+                                mapController?.animateCamera(
+                                  CameraUpdate.newLatLng(
+                                    coord,
+                                  ),
+                                );
+                                setState(() {
+                                  hasSearched = false;
+                                  poiResults = [];
+                                  _searchController.clear();
+                                });
+                              },
+                            );
+                          },
+                        ),
+                      )
+                    else if (hasSearched)
+                      Container(
+                        width: 250,
+                        height: 50,
+                        margin: EdgeInsets.only(top: 10),
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          'No results found',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w400,
+                            color: Colors.grey,
                           ),
                         ),
                       ),
-                      SizedBox(width: 5),
-
-                      // Open Photo Button
-                      FloatingActionButton(
-                        backgroundColor: Colors.white
-                            .withOpacity(GlobalConstants.floatingbuttonopacity),
-                        mini: true,
-                        heroTag: "openPhotoButton",
-                        onPressed: _pickPhoto,
-                        tooltip: 'Open Photo',
-                        child: Icon(Icons.photo_library, color: Colors.black),
-                      ),
-                    ],
-                  ),
-                  // TODO: Display the selected photo below the search box
-                  // if (_photoBytes != null)
-                  //   Container(
-                  //     width: GlobalConstants.searchboxWidth,
-                  //     height: 150,
-                  //     margin: EdgeInsets.only(top: 10),
-                  //     decoration: BoxDecoration(
-                  //       color: Colors.white.withOpacity(0.6),
-                  //       borderRadius: BorderRadius.circular(10),
-                  //     ),
-                  //     child: Image.memory(_photoBytes!, fit: BoxFit.cover),
-                  //   ),
-                  if (poiResults.isNotEmpty)
-                    Container(
-                      width: 250,
-                      height: 600,
-                      margin: EdgeInsets.only(top: 10),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: ListView.builder(
-                        itemCount: poiResults.length,
-                        itemBuilder: (context, index) {
-                          final poi = poiResults[index];
-                          return ListTile(
-                            title: Text(poi['name']),
-                            subtitle: Text(
-                              '${poi['distance'].toStringAsFixed(2)} km',
-                              style: TextStyle(
-                                  height:
-                                      1.5), // Adjust line spacing for readability
-                            ),
-                            isThreeLine:
-                                true, // Allows multiple lines in the subtitle
-                            onTap: () {
-                              LatLng coord = LatLng(poi['lat'], poi['lng']);
-                              _onMapClick(Point(0, 0), coord);
-                              isUiOpen.flag = true;
-                              mapController?.animateCamera(
-                                CameraUpdate.newLatLng(
-                                  coord,
-                                ),
-                              );
-                              setState(() {
-                                hasSearched = false;
-                                poiResults = [];
-                                _searchController.clear();
-                              });
-                            },
-                          );
-                        },
-                      ),
-                    )
-                  else if (hasSearched)
-                    Container(
-                      width: 250,
-                      height: 50,
-                      margin: EdgeInsets.only(top: 10),
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        'No results found',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w400,
-                          color: Colors.grey,
-                        ),
-                      ),
-                    ),
-                ],
+                  ],
+                ),
               ),
-            ),
             // 筛选按钮
             Positioned(
               bottom: 38,
@@ -2773,6 +3249,57 @@ class _GeneratorPageState extends State<GeneratorPage> {
                     });
                     _updateMeetingPointsLayer();
                   },
+                  onTeamJoined: () {
+                    // 团队加入/创建成功后初始化集合点服务
+                    _initializeMeetingPointService();
+                  },
+                ),
+              ),
+            // Route Planning Panel
+            if (_showRoutePlanningPanel)
+              Positioned(
+                top: 20,
+                left: 20,
+                child: GestureDetector(
+                  onTapDown: (_) => isUiOpen.flag = true,
+                  child: RoutePlanningPanel(
+                    data: _routePlanningData,
+                    route: route,
+                    resortCoordinate: resortCoordinate,
+                    mapController: mapController,
+                    timerFlag: isUiOpen,
+                    onClose: () {
+                      isUiOpen.flag = true;
+                      _exitRoutePlanning();
+                    },
+                    onPointSelected: (coordinates, name, type, stopoverIndex) {
+                      isUiOpen.flag = true;
+                      _handleRoutePlanningPointSelected(
+                          coordinates, name, type, stopoverIndex);
+                    },
+                    onRemovePoint: (index) {
+                      isUiOpen.flag = true;
+                      _handleRoutePlanningRemovePoint(index);
+                    },
+                    onReorderPoints: (oldIndex, newIndex) {
+                      isUiOpen.flag = true;
+                      _handleRoutePlanningReorderPoints(oldIndex, newIndex);
+                    },
+                    onPickPhoto: (type) {
+                      isUiOpen.flag = true;
+                      _pickPhotoForRoutePlanning(type);
+                    },
+                    onUseCurrentLocation: (type) {
+                      isUiOpen.flag = true;
+                      _useCurrentLocationForRoutePlanning(type);
+                    },
+                    onEditingTypeChanged: (type, stopoverIndex) {
+                      setState(() {
+                        _currentEditingType = type;
+                        _editingStopoverIndex = stopoverIndex;
+                      });
+                    },
+                  ),
                 ),
               ),
             // Dropdown for selecting ski resort
