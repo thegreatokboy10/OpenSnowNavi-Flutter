@@ -151,6 +151,19 @@ class _GeneratorPageState extends State<GeneratorPage> {
   double _pulseRadius = 12.0; // 呼吸圆圈半径
   bool _pulseExpanding = true; // 是否正在扩大
 
+  // OpenSnowMap 图层
+  bool _showOpenSnowMapLayer = false; // 是否显示 OpenSnowMap 图层
+  bool _openSnowMapLayerAdded = false; // OpenSnowMap 图层是否已添加
+  bool _showLayerPanel = false; // 是否显示图层面板
+
+  // OpenSnowMap 常量
+  static const String _openSnowMapSourceId = 'opensnowmap-source';
+  static const String _openSnowMapLayerId = 'opensnowmap-layer';
+  static const String _openSnowMapTileUrl =
+      'https://tiles.opensnowmap.org/pistes/{z}/{x}/{y}.png';
+  static const String _openSnowMapAttribution =
+      'Data © OpenStreetMap contributors ODBL, Tiles © opensnowmap.org CC-BY-SA';
+
   // 移动端检测
   bool get _isMobile {
     final userAgent = html.window.navigator.userAgent.toLowerCase();
@@ -724,6 +737,68 @@ class _GeneratorPageState extends State<GeneratorPage> {
           print("Source $sourceId not found: $e");
         }
       }
+    }
+  }
+
+  /// 添加 OpenSnowMap 图层
+  Future<void> _addOpenSnowMapLayer() async {
+    if (mapController == null || _openSnowMapLayerAdded) return;
+
+    try {
+      // 添加 raster source
+      await mapController!.addSource(
+        _openSnowMapSourceId,
+        RasterSourceProperties(
+          tiles: [_openSnowMapTileUrl],
+          tileSize: 256,
+          attribution: _openSnowMapAttribution,
+          minzoom: 0,
+          maxzoom: 18,
+        ),
+      );
+
+      // 添加 raster layer
+      await mapController!.addRasterLayer(
+        _openSnowMapSourceId,
+        _openSnowMapLayerId,
+        RasterLayerProperties(
+          rasterOpacity: 0.8,
+        ),
+      );
+
+      _openSnowMapLayerAdded = true;
+      print('[MapboxView] OpenSnowMap layer added');
+    } catch (e) {
+      print('[MapboxView] Failed to add OpenSnowMap layer: $e');
+    }
+  }
+
+  /// 移除 OpenSnowMap 图层
+  Future<void> _removeOpenSnowMapLayer() async {
+    if (mapController == null || !_openSnowMapLayerAdded) return;
+
+    try {
+      // 先移除 layer，再移除 source
+      await mapController!.removeLayer(_openSnowMapLayerId);
+      await mapController!.removeSource(_openSnowMapSourceId);
+
+      _openSnowMapLayerAdded = false;
+      print('[MapboxView] OpenSnowMap layer removed');
+    } catch (e) {
+      print('[MapboxView] Failed to remove OpenSnowMap layer: $e');
+    }
+  }
+
+  /// 切换 OpenSnowMap 图层显示
+  Future<void> _toggleOpenSnowMapLayer(bool show) async {
+    setState(() {
+      _showOpenSnowMapLayer = show;
+    });
+
+    if (show) {
+      await _addOpenSnowMapLayer();
+    } else {
+      await _removeOpenSnowMapLayer();
     }
   }
 
@@ -2885,6 +2960,115 @@ class _GeneratorPageState extends State<GeneratorPage> {
     );
   }
 
+  /// 构建图层面板
+  Widget _buildLayerPanel() {
+    return Material(
+      elevation: 8,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: 250,
+        padding: EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 标题栏
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '地图图层',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(Icons.close, size: 20),
+                  onPressed: () {
+                    isUiOpen.flag = true;
+                    setState(() => _showLayerPanel = false);
+                  },
+                  padding: EdgeInsets.zero,
+                  constraints: BoxConstraints(),
+                ),
+              ],
+            ),
+            Divider(),
+            SizedBox(height: 8),
+            // OpenSnowMap 图层选项
+            InkWell(
+              onTap: () {
+                isUiOpen.flag = true;
+                _toggleOpenSnowMapLayer(!_showOpenSnowMapLayer);
+              },
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: Row(
+                  children: [
+                    Icon(
+                      _showOpenSnowMapLayer
+                          ? Icons.check_box
+                          : Icons.check_box_outline_blank,
+                      color: _showOpenSnowMapLayer
+                          ? Colors.deepOrange
+                          : Colors.grey,
+                    ),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'OpenSnowMap',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w500,
+                              fontSize: 14,
+                            ),
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            '显示全球滑雪道图层',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            // Attribution 信息
+            if (_showOpenSnowMapLayer) ...[
+              SizedBox(height: 12),
+              Container(
+                padding: EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  _openSnowMapAttribution,
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: Colors.grey[700],
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
@@ -3254,6 +3438,37 @@ class _GeneratorPageState extends State<GeneratorPage> {
                     _initializeMeetingPointService();
                   },
                 ),
+              ),
+            // 图层按钮
+            Positioned(
+              top: 218,
+              right: 20,
+              child: Transform.scale(
+                scale: GlobalConstants.floatingActionButtonScale,
+                child: FloatingActionButton(
+                  backgroundColor: _showOpenSnowMapLayer
+                      ? Colors.deepOrange
+                          .withOpacity(GlobalConstants.floatingbuttonopacity)
+                      : Colors.white
+                          .withOpacity(GlobalConstants.floatingbuttonopacity),
+                  onPressed: () {
+                    isUiOpen.flag = true;
+                    setState(() => _showLayerPanel = !_showLayerPanel);
+                  },
+                  tooltip: '图层',
+                  child: Icon(
+                    Icons.layers,
+                    color: _showOpenSnowMapLayer ? Colors.white : Colors.black,
+                  ),
+                ),
+              ),
+            ),
+            // 图层面板
+            if (_showLayerPanel)
+              Positioned(
+                top: 218,
+                right: 70,
+                child: _buildLayerPanel(),
               ),
             // Route Planning Panel
             if (_showRoutePlanningPanel)
