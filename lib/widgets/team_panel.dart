@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../team/team_models.dart';
 import '../team/team_service.dart';
 import '../timer_flag.dart';
+import '../l10n/locale_service.dart';
 import 'meeting_point_panel.dart';
 
 class TeamPanel extends StatefulWidget {
@@ -145,9 +146,9 @@ class _TeamPanelState extends State<TeamPanel> {
         children: [
           const Icon(Icons.group, color: Colors.deepOrange),
           const SizedBox(width: 8),
-          const Text(
-            '组队滑雪',
-            style: TextStyle(
+          Text(
+            LocaleService.S.teamSkiing,
+            style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: Colors.deepOrange,
@@ -188,25 +189,26 @@ class _TeamPanelState extends State<TeamPanel> {
         TextField(
           controller: _nicknameController,
           onTap: () => widget.timerFlag.flag = true,
-          decoration: const InputDecoration(
-            labelText: '你的昵称',
-            prefixIcon: Icon(Icons.person),
-            border: OutlineInputBorder(),
+          decoration: InputDecoration(
+            labelText: LocaleService.S.yourNickname,
+            prefixIcon: const Icon(Icons.person),
+            border: const OutlineInputBorder(),
           ),
         ),
         const SizedBox(height: 16),
 
         // 创建团队
-        const Text('创建新团队', style: TextStyle(fontWeight: FontWeight.bold)),
+        Text(LocaleService.S.createNewTeam,
+            style: const TextStyle(fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         TextField(
           controller: _teamNameController,
           onTap: () => widget.timerFlag.flag = true,
-          decoration: const InputDecoration(
-            labelText: '团队名称',
-            hintText: '例如：周末滑雪小分队',
-            prefixIcon: Icon(Icons.groups),
-            border: OutlineInputBorder(),
+          decoration: InputDecoration(
+            labelText: LocaleService.S.teamName,
+            hintText: LocaleService.S.teamNameHint,
+            prefixIcon: const Icon(Icons.groups),
+            border: const OutlineInputBorder(),
           ),
         ),
         const SizedBox(height: 8),
@@ -216,7 +218,7 @@ class _TeamPanelState extends State<TeamPanel> {
             _createTeam();
           },
           icon: const Icon(Icons.add),
-          label: const Text('创建团队'),
+          label: Text(LocaleService.S.createTeam),
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.deepOrange,
             foregroundColor: Colors.white,
@@ -228,16 +230,17 @@ class _TeamPanelState extends State<TeamPanel> {
         const SizedBox(height: 16),
 
         // 加入团队
-        const Text('加入已有团队', style: TextStyle(fontWeight: FontWeight.bold)),
+        Text(LocaleService.S.joinExistingTeam,
+            style: const TextStyle(fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         TextField(
           controller: _teamIdController,
           onTap: () => widget.timerFlag.flag = true,
-          decoration: const InputDecoration(
-            labelText: '团队代码',
-            hintText: '输入6位团队代码',
-            prefixIcon: Icon(Icons.vpn_key),
-            border: OutlineInputBorder(),
+          decoration: InputDecoration(
+            labelText: LocaleService.S.teamCode,
+            hintText: LocaleService.S.teamCodeHint,
+            prefixIcon: const Icon(Icons.vpn_key),
+            border: const OutlineInputBorder(),
           ),
           textCapitalization: TextCapitalization.characters,
         ),
@@ -248,7 +251,7 @@ class _TeamPanelState extends State<TeamPanel> {
             _joinTeam();
           },
           icon: const Icon(Icons.login),
-          label: const Text('加入团队'),
+          label: Text(LocaleService.S.joinTeam),
         ),
       ],
     );
@@ -256,11 +259,11 @@ class _TeamPanelState extends State<TeamPanel> {
 
   Future<void> _createTeam() async {
     if (_nicknameController.text.trim().isEmpty) {
-      setState(() => _errorMessage = '请输入昵称');
+      setState(() => _errorMessage = LocaleService.S.pleaseEnterNickname);
       return;
     }
     if (_teamNameController.text.trim().isEmpty) {
-      setState(() => _errorMessage = '请输入团队名称');
+      setState(() => _errorMessage = LocaleService.S.pleaseEnterTeamName);
       return;
     }
 
@@ -276,7 +279,7 @@ class _TeamPanelState extends State<TeamPanel> {
       final permissionResult = await _teamService.checkPermission(email);
       if (!permissionResult.isSuperAdmin) {
         setState(() {
-          _errorMessage = '权限不足：只有超级管理员才能创建团队';
+          _errorMessage = LocaleService.S.noPermissionCreateTeam;
           _isLoading = false;
         });
         return;
@@ -292,10 +295,11 @@ class _TeamPanelState extends State<TeamPanel> {
         // 通知父组件初始化集合点服务
         widget.onTeamJoined?.call();
       } else {
-        setState(() => _errorMessage = result.error ?? '创建失败');
+        setState(
+            () => _errorMessage = result.error ?? LocaleService.S.createFailed);
       }
     } catch (e) {
-      setState(() => _errorMessage = '创建失败: $e');
+      setState(() => _errorMessage = '${LocaleService.S.createFailed}: $e');
     } finally {
       setState(() => _isLoading = false);
     }
@@ -307,22 +311,22 @@ class _TeamPanelState extends State<TeamPanel> {
     return showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('管理员验证'),
+        title: Text(LocaleService.S.adminVerification),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('创建团队需要管理员权限，请输入您的管理员邮箱：'),
+            Text(LocaleService.S.adminVerificationDesc),
             const SizedBox(height: 12),
             TextField(
               controller: emailController,
               onTap: () => widget.timerFlag.flag = true,
               keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(
-                labelText: '管理员邮箱',
+              decoration: InputDecoration(
+                labelText: LocaleService.S.adminEmail,
                 hintText: 'admin@example.com',
-                prefixIcon: Icon(Icons.email),
-                border: OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.email),
+                border: const OutlineInputBorder(),
               ),
             ),
           ],
@@ -333,14 +337,14 @@ class _TeamPanelState extends State<TeamPanel> {
               widget.timerFlag.flag = true;
               Navigator.pop(ctx, null);
             },
-            child: const Text('取消'),
+            child: Text(LocaleService.S.cancel),
           ),
           ElevatedButton(
             onPressed: () {
               widget.timerFlag.flag = true;
               Navigator.pop(ctx, emailController.text.trim());
             },
-            child: const Text('验证'),
+            child: Text(LocaleService.S.verify),
           ),
         ],
       ),
@@ -349,11 +353,11 @@ class _TeamPanelState extends State<TeamPanel> {
 
   Future<void> _joinTeam() async {
     if (_nicknameController.text.trim().isEmpty) {
-      setState(() => _errorMessage = '请输入昵称');
+      setState(() => _errorMessage = LocaleService.S.pleaseEnterNickname);
       return;
     }
     if (_teamIdController.text.trim().isEmpty) {
-      setState(() => _errorMessage = '请输入团队代码');
+      setState(() => _errorMessage = LocaleService.S.pleaseEnterTeamCode);
       return;
     }
 
@@ -369,10 +373,11 @@ class _TeamPanelState extends State<TeamPanel> {
         // 通知父组件初始化集合点服务
         widget.onTeamJoined?.call();
       } else {
-        setState(() => _errorMessage = result.error ?? '加入失败');
+        setState(
+            () => _errorMessage = result.error ?? LocaleService.S.joinFailed);
       }
     } catch (e) {
-      setState(() => _errorMessage = '加入失败: $e');
+      setState(() => _errorMessage = '${LocaleService.S.joinFailed}: $e');
     } finally {
       setState(() => _isLoading = false);
     }
@@ -415,7 +420,8 @@ class _TeamPanelState extends State<TeamPanel> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      '${team.members.length}/${team.maxMembers}人',
+                      LocaleService.S.teamMemberCount(
+                          team.members.length, team.maxMembers),
                       style: const TextStyle(fontSize: 12),
                     ),
                   ),
@@ -423,7 +429,7 @@ class _TeamPanelState extends State<TeamPanel> {
               ),
               const SizedBox(height: 4),
               Text(
-                '团队代码: ${team.id}',
+                LocaleService.S.teamCodeLabel(team.id),
                 style: TextStyle(color: Colors.grey.shade700),
               ),
             ],
@@ -441,11 +447,11 @@ class _TeamPanelState extends State<TeamPanel> {
                   Clipboard.setData(
                       ClipboardData(text: _teamService.getShareLink()));
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('链接已复制')),
+                    SnackBar(content: Text(LocaleService.S.linkCopied)),
                   );
                 },
                 icon: const Icon(Icons.share, size: 18),
-                label: const Text('邀请链接'),
+                label: Text(LocaleService.S.inviteLink),
               ),
             ),
             const SizedBox(width: 8),
@@ -457,7 +463,7 @@ class _TeamPanelState extends State<TeamPanel> {
                 },
                 icon:
                     const Icon(Icons.star, size: 18, color: Colors.deepOrange),
-                label: const Text('集合点'),
+                label: Text(LocaleService.S.meetingPoints),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.deepOrange,
                   side: const BorderSide(color: Colors.deepOrange),
@@ -471,8 +477,8 @@ class _TeamPanelState extends State<TeamPanel> {
         // 位置共享开关
         if (currentMember != null)
           SwitchListTile(
-            title: const Text('共享我的位置'),
-            subtitle: const Text('让队友看到你的实时位置'),
+            title: Text(LocaleService.S.shareMyLocation),
+            subtitle: Text(LocaleService.S.shareMyLocationDesc),
             value: currentMember.shareLocation,
             onChanged: (value) async {
               widget.timerFlag.flag = true;
@@ -484,8 +490,8 @@ class _TeamPanelState extends State<TeamPanel> {
 
         // 集合点图层开关
         SwitchListTile(
-          title: const Text('显示集合点'),
-          subtitle: const Text('在地图上显示所有收藏的集合点'),
+          title: Text(LocaleService.S.showMeetingPoints),
+          subtitle: Text(LocaleService.S.showMeetingPointsDesc),
           value: _showMeetingPointsLayer,
           activeColor: Colors.deepOrange,
           onChanged: (value) {
@@ -506,14 +512,14 @@ class _TeamPanelState extends State<TeamPanel> {
           children: [
             Row(
               children: [
-                const Text('团队成员',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
+                Text(LocaleService.S.teamMembers,
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
                 const SizedBox(width: 8),
                 // 刷新按钮
                 IconButton(
                   icon: Icon(Icons.refresh,
                       size: 20, color: Colors.blue.shade600),
-                  tooltip: '刷新成员位置',
+                  tooltip: LocaleService.S.refreshMemberLocation,
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
                   onPressed: () async {
@@ -521,9 +527,9 @@ class _TeamPanelState extends State<TeamPanel> {
                     await _refreshTeam();
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text('已刷新'),
-                            duration: Duration(seconds: 1)),
+                        SnackBar(
+                            content: Text(LocaleService.S.refreshed),
+                            duration: const Duration(seconds: 1)),
                       );
                     }
                   },
@@ -536,7 +542,7 @@ class _TeamPanelState extends State<TeamPanel> {
                   widget.timerFlag.flag = true;
                   _showMaxMembersDialog();
                 },
-                child: Text('人数上限: ${team.maxMembers}'),
+                child: Text(LocaleService.S.maxMembersLabel(team.maxMembers)),
               ),
           ],
         ),
@@ -553,7 +559,8 @@ class _TeamPanelState extends State<TeamPanel> {
             _leaveTeam();
           },
           icon: const Icon(Icons.exit_to_app, color: Colors.red),
-          label: const Text('离开团队', style: TextStyle(color: Colors.red)),
+          label: Text(LocaleService.S.leaveTeam,
+              style: const TextStyle(color: Colors.red)),
         ),
       ],
     );
@@ -588,7 +595,9 @@ class _TeamPanelState extends State<TeamPanel> {
       title: Row(
         children: [
           Text(member.nickname),
-          if (isMe) const Text(' (我)', style: TextStyle(color: Colors.grey)),
+          if (isMe)
+            Text(' (${LocaleService.S.me})',
+                style: const TextStyle(color: Colors.grey)),
           if (member.isLeader)
             const Padding(
               padding: EdgeInsets.only(left: 4),
@@ -615,7 +624,11 @@ class _TeamPanelState extends State<TeamPanel> {
         ],
       ),
       subtitle: Text(
-        isActive ? (member.shareLocation ? '位置共享中' : '今日已签到') : '未签到',
+        isActive
+            ? (member.shareLocation
+                ? LocaleService.S.sharingLocation
+                : LocaleService.S.checkedInToday)
+            : LocaleService.S.notCheckedIn,
         style: TextStyle(
           color: isActive ? Colors.green : Colors.grey,
           fontSize: 12,
@@ -640,12 +653,12 @@ class _TeamPanelState extends State<TeamPanel> {
     final newNickname = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('修改昵称'),
+        title: Text(LocaleService.S.changeNickname),
         content: TextField(
           controller: controller,
-          decoration: const InputDecoration(
-            labelText: '新昵称',
-            hintText: '请输入新昵称',
+          decoration: InputDecoration(
+            labelText: LocaleService.S.newNickname,
+            hintText: LocaleService.S.newNicknameHint,
           ),
           autofocus: true,
           onTap: () => widget.timerFlag.flag = true,
@@ -656,7 +669,7 @@ class _TeamPanelState extends State<TeamPanel> {
               widget.timerFlag.flag = true;
               Navigator.pop(ctx);
             },
-            child: const Text('取消'),
+            child: Text(LocaleService.S.cancel),
           ),
           TextButton(
             onPressed: () {
@@ -666,7 +679,7 @@ class _TeamPanelState extends State<TeamPanel> {
                 Navigator.pop(ctx, name);
               }
             },
-            child: const Text('确定'),
+            child: Text(LocaleService.S.confirm),
           ),
         ],
       ),
@@ -680,13 +693,13 @@ class _TeamPanelState extends State<TeamPanel> {
         if (mounted) {
           setState(() {});
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('昵称已更新')),
+            SnackBar(content: Text(LocaleService.S.nicknameUpdated)),
           );
         }
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('更新失败，请重试')),
+            SnackBar(content: Text(LocaleService.S.updateFailed)),
           );
         }
       }
@@ -697,12 +710,12 @@ class _TeamPanelState extends State<TeamPanel> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('移除成员'),
-        content: Text('确定要移除 ${member.nickname} 吗？'),
+        title: Text(LocaleService.S.removeMember),
+        content: Text(LocaleService.S.removeMemberConfirm(member.nickname)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('取消'),
+            child: Text(LocaleService.S.cancel),
           ),
           TextButton(
             onPressed: () async {
@@ -710,7 +723,8 @@ class _TeamPanelState extends State<TeamPanel> {
               await _teamService.removeMember(member.deviceId);
               setState(() {});
             },
-            child: const Text('确定', style: TextStyle(color: Colors.red)),
+            child: Text(LocaleService.S.confirm,
+                style: const TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -724,7 +738,7 @@ class _TeamPanelState extends State<TeamPanel> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('设置人数上限'),
+        title: Text(LocaleService.S.setMaxMembers),
         content: StatefulBuilder(
           builder: (context, setDialogState) => Column(
             mainAxisSize: MainAxisSize.min,
@@ -734,17 +748,17 @@ class _TeamPanelState extends State<TeamPanel> {
                 min: team.members.length.toDouble(),
                 max: 20,
                 divisions: 20 - team.members.length,
-                label: '$newMax人',
+                label: LocaleService.S.maxMembersValue(newMax),
                 onChanged: (v) => setDialogState(() => newMax = v.toInt()),
               ),
-              Text('$newMax 人'),
+              Text(LocaleService.S.maxMembersValue(newMax)),
             ],
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('取消'),
+            child: Text(LocaleService.S.cancel),
           ),
           TextButton(
             onPressed: () {
@@ -752,10 +766,12 @@ class _TeamPanelState extends State<TeamPanel> {
               // 注意：后端 API 暂不支持直接修改 maxSize，需要后端添加此功能
               // 目前仅更新本地显示
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('人数上限修改功能暂未开放')),
+                SnackBar(
+                    content:
+                        Text(LocaleService.S.maxMembersFeatureNotAvailable)),
               );
             },
-            child: const Text('确定'),
+            child: Text(LocaleService.S.confirm),
           ),
         ],
       ),
@@ -766,15 +782,15 @@ class _TeamPanelState extends State<TeamPanel> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('离开团队'),
-        content: const Text('确定要离开当前团队吗？'),
+        title: Text(LocaleService.S.leaveTeam),
+        content: Text(LocaleService.S.leaveTeamConfirm),
         actions: [
           TextButton(
             onPressed: () {
               widget.timerFlag.flag = true;
               Navigator.pop(ctx);
             },
-            child: const Text('取消'),
+            child: Text(LocaleService.S.cancel),
           ),
           TextButton(
             onPressed: () async {
@@ -792,12 +808,13 @@ class _TeamPanelState extends State<TeamPanel> {
               } else {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('操作失败，请重试')),
+                    SnackBar(content: Text(LocaleService.S.operationFailed)),
                   );
                 }
               }
             },
-            child: const Text('确定', style: TextStyle(color: Colors.red)),
+            child: Text(LocaleService.S.confirm,
+                style: const TextStyle(color: Colors.red)),
           ),
         ],
       ),

@@ -6,6 +6,7 @@ import '../timer_flag.dart';
 import '../route_engine.dart' as re;
 import '../search_service.dart';
 import '../global_constants.dart';
+import '../l10n/locale_service.dart';
 
 /// 正在编辑的点位类型
 enum EditingPointType { none, origin, destination, stopover, newStopover }
@@ -264,7 +265,7 @@ class _RoutePlanningPanelState extends State<RoutePlanningPanel> {
           SizedBox(width: 8),
           Expanded(
             child: Text(
-              '路线规划',
+              LocaleService.S.routePlanning,
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 18,
@@ -274,7 +275,7 @@ class _RoutePlanningPanelState extends State<RoutePlanningPanel> {
           ),
           if (widget.route != null) ...[
             Text(
-              '${(widget.route!.distance / 1000).toStringAsFixed(1)}km',
+              LocaleService.S.routeDistanceKm(widget.route!.distance / 1000),
               style: TextStyle(color: Colors.white70, fontSize: 12),
             ),
             SizedBox(width: 8),
@@ -315,7 +316,7 @@ class _RoutePlanningPanelState extends State<RoutePlanningPanel> {
       index: 0,
       icon: Icons.trip_origin,
       color: Colors.green,
-      label: '起点',
+      label: LocaleService.S.origin,
       point: widget.data.origin,
       isEditing: _editingType == EditingPointType.origin,
       onEdit: () => _startEditing(EditingPointType.origin),
@@ -330,7 +331,7 @@ class _RoutePlanningPanelState extends State<RoutePlanningPanel> {
         index: i + 1,
         icon: Icons.more_vert,
         color: Colors.orange,
-        label: '途径点 ${i + 1}',
+        label: LocaleService.S.stopoverN(i + 1),
         point: widget.data.stopovers[i],
         isEditing: _editingType == EditingPointType.stopover &&
             _editingStopoverIndex == i,
@@ -347,7 +348,7 @@ class _RoutePlanningPanelState extends State<RoutePlanningPanel> {
       index: destIndex,
       icon: Icons.location_on,
       color: Colors.blue,
-      label: '终点',
+      label: LocaleService.S.destination,
       point: widget.data.destination,
       isEditing: _editingType == EditingPointType.destination,
       onEdit: () => _startEditing(EditingPointType.destination),
@@ -416,7 +417,7 @@ class _RoutePlanningPanelState extends State<RoutePlanningPanel> {
               onPressed: onEdit,
               padding: EdgeInsets.zero,
               constraints: BoxConstraints(),
-              tooltip: '修改',
+              tooltip: LocaleService.S.select,
             ),
             SizedBox(width: 4),
             Icon(Icons.drag_handle, color: Colors.grey, size: 20),
@@ -430,7 +431,7 @@ class _RoutePlanningPanelState extends State<RoutePlanningPanel> {
                 },
                 padding: EdgeInsets.zero,
                 constraints: BoxConstraints(),
-                tooltip: '删除',
+                tooltip: LocaleService.S.delete,
               ),
             ],
           ],
@@ -446,16 +447,17 @@ class _RoutePlanningPanelState extends State<RoutePlanningPanel> {
     String editingLabel = '';
     switch (_editingType) {
       case EditingPointType.origin:
-        editingLabel = '搜索起点';
+        editingLabel = LocaleService.S.searchOrigin;
         break;
       case EditingPointType.destination:
-        editingLabel = '搜索终点';
+        editingLabel = LocaleService.S.searchDestination;
         break;
       case EditingPointType.stopover:
-        editingLabel = '搜索途径点 ${_editingStopoverIndex + 1}';
+        editingLabel =
+            LocaleService.S.searchStopoverN(_editingStopoverIndex + 1);
         break;
       case EditingPointType.newStopover:
-        editingLabel = '搜索新途径点';
+        editingLabel = LocaleService.S.searchNewStopover;
         break;
       default:
         break;
@@ -487,11 +489,11 @@ class _RoutePlanningPanelState extends State<RoutePlanningPanel> {
               ),
               TextButton(
                 onPressed: _cancelEditing,
-                child: Text('取消'),
                 style: TextButton.styleFrom(
                   padding: EdgeInsets.zero,
                   minimumSize: Size(40, 30),
                 ),
+                child: Text(LocaleService.S.cancel),
               ),
             ],
           ),
@@ -501,7 +503,7 @@ class _RoutePlanningPanelState extends State<RoutePlanningPanel> {
             controller: _searchController,
             onChanged: _onSearchChanged,
             decoration: InputDecoration(
-              hintText: '搜索地点...',
+              hintText: LocaleService.S.searchPlace,
               prefixIcon: Icon(Icons.search, size: 20),
               filled: true,
               fillColor: Colors.white,
@@ -528,7 +530,7 @@ class _RoutePlanningPanelState extends State<RoutePlanningPanel> {
                     _cancelEditing();
                   },
                   icon: Icon(Icons.my_location, size: 16),
-                  label: Text('当前位置'),
+                  label: Text(LocaleService.S.myLocation),
                   style: OutlinedButton.styleFrom(
                     padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                     minimumSize: Size(0, 32),
@@ -545,7 +547,7 @@ class _RoutePlanningPanelState extends State<RoutePlanningPanel> {
                     widget.onPickPhoto(type);
                   },
                   icon: Icon(Icons.photo_camera, size: 16),
-                  label: Text('从图片'),
+                  label: Text(LocaleService.S.fromPhoto),
                   style: OutlinedButton.styleFrom(
                     padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                     minimumSize: Size(0, 32),
@@ -624,7 +626,7 @@ class _RoutePlanningPanelState extends State<RoutePlanningPanel> {
       child: OutlinedButton.icon(
         onPressed: () => _startEditing(EditingPointType.newStopover),
         icon: Icon(Icons.add_location, size: 18),
-        label: Text('添加途径点'),
+        label: Text(LocaleService.S.addStopover),
         style: OutlinedButton.styleFrom(
           foregroundColor: Colors.orange,
           side: BorderSide(color: Colors.orange),
@@ -663,11 +665,12 @@ class _RoutePlanningPanelState extends State<RoutePlanningPanel> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '路线详情',
+                          LocaleService.S.routeDetails,
                           style: TextStyle(fontWeight: FontWeight.bold),
                         ),
                         Text(
-                          '${(route.distance / 1000).toStringAsFixed(2)} km • ${(route.duration / 60).toStringAsFixed(0)} 分钟',
+                          LocaleService.S.routeSummary(
+                              route.distance / 1000, route.duration / 60),
                           style: TextStyle(fontSize: 12, color: Colors.grey),
                         ),
                       ],

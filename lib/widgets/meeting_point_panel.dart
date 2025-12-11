@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../meeting_point/meeting_point_model.dart';
 import '../meeting_point/meeting_point_service.dart';
 import '../timer_flag.dart';
+import '../l10n/locale_service.dart';
 
 /// 集合点列表回调
 typedef OnMeetingPointTapped = void Function(MeetingPoint point);
@@ -93,7 +94,7 @@ class _MeetingPointPanelState extends State<MeetingPointPanel> {
               Icon(Icons.star, color: Colors.deepOrange),
               SizedBox(width: 8),
               Text(
-                '集合点',
+                LocaleService.S.meetingPoints,
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -110,7 +111,7 @@ class _MeetingPointPanelState extends State<MeetingPointPanel> {
                   _setTimerFlag();
                   _loadPoints();
                 },
-                tooltip: '刷新',
+                tooltip: LocaleService.S.refresh,
               ),
               IconButton(
                 icon: Icon(Icons.close),
@@ -135,12 +136,12 @@ class _MeetingPointPanelState extends State<MeetingPointPanel> {
           Icon(Icons.star_border, size: 48, color: Colors.grey),
           SizedBox(height: 16),
           Text(
-            '暂无集合点',
+            LocaleService.S.noMeetingPoints,
             style: TextStyle(fontSize: 16, color: Colors.grey[600]),
           ),
           SizedBox(height: 8),
           Text(
-            '在地图上选择位置后点击"添加集合点"来添加',
+            LocaleService.S.addMeetingPointHint,
             style: TextStyle(fontSize: 14, color: Colors.grey),
             textAlign: TextAlign.center,
           ),
@@ -176,7 +177,7 @@ class _MeetingPointPanelState extends State<MeetingPointPanel> {
         ),
       ),
       subtitle: Text(
-        '由 ${point.creatorNickname} 创建',
+        LocaleService.S.createdBy(point.creatorNickname),
         style: TextStyle(fontSize: 12, color: Colors.grey),
       ),
       trailing: Row(
@@ -192,7 +193,9 @@ class _MeetingPointPanelState extends State<MeetingPointPanel> {
               _setTimerFlag();
               _toggleActive(point);
             },
-            tooltip: point.isActive ? '取消设为当前集合点' : '设为当前集合点',
+            tooltip: point.isActive
+                ? LocaleService.S.unsetAsCurrentMeetingPoint
+                : LocaleService.S.setAsCurrentMeetingPoint,
           ),
           // 编辑名称
           IconButton(
@@ -201,7 +204,7 @@ class _MeetingPointPanelState extends State<MeetingPointPanel> {
               _setTimerFlag();
               _editPointName(point);
             },
-            tooltip: '编辑名称',
+            tooltip: LocaleService.S.editName,
           ),
           // 删除
           IconButton(
@@ -210,7 +213,7 @@ class _MeetingPointPanelState extends State<MeetingPointPanel> {
               _setTimerFlag();
               _deletePoint(point);
             },
-            tooltip: '删除',
+            tooltip: LocaleService.S.delete,
           ),
           // 导航
           IconButton(
@@ -219,7 +222,7 @@ class _MeetingPointPanelState extends State<MeetingPointPanel> {
               _setTimerFlag();
               widget.onNavigate?.call(point);
             },
-            tooltip: '导航到此处',
+            tooltip: LocaleService.S.navigateTo,
           ),
         ],
       ),
@@ -244,11 +247,11 @@ class _MeetingPointPanelState extends State<MeetingPointPanel> {
     final newName = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('编辑集合点名称'),
+        title: Text(LocaleService.S.editMeetingPointName),
         content: TextField(
           controller: controller,
           decoration: InputDecoration(
-            labelText: '名称',
+            labelText: LocaleService.S.name,
             border: OutlineInputBorder(),
           ),
           autofocus: true,
@@ -256,11 +259,11 @@ class _MeetingPointPanelState extends State<MeetingPointPanel> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('取消'),
+            child: Text(LocaleService.S.cancel),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, controller.text),
-            child: Text('保存'),
+            child: Text(LocaleService.S.save),
           ),
         ],
       ),
@@ -275,17 +278,17 @@ class _MeetingPointPanelState extends State<MeetingPointPanel> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('删除集合点'),
-        content: Text('确定要删除集合点 "${point.name}" 吗？'),
+        title: Text(LocaleService.S.deleteMeetingPoint),
+        content: Text(LocaleService.S.deleteMeetingPointConfirm(point.name)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: Text('取消'),
+            child: Text(LocaleService.S.cancel),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: Text('删除'),
+            child: Text(LocaleService.S.delete),
           ),
         ],
       ),

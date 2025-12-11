@@ -3,6 +3,7 @@ import '../timer_flag.dart';
 import '../lift.dart';
 import '../geojson_helper.dart';
 import '../web_title_helper.dart';
+import '../l10n/locale_service.dart';
 
 class LiftInfoPanel extends StatefulWidget {
   final Lift lift;
@@ -33,7 +34,7 @@ class _LiftInfoPanelState extends State<LiftInfoPanel> {
     WebTitleHelper.resetTitle(); // Reset title when panel closes
     super.dispose();
   }
-  
+
   @override
   Widget build(BuildContext context) {
     double computedLength = _calculateLiftLength(widget.lift.coordinates);
@@ -44,7 +45,9 @@ class _LiftInfoPanelState extends State<LiftInfoPanel> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 2))],
+        boxShadow: [
+          BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 2))
+        ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -58,12 +61,15 @@ class _LiftInfoPanelState extends State<LiftInfoPanel> {
                 iconPath,
                 width: 20,
                 height: 20,
-                errorBuilder: (context, error, stackTrace) => Icon(Icons.error, size: 20, color: Colors.grey),
+                errorBuilder: (context, error, stackTrace) =>
+                    Icon(Icons.error, size: 20, color: Colors.grey),
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  widget.lift.name.isNotEmpty ? widget.lift.name : "Unknown Lift",
+                  widget.lift.name.isNotEmpty
+                      ? widget.lift.name
+                      : LocaleService.S.unknown,
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -83,21 +89,21 @@ class _LiftInfoPanelState extends State<LiftInfoPanel> {
           // Lift Reference (Ref)
           if (widget.lift.ref.isNotEmpty)
             Text(
-              'Ref: ${widget.lift.ref}',
+              '${LocaleService.S.ref}: ${widget.lift.ref}',
               style: TextStyle(fontSize: 14, color: Colors.grey[700]),
             ),
-            const SizedBox(height: 6),
+          const SizedBox(height: 6),
 
           // Lift Type
           Text(
-            'Type: ${widget.lift.type}',
+            '${LocaleService.S.liftType}: ${widget.lift.type}',
             style: TextStyle(fontSize: 14, color: Colors.grey[700]),
           ),
           const SizedBox(height: 6),
 
           // Lift Length (Computed)
           Text(
-            'Length: ${computedLength.toStringAsFixed(0)} m',
+            '${LocaleService.S.length}: ${computedLength.toStringAsFixed(0)} m',
             style: TextStyle(fontSize: 14, color: Colors.grey[700]),
           ),
 
