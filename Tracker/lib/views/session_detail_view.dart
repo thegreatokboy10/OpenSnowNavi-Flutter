@@ -1,8 +1,9 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' hide Size;
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
+import '../config/mapbox_config.dart';
 import '../models/session.dart';
 import '../models/location_point.dart';
 import '../services/session_manager.dart';
@@ -77,6 +78,8 @@ class _SessionDetailViewState extends State<SessionDetailView> {
     );
   }
 
+  MapboxMap? _mapboxMap;
+
   Widget _buildMap() {
     if (_points.isEmpty) {
       return Container(
@@ -85,45 +88,130 @@ class _SessionDetailViewState extends State<SessionDetailView> {
       );
     }
 
-    final polylinePoints = _points.map((p) => p.latLng).toList();
-    final bounds = LatLngBounds.fromPoints(polylinePoints);
+    // 计算边界
+    double minLat = double.infinity, maxLat = -double.infinity;
+    double minLng = double.infinity, maxLng = -double.infinity;
+    for (final p in _points) {
+      if (p.latitude < minLat) minLat = p.latitude;
+      if (p.latitude > maxLat) maxLat = p.latitude;
+      if (p.longitude < minLng) minLng = p.longitude;
+      if (p.longitude > maxLng) maxLng = p.longitude;
+    }
 
-    return FlutterMap(
-      options: MapOptions(
-        initialCenter: bounds.center,
-        initialZoom: 14,
-        initialCameraFit:
-            CameraFit.bounds(bounds: bounds, padding: const EdgeInsets.all(50)),
+    final centerLat = (minLat + maxLat) / 2;
+    final centerLng = (minLng + maxLng) / 2;
+    final center = Point(coordinates: Position(centerLng, centerLat));
+
+    return MapWidget(
+      cameraOptions: CameraOptions(
+        center: center,
+        zoom: 14,
       ),
-      children: [
-        TileLayer(
-          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-          userAgentPackageName: 'com.snownavi.tracker',
-        ),
-        PolylineLayer(
-          polylines: [
-            Polyline(
-              points: polylinePoints,
-              strokeWidth: 4,
-              color: Colors.orange,
-            ),
-          ],
-        ),
-        MarkerLayer(
-          markers: [
-            Marker(
-              point: polylinePoints.first,
-              child:
-                  const Icon(Icons.play_circle, color: Colors.green, size: 32),
-            ),
-            Marker(
-              point: polylinePoints.last,
-              child: const Icon(Icons.stop_circle, color: Colors.red, size: 32),
-            ),
-          ],
-        ),
-      ],
+      styleUri: MapboxConfig.styleUrl,
+      onMapCreated: (mapboxMap) async {
+        _mapboxMap = mapboxMap;
+        await _addTrackLine(mapboxMap);
+        await _addMarkers(mapboxMap);
+        // 调整相机以适应轨迹
+        await _fitBounds(mapboxMap, minLat, maxLat, minLng, maxLng);
+      },
     );
+  }
+
+  Future<void> _addTrackLine(MapboxMap mapboxMap) async {
+    // 创建 GeoJSON LineString
+    final coordinates = _points.map((p) => [p.longitude, p.latitude]).toList();
+    final geoJson = {
+      'type': 'Feature',
+      'geometry': {
+        'type': 'LineString',
+        'coordinates': coordinates,
+      },
+    };
+
+    // 添加 source
+    await mapboxMap.style.addSource(
+      GeoJsonSource(id: 'track-source', data: jsonEncode(geoJson)),
+    );
+
+    // 添加 line layer
+    await mapboxMap.style.addLayer(
+      LineLayer(
+        id: 'track-layer',
+        sourceId: 'track-source',
+        lineColor: Colors.orange.value,
+        lineWidth: 4.0,
+        lineCap: LineCap.ROUND,
+        lineJoin: LineJoin.ROUND,
+      ),
+    );
+  }
+
+  Future<void> _addMarkers(MapboxMap mapboxMap) async {
+    final startPoint = _points.first;
+    final endPoint = _points.last;
+
+    // 添加起点和终点标记
+    final pointAnnotationManager =
+        await mapboxMap.annotations.createPointAnnotationManager();
+
+    // 起点标记 (绿色)
+    await pointAnnotationManager.create(
+      PointAnnotationOptions(
+        geometry: Point(
+            coordinates: Position(startPoint.longitude, startPoint.latitude)),
+        iconSize: 1.5,
+        textField: '▶',
+        textSize: 24.0,
+        textColor: Colors.green.value,
+      ),
+    );
+
+    // 终点标记 (红色)
+    await pointAnnotationManager.create(
+      PointAnnotationOptions(
+        geometry:
+            Point(coordinates: Position(endPoint.longitude, endPoint.latitude)),
+        iconSize: 1.5,
+        textField: '■',
+        textSize: 24.0,
+        textColor: Colors.red.value,
+      ),
+    );
+  }
+
+  Future<void> _fitBounds(MapboxMap mapboxMap, double minLat, double maxLat,
+      double minLng, double maxLng) async {
+    // 添加一些 padding
+    final latPadding = (maxLat - minLat) * 0.1;
+    final lngPadding = (maxLng - minLng) * 0.1;
+
+    final bounds = CoordinateBounds(
+      southwest: Point(
+          coordinates: Position(minLng - lngPadding, minLat - latPadding)),
+      northeast: Point(
+          coordinates: Position(maxLng + lngPadding, maxLat + latPadding)),
+      infiniteBounds: false,
+    );
+
+    await mapboxMap.setCamera(
+      CameraOptions(
+        center: Point(
+            coordinates:
+                Position((minLng + maxLng) / 2, (minLat + maxLat) / 2)),
+      ),
+    );
+
+    // 使用 easeTo 来适应边界
+    final cameraForBounds = await mapboxMap.cameraForCoordinateBounds(
+      bounds,
+      MbxEdgeInsets(top: 50, left: 50, bottom: 50, right: 50),
+      null,
+      null,
+      null,
+      null,
+    );
+    await mapboxMap.flyTo(cameraForBounds, MapAnimationOptions(duration: 500));
   }
 
   Widget _buildStats() {

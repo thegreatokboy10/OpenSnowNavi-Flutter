@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:provider/provider.dart';
+import 'config/mapbox_config.dart';
 import 'services/session_manager.dart';
 import 'views/recording_view.dart';
 import 'views/session_list_view.dart';
+import 'views/map_view.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  // 初始化 Mapbox Access Token
+  MapboxOptions.setAccessToken(MapboxConfig.accessToken);
   runApp(const SnowNaviTrackerApp());
 }
 
@@ -65,6 +71,7 @@ class _MainPageState extends State<MainPage> {
         index: _selectedIndex,
         children: const [
           RecordingView(),
+          MapView(),
           SessionListView(),
         ],
       ),
@@ -80,6 +87,11 @@ class _MainPageState extends State<MainPage> {
             icon: Icon(Icons.radio_button_checked),
             selectedIcon: Icon(Icons.radio_button_checked, color: Colors.red),
             label: 'Record',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.map_outlined),
+            selectedIcon: Icon(Icons.map, color: Colors.blue),
+            label: 'Map',
           ),
           NavigationDestination(
             icon: Icon(Icons.history),

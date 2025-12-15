@@ -1,4 +1,4 @@
-import 'package:latlong2/latlong.dart';
+import 'dart:math' as math;
 import '../models/session.dart';
 import '../models/location_point.dart';
 
@@ -6,9 +6,9 @@ import '../models/location_point.dart';
 class SessionStatistics {
   final Duration totalDuration;
   final Duration skiingDuration;
-  final double totalDistance;      // 米
-  final double skiingDistance;     // 米
-  final double maxSpeed;           // m/s
+  final double totalDistance; // 米
+  final double skiingDistance; // 米
+  final double maxSpeed; // m/s
   final double averageSkiingSpeed; // m/s
   final double totalElevationGain; // 米
   final double totalElevationLoss; // 米
@@ -93,7 +93,6 @@ class SessionStatistics {
       );
     }
 
-    const distance = Distance();
     double totalDist = 0;
     double skiingDist = 0;
     double maxSpd = 0;
@@ -106,7 +105,12 @@ class SessionStatistics {
 
     for (final point in points) {
       if (lastPoint != null) {
-        final dist = distance(lastPoint.latLng, point.latLng);
+        final dist = _calculateDistance(
+          lastPoint.latitude,
+          lastPoint.longitude,
+          point.latitude,
+          point.longitude,
+        );
         totalDist += dist;
 
         if (point.isMoving) {
@@ -146,5 +150,26 @@ class SessionStatistics {
       pointCount: points.length,
     );
   }
-}
 
+  /// Haversine 公式计算两点之间的距离（米）
+  static double _calculateDistance(
+    double lat1,
+    double lon1,
+    double lat2,
+    double lon2,
+  ) {
+    const double earthRadius = 6371000; // 地球半径（米）
+    final lat1Rad = lat1 * math.pi / 180;
+    final lat2Rad = lat2 * math.pi / 180;
+    final deltaLat = (lat2 - lat1) * math.pi / 180;
+    final deltaLon = (lon2 - lon1) * math.pi / 180;
+
+    final a = math.sin(deltaLat / 2) * math.sin(deltaLat / 2) +
+        math.cos(lat1Rad) *
+            math.cos(lat2Rad) *
+            math.sin(deltaLon / 2) *
+            math.sin(deltaLon / 2);
+    final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+    return earthRadius * c;
+  }
+}

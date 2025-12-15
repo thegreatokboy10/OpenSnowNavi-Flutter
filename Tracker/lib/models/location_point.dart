@@ -1,4 +1,4 @@
-import 'package:latlong2/latlong.dart';
+import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 
 /// 位置点数据模型
 class LocationPoint {
@@ -10,8 +10,8 @@ class LocationPoint {
   final double altitude;
   final double horizontalAccuracy;
   final double verticalAccuracy;
-  final double speed;      // m/s, -1 if invalid
-  final double heading;    // degrees, -1 if invalid
+  final double speed; // m/s, -1 if invalid
+  final double heading; // degrees, -1 if invalid
   final bool isMoving;
   final bool isAutoPaused;
 
@@ -30,7 +30,8 @@ class LocationPoint {
     this.isAutoPaused = false,
   });
 
-  LatLng get latLng => LatLng(latitude, longitude);
+  /// 获取 Mapbox Point
+  Point get point => Point(coordinates: Position(longitude, latitude));
 
   /// 从数据库 Map 创建
   factory LocationPoint.fromMap(Map<String, dynamic> map) {
@@ -68,4 +69,3 @@ class LocationPoint {
     };
   }
 }
-

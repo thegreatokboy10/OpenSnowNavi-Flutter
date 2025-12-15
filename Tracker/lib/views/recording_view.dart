@@ -1,10 +1,9 @@
 import 'dart:async';
 import 'dart:math' as math;
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' hide Size;
 import 'package:provider/provider.dart';
+import '../config/mapbox_config.dart';
 import '../services/session_manager.dart';
 import '../services/location_service.dart';
 
@@ -16,29 +15,16 @@ class RecordingView extends StatefulWidget {
   State<RecordingView> createState() => _RecordingViewState();
 }
 
-class _RecordingViewState extends State<RecordingView>
-    with SingleTickerProviderStateMixin {
+class _RecordingViewState extends State<RecordingView> {
   Timer? _timer;
   Duration _elapsed = Duration.zero;
-  final MapController _mapController = MapController();
+  MapboxMap? _mapboxMap;
   bool _mapReady = false;
-  LatLng? _lastMapCenter;
-
-  // 呼吸动画控制器
-  late AnimationController _breathingController;
-  late Animation<double> _breathingAnimation;
+  Point? _lastMapCenter;
 
   @override
   void initState() {
     super.initState();
-    _breathingController = AnimationController(
-      duration: const Duration(milliseconds: 1500),
-      vsync: this,
-    )..repeat(reverse: true);
-    _breathingAnimation = Tween<double>(begin: 0.4, end: 1.0).animate(
-      CurvedAnimation(parent: _breathingController, curve: Curves.easeInOut),
-    );
-
     // 监听 SessionManager 的位置更新
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<SessionManager>().addListener(_onPositionUpdate);
@@ -48,7 +34,6 @@ class _RecordingViewState extends State<RecordingView>
   @override
   void dispose() {
     _timer?.cancel();
-    _breathingController.dispose();
     context.read<SessionManager>().removeListener(_onPositionUpdate);
     super.dispose();
   }
@@ -56,24 +41,36 @@ class _RecordingViewState extends State<RecordingView>
   void _onPositionUpdate() {
     final manager = context.read<SessionManager>();
     final position = manager.currentPosition;
-    if (position != null && _mapReady) {
-      final newCenter = LatLng(position.latitude, position.longitude);
+    if (position != null && _mapReady && _mapboxMap != null) {
+      final newCenter =
+          Point(coordinates: Position(position.longitude, position.latitude));
       // 只有当位置变化超过一定距离时才移动地图
       if (_lastMapCenter == null ||
           _calculateDistance(_lastMapCenter!, newCenter) > 5) {
         _lastMapCenter = newCenter;
-        _mapController.move(newCenter, _mapController.camera.zoom);
+        _mapboxMap!.flyTo(
+          CameraOptions(
+            center: newCenter,
+            zoom: 16,
+          ),
+          MapAnimationOptions(duration: 500),
+        );
       }
     }
   }
 
-  double _calculateDistance(LatLng p1, LatLng p2) {
+  double _calculateDistance(Point p1, Point p2) {
     // 简单的距离计算（米）
     const double earthRadius = 6371000;
-    final lat1Rad = p1.latitude * math.pi / 180;
-    final lat2Rad = p2.latitude * math.pi / 180;
-    final deltaLat = (p2.latitude - p1.latitude) * math.pi / 180;
-    final deltaLon = (p2.longitude - p1.longitude) * math.pi / 180;
+    final lat1 = p1.coordinates.lat.toDouble();
+    final lon1 = p1.coordinates.lng.toDouble();
+    final lat2 = p2.coordinates.lat.toDouble();
+    final lon2 = p2.coordinates.lng.toDouble();
+
+    final lat1Rad = lat1 * math.pi / 180;
+    final lat2Rad = lat2 * math.pi / 180;
+    final deltaLat = (lat2 - lat1) * math.pi / 180;
+    final deltaLon = (lon2 - lon1) * math.pi / 180;
 
     final a = math.sin(deltaLat / 2) * math.sin(deltaLat / 2) +
         math.cos(lat1Rad) *
@@ -176,91 +173,31 @@ class _RecordingViewState extends State<RecordingView>
 
   Widget _buildMap(SessionManager manager) {
     final position = manager.currentPosition;
-    final center = position != null
-        ? LatLng(position.latitude, position.longitude)
-        : const LatLng(46.8182, 8.2275); // 默认瑞士中心
+    final initialCenter = position != null
+        ? Point(coordinates: Position(position.longitude, position.latitude))
+        : Point(coordinates: Position(8.2275, 46.8182)); // 默认瑞士中心
 
-    return FlutterMap(
-      mapController: _mapController,
-      options: MapOptions(
-        initialCenter: center,
-        initialZoom: 16,
-        onMapReady: () {
-          _mapReady = true;
-          _lastMapCenter = center;
-          // 初始化时如果有位置就跳转
-          if (position != null) {
-            _mapController.move(center, 16);
-          }
-        },
+    return MapWidget(
+      cameraOptions: CameraOptions(
+        center: initialCenter,
+        zoom: 16,
+        bearing: manager.currentHeading,
       ),
-      children: [
-        TileLayer(
-          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-          userAgentPackageName: 'com.snownavi.tracker',
-        ),
-        if (position != null)
-          MarkerLayer(
-            markers: [
-              Marker(
-                point: LatLng(position.latitude, position.longitude),
-                width: 60,
-                height: 60,
-                child: _buildCurrentLocationMarker(manager),
-              ),
-            ],
+      styleUri: MapboxConfig.styleUrl,
+      onMapCreated: (mapboxMap) async {
+        _mapboxMap = mapboxMap;
+        _mapReady = true;
+        _lastMapCenter = initialCenter;
+
+        // 启用用户位置显示，使用 Mapbox 内置的 puck（带呼吸动效和方向指示）
+        await mapboxMap.location.updateSettings(
+          LocationComponentSettings(
+            enabled: true,
+            pulsingEnabled: true,
+            pulsingColor: 0xFF007AFF, // Apple Maps 蓝色
+            showAccuracyRing: true,
+            puckBearingEnabled: true,
           ),
-      ],
-    );
-  }
-
-  Widget _buildCurrentLocationMarker(SessionManager manager) {
-    final heading = manager.currentHeading;
-    return AnimatedBuilder(
-      animation: _breathingAnimation,
-      builder: (context, child) {
-        // Apple Maps 蓝色
-        const appleBlue = Color(0xFF007AFF);
-
-        return Stack(
-          alignment: Alignment.center,
-          children: [
-            // 呼吸效果圆圈 - Apple Maps 蓝色
-            Container(
-              width: 50 * _breathingAnimation.value,
-              height: 50 * _breathingAnimation.value,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: appleBlue.withOpacity(0.3 * _breathingAnimation.value),
-              ),
-            ),
-            // 方向指示器
-            Transform.rotate(
-              angle: heading * math.pi / 180,
-              child: CustomPaint(
-                size: const Size(40, 40),
-                painter: _HeadingArrowPainter(
-                  isRecording: manager.isRecording,
-                ),
-              ),
-            ),
-            // 中心点 - Apple Maps 蓝色
-            Container(
-              width: 16,
-              height: 16,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: appleBlue,
-                border: Border.all(color: Colors.white, width: 3),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.3),
-                    blurRadius: 4,
-                  ),
-                ],
-              ),
-            ),
-          ],
         );
       },
     );
@@ -495,46 +432,5 @@ class _RecordingViewState extends State<RecordingView>
         ),
       ],
     );
-  }
-}
-
-/// 方向箭头绘制器 - Apple Maps 风格蓝色扇形
-class _HeadingArrowPainter extends CustomPainter {
-  final bool isRecording;
-  // Apple Maps 蓝色
-  static const appleBlue = Color(0xFF007AFF);
-
-  _HeadingArrowPainter({required this.isRecording});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = appleBlue.withOpacity(0.5)
-      ..style = PaintingStyle.fill;
-
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.width / 2 - 2;
-
-    // 绘制扇形方向指示器（类似 Apple Maps）
-    final path = ui.Path();
-    // 扇形角度 60 度
-    const sweepAngle = 60 * math.pi / 180;
-    const startAngle = -math.pi / 2 - sweepAngle / 2;
-
-    path.moveTo(center.dx, center.dy);
-    path.arcTo(
-      Rect.fromCircle(center: center, radius: radius),
-      startAngle,
-      sweepAngle,
-      false,
-    );
-    path.close();
-
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _HeadingArrowPainter oldDelegate) {
-    return oldDelegate.isRecording != isRecording;
   }
 }
