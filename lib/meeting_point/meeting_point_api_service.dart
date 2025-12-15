@@ -19,8 +19,8 @@ class MeetingPointApiResult<T> {
 /// 集合点 API 服务
 class MeetingPointApiService {
   static MeetingPointApiService? _instance;
-  static const String _baseUrl =
-      "http://localhost:8899"; //'https://snownavi.ski';
+  static const String _baseUrl = 'https://snownavi.ski';
+  // "http://localhost:8899";
 
   MeetingPointApiService._();
 
