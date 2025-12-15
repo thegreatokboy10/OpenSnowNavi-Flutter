@@ -49,6 +49,8 @@ class LocationService {
   double _currentHeading = 0; // 从 compass 获取的真实 heading
 
   LocationUpdateCallback? onLocationUpdate;
+  // Heading 更新回调，用于实时更新 UI
+  void Function(double heading)? onHeadingUpdate;
 
   /// 请求位置权限
   Future<bool> requestPermission() async {
@@ -91,6 +93,8 @@ class LocationService {
     _compassSubscription = FlutterCompass.events?.listen((event) {
       if (event.heading != null) {
         _currentHeading = event.heading!;
+        // 通知 heading 更新，实时刷新 UI
+        onHeadingUpdate?.call(_currentHeading);
       }
     });
   }

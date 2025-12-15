@@ -60,7 +60,14 @@ class SessionManager extends ChangeNotifier {
 
   void _setupCallbacks() {
     _locationService.onLocationUpdate = _handleLocationUpdate;
+    _locationService.onHeadingUpdate = _handleHeadingUpdate;
     _motionService.onMotionUpdate = _handleMotionUpdate;
+  }
+
+  // 处理 heading 更新，用于实时刷新 UI
+  void _handleHeadingUpdate(double heading) {
+    _currentHeading = heading;
+    notifyListeners();
   }
 
   /// 请求位置权限并开始监听 GPS（用于信号强度指示）

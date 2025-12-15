@@ -219,17 +219,19 @@ class _RecordingViewState extends State<RecordingView>
     return AnimatedBuilder(
       animation: _breathingAnimation,
       builder: (context, child) {
+        // Apple Maps 蓝色
+        const appleBlue = Color(0xFF007AFF);
+
         return Stack(
           alignment: Alignment.center,
           children: [
-            // 呼吸效果圆圈
+            // 呼吸效果圆圈 - Apple Maps 蓝色
             Container(
               width: 50 * _breathingAnimation.value,
               height: 50 * _breathingAnimation.value,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color:
-                    Colors.orange.withOpacity(0.3 * _breathingAnimation.value),
+                color: appleBlue.withOpacity(0.3 * _breathingAnimation.value),
               ),
             ),
             // 方向指示器
@@ -242,13 +244,13 @@ class _RecordingViewState extends State<RecordingView>
                 ),
               ),
             ),
-            // 中心点
+            // 中心点 - Apple Maps 蓝色
             Container(
               width: 16,
               height: 16,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: manager.isRecording ? Colors.red : Colors.orange,
+                color: appleBlue,
                 border: Border.all(color: Colors.white, width: 3),
                 boxShadow: [
                   BoxShadow(
@@ -496,27 +498,36 @@ class _RecordingViewState extends State<RecordingView>
   }
 }
 
-/// 方向箭头绘制器
+/// 方向箭头绘制器 - Apple Maps 风格蓝色扇形
 class _HeadingArrowPainter extends CustomPainter {
   final bool isRecording;
+  // Apple Maps 蓝色
+  static const appleBlue = Color(0xFF007AFF);
 
   _HeadingArrowPainter({required this.isRecording});
 
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = isRecording ? Colors.red : Colors.orange
+      ..color = appleBlue.withOpacity(0.5)
       ..style = PaintingStyle.fill;
 
     final center = Offset(size.width / 2, size.height / 2);
-    final arrowLength = size.width / 2 - 4;
+    final radius = size.width / 2 - 2;
 
-    // 绘制箭头（指向上方，会通过 Transform.rotate 旋转）
+    // 绘制扇形方向指示器（类似 Apple Maps）
     final path = ui.Path();
-    path.moveTo(center.dx, center.dy - arrowLength); // 箭头顶点
-    path.lineTo(center.dx - 6, center.dy - arrowLength + 12); // 左边
-    path.lineTo(center.dx, center.dy - arrowLength + 8); // 凹陷
-    path.lineTo(center.dx + 6, center.dy - arrowLength + 12); // 右边
+    // 扇形角度 60 度
+    const sweepAngle = 60 * math.pi / 180;
+    const startAngle = -math.pi / 2 - sweepAngle / 2;
+
+    path.moveTo(center.dx, center.dy);
+    path.arcTo(
+      Rect.fromCircle(center: center, radius: radius),
+      startAngle,
+      sweepAngle,
+      false,
+    );
     path.close();
 
     canvas.drawPath(path, paint);
