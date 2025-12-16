@@ -193,30 +193,73 @@ class _RecordingViewState extends State<RecordingView> {
         ? Point(coordinates: Position(position.longitude, position.latitude))
         : Point(coordinates: Position(8.2275, 46.8182)); // 默认瑞士中心
 
-    return MapWidget(
-      cameraOptions: CameraOptions(
-        center: initialCenter,
-        zoom: 16,
-        bearing: manager.currentHeading,
-      ),
-      styleUri: MapboxConfig.styleUrl,
-      onMapCreated: (mapboxMap) async {
-        _mapboxMap = mapboxMap;
-        _mapReady = true;
-        _lastMapCenter = initialCenter;
-
-        // 启用用户位置显示，使用 Mapbox 内置的 puck（带呼吸动效和方向指示）
-        await mapboxMap.location.updateSettings(
-          LocationComponentSettings(
-            enabled: true,
-            pulsingEnabled: true,
-            pulsingColor: 0xFF007AFF, // Apple Maps 蓝色
-            showAccuracyRing: true,
-            puckBearingEnabled: true,
+    return Stack(
+      children: [
+        MapWidget(
+          cameraOptions: CameraOptions(
+            center: initialCenter,
+            zoom: 16,
+            bearing: manager.currentHeading,
           ),
-        );
-      },
+          styleUri: MapboxConfig.styleUrl,
+          onMapCreated: (mapboxMap) async {
+            _mapboxMap = mapboxMap;
+            _mapReady = true;
+            _lastMapCenter = initialCenter;
+
+            // 启用用户位置显示，使用 Mapbox 内置的 puck（带呼吸动效和方向指示）
+            await mapboxMap.location.updateSettings(
+              LocationComponentSettings(
+                enabled: true,
+                pulsingEnabled: true,
+                pulsingColor: 0xFF007AFF, // Apple Maps 蓝色
+                showAccuracyRing: true,
+                puckBearingEnabled: true,
+              ),
+            );
+
+            // 自动定位到当前位置
+            await _goToCurrentLocation();
+          },
+        ),
+        // 定位按钮
+        Positioned(
+          right: 12,
+          bottom: 12,
+          child: Material(
+            elevation: 4,
+            borderRadius: BorderRadius.circular(8),
+            color: Colors.white,
+            child: InkWell(
+              onTap: _goToCurrentLocation,
+              borderRadius: BorderRadius.circular(8),
+              child: const Padding(
+                padding: EdgeInsets.all(10),
+                child: Icon(Icons.my_location, size: 22, color: Colors.blue),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
+  }
+
+  Future<void> _goToCurrentLocation() async {
+    if (_mapboxMap == null) return;
+
+    final manager = Provider.of<SessionManager>(context, listen: false);
+    final position = manager.currentPosition;
+
+    if (position != null) {
+      final center = Point(
+        coordinates: Position(position.longitude, position.latitude),
+      );
+      _lastMapCenter = center;
+      await _mapboxMap!.flyTo(
+        CameraOptions(center: center, zoom: 16),
+        MapAnimationOptions(duration: 500),
+      );
+    }
   }
 
   Widget _buildGpsSignalIndicator(SessionManager manager) {
