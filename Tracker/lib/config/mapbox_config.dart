@@ -7,7 +7,8 @@ class MapboxConfig {
   /// 如果没有设置，使用默认 token（仅用于开发）
   static const String accessToken = String.fromEnvironment(
     'MAPBOX_ACCESS_TOKEN',
-    defaultValue: 'your-token-here',
+    defaultValue:
+        'pk.eyJ1Ijoib2tib3kyMDA4IiwiYSI6ImNsdGE1dzd6OTAxbHQyanA0aWM1MjU5c24ifQ.vbbY3gzL8nnUFctmDv9UBQ',
   );
 
   /// 自定义 Mapbox 样式 URL

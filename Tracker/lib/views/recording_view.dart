@@ -126,41 +126,57 @@ class _RecordingViewState extends State<RecordingView> {
               Expanded(
                 flex: 3,
                 child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      // 状态指示器和GPS信号
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          _buildStatusBadge(manager),
-                          const SizedBox(width: 16),
-                          _buildGpsSignalIndicator(manager),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      // 计时器
-                      Text(
-                        _formatDuration(_elapsed),
-                        style: TextStyle(
-                          fontSize: 48,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'monospace',
-                          color: manager.isPaused ? Colors.grey : null,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16.0, vertical: 8.0),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      return SingleChildScrollView(
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            minHeight: constraints.maxHeight,
+                          ),
+                          child: IntrinsicHeight(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                // 状态指示器和GPS信号
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    _buildStatusBadge(manager),
+                                    const SizedBox(width: 16),
+                                    _buildGpsSignalIndicator(manager),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                // 计时器
+                                Text(
+                                  _formatDuration(_elapsed),
+                                  style: TextStyle(
+                                    fontSize: 44,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'monospace',
+                                    color:
+                                        manager.isPaused ? Colors.grey : null,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                // 速度
+                                _buildSpeedGauge(manager),
+                                const SizedBox(height: 8),
+                                // 实时统计
+                                if (manager.isRecording)
+                                  _buildLiveStats(manager),
+                                const Spacer(),
+                                // 控制按钮
+                                _buildControlButtons(manager),
+                                const SizedBox(height: 8),
+                              ],
+                            ),
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      // 速度
-                      _buildSpeedGauge(manager),
-                      const SizedBox(height: 16),
-                      // 实时统计
-                      if (manager.isRecording) _buildLiveStats(manager),
-                      const Spacer(),
-                      // 控制按钮
-                      _buildControlButtons(manager),
-                      const SizedBox(height: 16),
-                    ],
+                      );
+                    },
                   ),
                 ),
               ),

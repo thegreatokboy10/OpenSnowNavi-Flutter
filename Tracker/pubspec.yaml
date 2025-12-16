@@ -98,6 +98,14 @@ flutter:
   # Assets
   assets:
     - assets/img/
+    - assets/ski_resorts/palarinsal/runs.geojson
+    - assets/ski_resorts/palarinsal/lifts.geojson
+    - assets/ski_resorts/3valley/runs.geojson
+    - assets/ski_resorts/3valley/lifts.geojson
+    - assets/ski_resorts/morzine/runs.geojson
+    - assets/ski_resorts/morzine/lifts.geojson
+    - assets/ski_resorts/beidahu/runs.geojson
+    - assets/ski_resorts/beidahu/lifts.geojson
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter_compass/flutter_compass.dart';
 
@@ -87,7 +88,11 @@ class LocationService {
 
     _positionSubscription = Geolocator.getPositionStream(
       locationSettings: locationSettings,
-    ).listen(_handlePosition);
+    ).handleError((error) {
+      // 处理位置服务错误，避免应用崩溃
+      debugPrint('Location error: $error');
+      _signalStrength = GpsSignalStrength.none;
+    }).listen(_handlePosition);
 
     // 启动 compass 订阅来获取真实的 heading
     _compassSubscription = FlutterCompass.events?.listen((event) {
