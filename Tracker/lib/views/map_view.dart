@@ -1059,10 +1059,14 @@ class _MapViewState extends State<MapView> {
 
     debugPrint('Map single tapped at: ${coordinates.lat}, ${coordinates.lng}');
 
-    // 如果正在编辑路线点，处理路线编辑
+    // 如果正在编辑路线点，提示用户使用长按
     if (_currentEditingType != EditingPointType.none) {
-      _handleMapTapForRouteEditing(coordinates);
-      _flyToPosition(coordinates);
+      ScaffoldMessenger.of(this.context).showSnackBar(
+        const SnackBar(
+          content: Text('请长按地图选择位置'),
+          duration: Duration(seconds: 2),
+        ),
+      );
       return;
     }
 
@@ -1098,11 +1102,15 @@ class _MapViewState extends State<MapView> {
     debugPrint(
         'Querying features at screen point: (${screenPoint.x}, ${screenPoint.y})');
 
+    // 点击检测阈值 (米) - 用于自定义标记（成员和集合点）
+    const double primaryThreshold = 100; // 主要阈值
+    const double secondaryThreshold = 150; // 备用更大阈值（用于透传机制）
+
     try {
-      // 首先检查是否点击了团队成员标记
+      // 1. 首先检查是否点击了团队成员标记（使用主要阈值）
       if (_showMemberLocationsLayer && _memberLocations.isNotEmpty) {
-        final tappedMember =
-            _findNearestMemberLocation(coordinates, threshold: 50);
+        final tappedMember = _findNearestMemberLocation(coordinates,
+            threshold: primaryThreshold);
         if (tappedMember != null) {
           debugPrint('Tapped on member: ${tappedMember.nickname}');
           _flyToPosition(coordinates);
@@ -1111,10 +1119,10 @@ class _MapViewState extends State<MapView> {
         }
       }
 
-      // 检查是否点击了集合点
+      // 2. 检查是否点击了集合点（使用主要阈值）
       if (_showMeetingPointsLayer && _meetingPoints.isNotEmpty) {
         final tappedPoint =
-            _findNearestMeetingPoint(coordinates, threshold: 50);
+            _findNearestMeetingPoint(coordinates, threshold: primaryThreshold);
         if (tappedPoint != null) {
           debugPrint('Tapped on meeting point: ${tappedPoint.name}');
           _flyToPosition(coordinates);
@@ -1123,18 +1131,19 @@ class _MapViewState extends State<MapView> {
         }
       }
 
-      // 查询雪道和缆车图层
+      // 3. 查询雪道和缆车图层 - 使用实际的图层ID
       final renderedFeatures = await _mapboxMap!.queryRenderedFeatures(
         RenderedQueryGeometry.fromScreenCoordinate(screenPoint),
         RenderedQueryOptions(
           layerIds: [
-            'piste_green',
-            'piste_blue',
-            'piste_red',
-            'piste_black',
-            'piste_freeride',
-            'piste_connection',
-            'lift_layer',
+            'runs_connection',
+            'runs_novice',
+            'runs_easy',
+            'runs_intermediate',
+            'runs_advanced',
+            'runs_expert',
+            'runs_freeride',
+            'lifts',
           ],
         ),
       );
@@ -1152,6 +1161,30 @@ class _MapViewState extends State<MapView> {
             _showFeatureInfoPanel(properties, coordinates);
             return;
           }
+        }
+      }
+
+      // 4. 透传机制：如果没有找到雪道/缆车，再次用更大阈值检测成员/集合点
+      if (_showMemberLocationsLayer && _memberLocations.isNotEmpty) {
+        final tappedMember = _findNearestMemberLocation(coordinates,
+            threshold: secondaryThreshold);
+        if (tappedMember != null) {
+          debugPrint('Tapped on member (secondary): ${tappedMember.nickname}');
+          _flyToPosition(coordinates);
+          _showMemberInfoPanel(tappedMember);
+          return;
+        }
+      }
+
+      if (_showMeetingPointsLayer && _meetingPoints.isNotEmpty) {
+        final tappedPoint = _findNearestMeetingPoint(coordinates,
+            threshold: secondaryThreshold);
+        if (tappedPoint != null) {
+          debugPrint(
+              'Tapped on meeting point (secondary): ${tappedPoint.name}');
+          _flyToPosition(coordinates);
+          _showMeetingPointInfoPanel(tappedPoint);
+          return;
         }
       }
 
@@ -1741,60 +1774,6 @@ class _MapViewState extends State<MapView> {
         // 忽略移除错误
       }
     }
-  }
-
-  void _handleMapTapForRouteEditing(Position coordinates) {
-    final name =
-        '${coordinates.lat.toStringAsFixed(4)}, ${coordinates.lng.toStringAsFixed(4)}';
-
-    switch (_currentEditingType) {
-      case EditingPointType.origin:
-        _routePlanningData.setOrigin(RoutePoint(
-          id: 'origin',
-          name: name,
-          coordinates: coordinates,
-          type: RoutePointType.origin,
-        ));
-        break;
-      case EditingPointType.destination:
-        _routePlanningData.setDestination(RoutePoint(
-          id: 'destination',
-          name: name,
-          coordinates: coordinates,
-          type: RoutePointType.destination,
-        ));
-        break;
-      case EditingPointType.stopover:
-        _routePlanningData.replaceStopover(
-          _currentEditingStopoverIndex,
-          RoutePoint(
-            id: 'stopover_$_currentEditingStopoverIndex',
-            name: name,
-            coordinates: coordinates,
-            type: RoutePointType.stopover,
-          ),
-        );
-        break;
-      case EditingPointType.newStopover:
-        _routePlanningData.addStopover(RoutePoint(
-          id: 'stopover_${_routePlanningData.stopovers.length}',
-          name: name,
-          coordinates: coordinates,
-          type: RoutePointType.stopover,
-        ));
-        break;
-      default:
-        break;
-    }
-
-    setState(() {
-      _currentEditingType = EditingPointType.none;
-      _currentEditingStopoverIndex = -1;
-    });
-
-    _updateRoutePointMarkers();
-    _removePOIMarker();
-    _tryGenerateRoute();
   }
 
   void _onEditingTypeChanged(EditingPointType type, int stopoverIndex) {
@@ -2434,13 +2413,16 @@ class _MapViewState extends State<MapView> {
 
     // 设置回调 - 集合点列表更新时刷新图层
     meetingPointService.onMeetingPointsUpdated = (points) {
-      _meetingPoints = points;
+      debugPrint('[MapView] Meeting points updated: ${points.length} points');
+      // 创建新列表以确保状态更新
+      _meetingPoints = List.from(points);
       _updateMeetingPointMarkers();
     };
 
-    // 设置回调 - 活动集合点变化时更新图层和规划路线
+    // 设置回调 - 活动集合点变化时规划路线（标记更新已在 onMeetingPointsUpdated 中处理）
     meetingPointService.onActiveMeetingPointChanged = (activePoint) {
-      _updateMeetingPointMarkers();
+      debugPrint(
+          '[MapView] Active meeting point changed: ${activePoint?.name}');
       // 如果有活动集合点，自动规划路线
       if (activePoint != null && _currentRoute == null) {
         _planRouteToMeetingPoint(activePoint);

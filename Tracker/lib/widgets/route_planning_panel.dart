@@ -459,6 +459,31 @@ class _RoutePlanningPanelState extends State<RoutePlanningPanel> {
               minimumSize: const Size(double.infinity, 32),
             ),
           ),
+          const SizedBox(height: 8),
+          // 提示用户可以长按地图选择位置
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.blue.shade200),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.touch_app, size: 16, color: Colors.blue.shade700),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '长按地图可选择任意位置',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.blue.shade700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
           if (_searchResults.isNotEmpty)
             Container(
               constraints: const BoxConstraints(maxHeight: 150),
