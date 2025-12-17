@@ -6,12 +6,11 @@ class GeoJsonHelper {
     if (geometry['type'] == 'LineString') {
       // Map coordinates explicitly to List<List<double>> for LineString
       return (geometry['coordinates'] as List)
-          .map<List<double>>(
-              (e) => (e as List).map<double>((coord) => coord.toDouble()).toList())
+          .map<List<double>>((e) =>
+              (e as List).map<double>((coord) => coord.toDouble()).toList())
           .toList();
     } else {
       throw Exception('Unsupported geometry type: ${geometry['type']}');
     }
   }
 }
-

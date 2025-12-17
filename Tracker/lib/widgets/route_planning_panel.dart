@@ -20,6 +20,7 @@ class RoutePlanningPanel extends StatefulWidget {
   final Function(RoutePointType type) onUseCurrentLocation;
   final Function(EditingPointType type, int stopoverIndex)?
       onEditingTypeChanged;
+  final Function(int stepIndex)? onStepTap;
 
   const RoutePlanningPanel({
     super.key,
@@ -32,6 +33,7 @@ class RoutePlanningPanel extends StatefulWidget {
     required this.onReorderPoints,
     required this.onUseCurrentLocation,
     this.onEditingTypeChanged,
+    this.onStepTap,
   });
 
   @override
@@ -567,6 +569,10 @@ class _RoutePlanningPanelState extends State<RoutePlanningPanel> {
                   final step = route.steps[index];
                   return ListTile(
                     dense: true,
+                    onTap: () {
+                      // 点击路线步骤，触发回调
+                      widget.onStepTap?.call(index);
+                    },
                     leading: CircleAvatar(
                       radius: 10,
                       backgroundColor: Theme.of(context).primaryColor,

@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' hide Size;
+import 'package:polyline_codec/polyline_codec.dart';
 import 'package:provider/provider.dart';
 import '../config/mapbox_config.dart';
 import '../config/ski_resorts.dart';
@@ -44,6 +45,15 @@ class _MapViewState extends State<MapView> {
   EditingPointType _currentEditingType = EditingPointType.none;
   int _currentEditingStopoverIndex = -1;
   final re.RouteEngine _routeEngine = re.RouteEngine();
+
+  // Marker 管理器
+  CircleAnnotationManager? _poiCircleManager;
+  CircleAnnotationManager? _routePointsCircleManager;
+  CircleAnnotationManager? _stepCircleManager;
+
+  // ✅ Route polyline managers (用 annotations 画整条路线，保证稳定显示)
+  PolylineAnnotationManager? _routePolylineManager;
+  PolylineAnnotationManager? _routeOutlinePolylineManager;
 
   @override
   Widget build(BuildContext context) {
@@ -89,6 +99,7 @@ class _MapViewState extends State<MapView> {
                       onReorderPoints: _onReorderRoutePoints,
                       onUseCurrentLocation: _onUseCurrentLocationForRoute,
                       onEditingTypeChanged: _onEditingTypeChanged,
+                      onStepTap: _highlightRouteStep,
                     ),
                   ),
 
@@ -145,12 +156,28 @@ class _MapViewState extends State<MapView> {
       ),
     );
 
-    // 找到离当前位置最近的雪场并设置
-    await _findAndSetNearestResort();
+    // 等待样式完全加载
+    await Future.delayed(const Duration(milliseconds: 500));
 
-    // 加载雪场数据
+    // 先尝试获取位置并选择最近的雪场
+    await _selectNearestResortAndReload();
+
+    // 如果 _selectNearestResortAndReload 没有加载数据（因为已经是默认雪场）
+    // 则在这里加载默认雪场数据
     if (_showResortData) {
-      await _loadSkiResortData();
+      // 检查是否已经加载过数据
+      bool hasData = false;
+      try {
+        await _mapboxMap!.style.getSource('runs_source');
+        hasData = true;
+      } catch (e) {
+        hasData = false;
+      }
+
+      if (!hasData) {
+        debugPrint('Loading default resort data...');
+        await _loadSkiResortData();
+      }
     }
 
     // 自动定位到当前位置
@@ -158,12 +185,26 @@ class _MapViewState extends State<MapView> {
     _initialLocationSet = true;
   }
 
-  /// 找到离当前位置最近的雪场
-  Future<void> _findAndSetNearestResort() async {
+  /// 选择最近的雪场并重新加载数据
+  Future<void> _selectNearestResortAndReload() async {
     final manager = Provider.of<SessionManager>(context, listen: false);
-    final position = manager.currentPosition;
+    var position = manager.currentPosition;
 
-    if (position == null) return;
+    // 如果 SessionManager 中没有位置，等待一小段时间再试
+    if (position == null) {
+      debugPrint('Position not available, waiting 500ms...');
+      await Future.delayed(const Duration(milliseconds: 500));
+      position = manager.currentPosition;
+    }
+
+    if (position == null) {
+      debugPrint(
+          'Still no position, using default resort: $_selectedResortKey');
+      return;
+    }
+
+    debugPrint(
+        'Finding nearest resort from: ${position.latitude}, ${position.longitude}');
 
     String nearestResortKey = _selectedResortKey;
     double minDistance = double.infinity;
@@ -180,18 +221,27 @@ class _MapViewState extends State<MapView> {
         resortLng,
       );
 
+      debugPrint(
+          'Resort ${entry.key}: ${(distance / 1000).toStringAsFixed(1)} km');
+
       if (distance < minDistance) {
         minDistance = distance;
         nearestResortKey = entry.key;
       }
     }
 
+    debugPrint(
+        'Nearest resort: $nearestResortKey (${(minDistance / 1000).toStringAsFixed(1)} km)');
+
     if (nearestResortKey != _selectedResortKey) {
+      // 切换到最近的雪场
       setState(() {
         _selectedResortKey = nearestResortKey;
       });
-      debugPrint(
-          'Set nearest resort: $nearestResortKey (${minDistance / 1000} km)');
+      // 重新加载该雪场的数据
+      if (_showResortData) {
+        await _loadSkiResortData();
+      }
     }
   }
 
@@ -608,6 +658,9 @@ class _MapViewState extends State<MapView> {
   Future<void> _loadSkiResortData() async {
     if (_mapboxMap == null) return;
 
+    // 先移除旧的图层
+    await _removeSkiResortLayers();
+
     try {
       // 加载雪道数据
       await _loadGeoJsonLayer(
@@ -639,18 +692,14 @@ class _MapViewState extends State<MapView> {
       final String geojsonString = await rootBundle.loadString(assetPath);
       final geojsonData = json.decode(geojsonString);
 
-      // 使用模型解析数据
-      // 复刻网页版：在读取时就使用 Piste.fromGeoJson / Lift.fromGeoJson 进行解析和筛选
       String processedGeojson;
       if (isRuns) {
         final pistes = _parsePistesFromGeoJson(geojsonData);
         debugPrint('Parsed ${pistes.length} pistes (downhill/connection only)');
-        // 转换回 GeoJSON 用于 Mapbox
         processedGeojson = json.encode(_pistesToGeoJson(pistes));
       } else {
         final lifts = _parseLiftsFromGeoJson(geojsonData);
         debugPrint('Parsed ${lifts.length} lifts');
-        // 转换回 GeoJSON 用于 Mapbox
         processedGeojson = json.encode(_liftsToGeoJson(lifts));
       }
 
@@ -672,22 +721,18 @@ class _MapViewState extends State<MapView> {
   }
 
   /// 解析雪道数据 - 复刻网页版逻辑
-  /// 使用 Piste.fromGeoJson 进行解析，只保留 downhill 和 connection 类型
   List<Piste> _parsePistesFromGeoJson(Map<String, dynamic> geojsonData) {
     final features = geojsonData['features'] as List<dynamic>? ?? [];
     final pistes = <Piste>[];
 
     for (final feature in features) {
       try {
-        // Piste.fromGeoJson 会自动筛选，不支持的类型会抛出异常
         final piste = Piste.fromGeoJson(feature as Map<String, dynamic>);
         pistes.add(piste);
       } catch (e) {
-        // 不支持的类型会被跳过（如 nordic, sled 等）
-        // 这与网页版的行为一致
+        // skip
       }
     }
-
     return pistes;
   }
 
@@ -704,11 +749,9 @@ class _MapViewState extends State<MapView> {
         debugPrint('Error parsing lift: $e');
       }
     }
-
     return lifts;
   }
 
-  /// 将 Piste 列表转换为 GeoJSON FeatureCollection
   Map<String, dynamic> _pistesToGeoJson(List<Piste> pistes) {
     return {
       'type': 'FeatureCollection',
@@ -716,7 +759,6 @@ class _MapViewState extends State<MapView> {
     };
   }
 
-  /// 将 Lift 列表转换为 GeoJSON FeatureCollection
   Map<String, dynamic> _liftsToGeoJson(List<Lift> lifts) {
     return {
       'type': 'FeatureCollection',
@@ -726,12 +768,13 @@ class _MapViewState extends State<MapView> {
 
   Future<void> _addRunsLayers(
     String sourceId,
-    String layerId,
-  ) async {
+    String layerId, {
+    double? opacity,
+  }) async {
     if (_mapboxMap == null) return;
 
-    // 按难度分组添加图层 - 使用网页版相同的难度列表
     final difficulties = [
+      'connection',
       'novice',
       'easy',
       'intermediate',
@@ -739,6 +782,8 @@ class _MapViewState extends State<MapView> {
       'expert',
       'freeride',
     ];
+
+    final effectiveOpacity = opacity ?? SkiResorts.strokeOpacity;
 
     for (final difficulty in difficulties) {
       final color = SkiResorts.difficultyColors[difficulty] ?? 0xFF888888;
@@ -748,8 +793,8 @@ class _MapViewState extends State<MapView> {
           id: '${layerId}_$difficulty',
           sourceId: sourceId,
           lineColor: color,
-          lineWidth: SkiResorts.pisteLineWidth, // 使用配置的线宽
-          lineOpacity: SkiResorts.strokeOpacity, // 使用配置的透明度
+          lineWidth: SkiResorts.pisteLineWidth,
+          lineOpacity: effectiveOpacity,
           lineCap: LineCap.ROUND,
           lineJoin: LineJoin.ROUND,
           filter: [
@@ -762,17 +807,19 @@ class _MapViewState extends State<MapView> {
     }
   }
 
-  Future<void> _addLiftsLayer(String sourceId, String layerId) async {
+  Future<void> _addLiftsLayer(String sourceId, String layerId,
+      {double? opacity}) async {
     if (_mapboxMap == null) return;
 
-    // 使用网页版相同的缆车样式
+    final effectiveOpacity = opacity ?? SkiResorts.liftStrokeOpacity;
+
     await _mapboxMap!.style.addLayer(
       LineLayer(
         id: layerId,
         sourceId: sourceId,
         lineColor: SkiResorts.liftColor,
-        lineWidth: SkiResorts.liftLineWidth, // 使用配置的线宽
-        lineOpacity: SkiResorts.liftStrokeOpacity, // 使用配置的透明度
+        lineWidth: SkiResorts.liftLineWidth,
+        lineOpacity: effectiveOpacity,
         lineCap: LineCap.ROUND,
         lineJoin: LineJoin.ROUND,
       ),
@@ -783,6 +830,7 @@ class _MapViewState extends State<MapView> {
     if (_mapboxMap == null) return;
 
     final layersToRemove = [
+      'runs_connection',
       'runs_novice',
       'runs_easy',
       'runs_intermediate',
@@ -797,23 +845,18 @@ class _MapViewState extends State<MapView> {
     for (final layerId in layersToRemove) {
       try {
         await _mapboxMap!.style.removeStyleLayer(layerId);
-      } catch (e) {
-        // 图层可能不存在，忽略错误
-      }
+      } catch (e) {}
     }
 
     for (final sourceId in sourcesToRemove) {
       try {
         await _mapboxMap!.style.removeStyleSource(sourceId);
-      } catch (e) {
-        // 数据源可能不存在，忽略错误
-      }
+      } catch (e) {}
     }
   }
 
   // ==================== 路线规划相关方法 ====================
 
-  /// 获取当前雪场的 LatLng 坐标
   LatLng? _getResortLatLng() {
     final resortData = SkiResorts.list[_selectedResortKey];
     if (resortData == null) return null;
@@ -821,12 +864,10 @@ class _MapViewState extends State<MapView> {
     return LatLng(coord['lat'] as double, coord['lng'] as double);
   }
 
-  /// 切换路线规划面板
   void _toggleRoutePlanningPanel() {
     setState(() {
       _showRoutePlanningPanel = !_showRoutePlanningPanel;
       if (!_showRoutePlanningPanel) {
-        // 关闭面板时重置状态
         _routePlanningData.reset();
         _currentRoute = null;
         _removeRouteLayer();
@@ -834,45 +875,147 @@ class _MapViewState extends State<MapView> {
     });
   }
 
-  /// 关闭路线规划面板
   void _closeRoutePlanningPanel() {
     setState(() {
       _showRoutePlanningPanel = false;
       _routePlanningData.reset();
       _currentRoute = null;
-      _removeRouteLayer();
     });
+    _removeRouteLayer();
+    _removeRoutePointMarkers();
+    _removePOIMarker();
+    _removeStepMarker();
   }
 
-  /// 关闭 POI 面板
   void _closePOIPanel() {
     setState(() {
       _showPOIPanel = false;
       _selectedPOIPosition = null;
       _selectedPOIName = null;
     });
+    _removePOIMarker();
   }
 
-  /// 地图点击事件处理
   void _onMapTap(MapContentGestureContext context) {
     final point = context.point;
     final coordinates = point.coordinates;
 
-    // 如果正在编辑路线点，直接设置该点
+    debugPrint('Map tapped at: ${coordinates.lat}, ${coordinates.lng}');
+
     if (_currentEditingType != EditingPointType.none) {
       _handleMapTapForRouteEditing(coordinates);
       return;
     }
 
-    // 否则显示 POI 面板
     setState(() {
       _selectedPOIPosition = coordinates;
-      _selectedPOIName = null; // 可以后续通过反向地理编码获取名称
+      _selectedPOIName = null;
       _showPOIPanel = true;
     });
+
+    _showPOIMarker(coordinates);
   }
 
-  /// 处理地图点击用于路线编辑
+  Future<void> _showPOIMarker(Position coordinates) async {
+    if (_mapboxMap == null) return;
+
+    debugPrint('Showing POI marker at: ${coordinates.lat}, ${coordinates.lng}');
+
+    await _removePOIMarker();
+
+    try {
+      final manager =
+          await _mapboxMap!.annotations.createCircleAnnotationManager();
+      _poiCircleManager = manager;
+
+      final options = CircleAnnotationOptions(
+        geometry: Point(coordinates: coordinates),
+        circleRadius: 10.0,
+        circleColor: SkiResorts.poiMarkerColor,
+        circleStrokeColor: Colors.white.value,
+        circleStrokeWidth: 2.0,
+      );
+
+      final annotation = await manager.create(options);
+      debugPrint('POI marker created: ${annotation.id}');
+    } catch (e) {
+      debugPrint('Error showing POI marker: $e');
+    }
+  }
+
+  Future<void> _removePOIMarker() async {
+    if (_poiCircleManager != null && _mapboxMap != null) {
+      try {
+        await _mapboxMap!.annotations
+            .removeAnnotationManager(_poiCircleManager!);
+        _poiCircleManager = null;
+      } catch (e) {}
+    }
+  }
+
+  Future<void> _updateRoutePointMarkers() async {
+    if (_mapboxMap == null) return;
+
+    await _removeRoutePointMarkers();
+
+    try {
+      final manager =
+          await _mapboxMap!.annotations.createCircleAnnotationManager();
+      _routePointsCircleManager = manager;
+
+      final List<CircleAnnotationOptions> options = [];
+
+      if (_routePlanningData.origin != null) {
+        options.add(CircleAnnotationOptions(
+          geometry: Point(coordinates: _routePlanningData.origin!.coordinates),
+          circleRadius: 12.0,
+          circleColor: SkiResorts.originMarkerColor,
+          circleStrokeColor: Colors.white.value,
+          circleStrokeWidth: 3.0,
+        ));
+      }
+
+      if (_routePlanningData.destination != null) {
+        options.add(CircleAnnotationOptions(
+          geometry:
+              Point(coordinates: _routePlanningData.destination!.coordinates),
+          circleRadius: 12.0,
+          circleColor: SkiResorts.destinationMarkerColor,
+          circleStrokeColor: Colors.white.value,
+          circleStrokeWidth: 3.0,
+        ));
+      }
+
+      for (final stopover in _routePlanningData.stopovers) {
+        options.add(CircleAnnotationOptions(
+          geometry: Point(coordinates: stopover.coordinates),
+          circleRadius: 10.0,
+          circleColor: SkiResorts.stopoverMarkerColor,
+          circleStrokeColor: Colors.white.value,
+          circleStrokeWidth: 2.0,
+        ));
+      }
+
+      if (options.isNotEmpty) {
+        debugPrint('Creating ${options.length} route point markers');
+        final annotations = await manager.createMulti(options);
+        debugPrint('Created ${annotations.length} route point markers');
+      }
+    } catch (e) {
+      debugPrint('Error updating route point markers: $e');
+    }
+  }
+
+  Future<void> _removeRoutePointMarkers() async {
+    if (_routePointsCircleManager != null && _mapboxMap != null) {
+      try {
+        await _mapboxMap!.annotations
+            .removeAnnotationManager(_routePointsCircleManager!);
+        _routePointsCircleManager = null;
+      } catch (e) {}
+    }
+  }
+
   void _handleMapTapForRouteEditing(Position coordinates) {
     final name =
         '${coordinates.lat.toStringAsFixed(4)}, ${coordinates.lng.toStringAsFixed(4)}';
@@ -922,11 +1065,11 @@ class _MapViewState extends State<MapView> {
       _currentEditingStopoverIndex = -1;
     });
 
-    // 尝试生成路线
+    _updateRoutePointMarkers();
+    _removePOIMarker();
     _tryGenerateRoute();
   }
 
-  /// 编辑类型变化回调
   void _onEditingTypeChanged(EditingPointType type, int stopoverIndex) {
     setState(() {
       _currentEditingType = type;
@@ -934,7 +1077,6 @@ class _MapViewState extends State<MapView> {
     });
   }
 
-  /// 路线点选择回调
   void _onRoutePointSelected(
     Position coordinates,
     String name,
@@ -981,24 +1123,25 @@ class _MapViewState extends State<MapView> {
     }
 
     setState(() {});
+    _updateRoutePointMarkers();
+    _removePOIMarker();
     _tryGenerateRoute();
   }
 
-  /// 删除路线点
   void _onRemoveRoutePoint(int index) {
     _routePlanningData.removePointAt(index);
     setState(() {});
+    _updateRoutePointMarkers();
     _tryGenerateRoute();
   }
 
-  /// 重新排序路线点
   void _onReorderRoutePoints(int oldIndex, int newIndex) {
     _routePlanningData.reorderAllPoints(oldIndex, newIndex);
     setState(() {});
+    _updateRoutePointMarkers();
     _tryGenerateRoute();
   }
 
-  /// 使用当前位置作为路线点
   void _onUseCurrentLocationForRoute(RoutePointType type) {
     final manager = Provider.of<SessionManager>(context, listen: false);
     final position = manager.currentPosition;
@@ -1011,19 +1154,17 @@ class _MapViewState extends State<MapView> {
     }
 
     final coordinates = Position(position.longitude, position.latitude);
-    final name = '当前位置';
+    const name = '当前位置';
 
     _onRoutePointSelected(coordinates, name, type, -1);
   }
 
-  /// 将 POI 设置为路线点
   void _setPOIAsRoutePoint(RoutePointType type) {
     if (_selectedPOIPosition == null) return;
 
     final name = _selectedPOIName ??
         '${_selectedPOIPosition!.lat.toStringAsFixed(4)}, ${_selectedPOIPosition!.lng.toStringAsFixed(4)}';
 
-    // 如果路线规划面板未打开，先打开
     if (!_showRoutePlanningPanel) {
       setState(() {
         _showRoutePlanningPanel = true;
@@ -1034,63 +1175,306 @@ class _MapViewState extends State<MapView> {
     _closePOIPanel();
   }
 
-  /// 尝试生成路线
+  /// ✅ 整段替换后的版本：先 displayRoute，再 setState（你之前已经替换过也没问题）
   Future<void> _tryGenerateRoute() async {
     if (!_routePlanningData.canGenerateRoute) {
+      await _removeRouteLayer();
+      if (!mounted) return;
       setState(() {
         _currentRoute = null;
       });
-      _removeRouteLayer();
       return;
     }
 
     final origin = _routePlanningData.origin!;
     final destination = _routePlanningData.destination!;
     final stopovers = _routePlanningData.stopovers
-        .map((s) =>
-            LatLng(s.coordinates.lat.toDouble(), s.coordinates.lng.toDouble()))
+        .map((s) => LatLng(
+              s.coordinates.lat.toDouble(),
+              s.coordinates.lng.toDouble(),
+            ))
         .toList();
 
     try {
       final route = await _routeEngine.generateRoute(
-        startCoordinate: LatLng(origin.coordinates.lat.toDouble(),
-            origin.coordinates.lng.toDouble()),
-        endCoordinate: LatLng(destination.coordinates.lat.toDouble(),
-            destination.coordinates.lng.toDouble()),
+        startCoordinate: LatLng(
+          origin.coordinates.lat.toDouble(),
+          origin.coordinates.lng.toDouble(),
+        ),
+        endCoordinate: LatLng(
+          destination.coordinates.lat.toDouble(),
+          destination.coordinates.lng.toDouble(),
+        ),
         stopovers: stopovers.isNotEmpty ? stopovers : null,
         selectedResortKey: _selectedResortKey,
       );
 
+      if (route == null) {
+        await _removeRouteLayer();
+        if (!mounted) return;
+        setState(() {
+          _currentRoute = null;
+        });
+        return;
+      }
+
+      // ✅ 关键：先画整条路线（现在用 annotations，稳定显示）
+      await _displayRoute(route);
+
+      if (!mounted) return;
       setState(() {
         _currentRoute = route;
       });
-
-      if (route != null) {
-        await _displayRoute(route);
-      }
-    } catch (e) {
+    } catch (e, st) {
       debugPrint('Error generating route: $e');
+      debugPrint(st.toString());
     }
   }
 
-  /// 显示路线
+  /// ✅ 显示路线：用 PolylineAnnotationManager 绘制（稳定显示）
   Future<void> _displayRoute(re.Route route) async {
     if (_mapboxMap == null) return;
 
-    // 先移除旧的路线图层
+    debugPrint('Displaying route with ${route.steps.length} steps');
+
+    // 先移除旧路线
     await _removeRouteLayer();
 
-    // 从路线步骤中提取坐标
-    final coordinates = <List<double>>[];
-    for (final step in route.steps) {
-      for (final loc in [step.maneuver.location]) {
-        coordinates.add(loc);
+    // 淡化雪道和缆车图层
+    await _fadeRunsAndLiftsLayers(true);
+
+    final List<List<double>> allCoordinates = [];
+
+    for (int i = 0; i < route.steps.length; i++) {
+      final step = route.steps[i];
+      debugPrint(
+          'Step $i: ${step.name}, geometry length: ${step.geometry.length}');
+
+      if (step.geometry.isEmpty) continue;
+
+      final decoded = PolylineCodec.decode(step.geometry, precision: 5);
+      debugPrint('Decoded ${decoded.length} coordinates for step $i');
+
+      if (decoded.isEmpty) continue;
+
+      // decoded: [lat,lng] -> [lng,lat]
+      final coords =
+          decoded.map((c) => [c[1].toDouble(), c[0].toDouble()]).toList();
+
+      // 过滤掉连续重复点（可选：能避免某些 step 只有 1 点导致视觉怪）
+      for (final c in coords) {
+        if (allCoordinates.isEmpty) {
+          allCoordinates.add(c);
+        } else {
+          final last = allCoordinates.last;
+          if (last[0] != c[0] || last[1] != c[1]) {
+            allCoordinates.add(c);
+          }
+        }
       }
     }
 
-    if (coordinates.isEmpty) return;
+    debugPrint('Total coordinates: ${allCoordinates.length}');
+    if (allCoordinates.length < 2) {
+      debugPrint('Not enough coordinates to draw route polyline.');
+      return;
+    }
 
-    // 创建 GeoJSON
+    final positions = allCoordinates.map((c) => Position(c[0], c[1])).toList();
+
+    try {
+      // 1) 描边（白色）
+      _routeOutlinePolylineManager =
+          await _mapboxMap!.annotations.createPolylineAnnotationManager();
+
+      await _routeOutlinePolylineManager!.create(
+        PolylineAnnotationOptions(
+          geometry: LineString(coordinates: positions),
+          lineColor: 0xFFFFFFFF,
+          lineOpacity: 0.95,
+          lineWidth: math.max(8.0, SkiResorts.routeLineWidth + 4.0),
+          lineJoin: LineJoin.ROUND,
+        ),
+      );
+
+      // 2) 主线（盖在描边上）
+      _routePolylineManager =
+          await _mapboxMap!.annotations.createPolylineAnnotationManager();
+
+      await _routePolylineManager!.create(
+        PolylineAnnotationOptions(
+          geometry: LineString(coordinates: positions),
+          lineColor: SkiResorts.routeColor,
+          lineOpacity: 1.0,
+          lineWidth: math.max(6.0, SkiResorts.routeLineWidth),
+          lineJoin: LineJoin.ROUND,
+        ),
+      );
+
+      debugPrint('Route polyline + outline created via annotations');
+
+      await _fitCameraToRoute(allCoordinates);
+    } catch (e, st) {
+      debugPrint('Error displaying route with polyline annotations: $e');
+      debugPrint(st.toString());
+    }
+  }
+
+  Future<void> _fadeRunsAndLiftsLayers(bool fade) async {
+    if (_mapboxMap == null) return;
+
+    final opacity =
+        fade ? SkiResorts.lowlightOpacity : SkiResorts.strokeOpacity;
+    final liftOpacity =
+        fade ? SkiResorts.lowlightOpacity : SkiResorts.liftStrokeOpacity;
+
+    final difficulties = [
+      'connection',
+      'novice',
+      'easy',
+      'intermediate',
+      'advanced',
+      'expert',
+      'freeride',
+    ];
+
+    for (final difficulty in difficulties) {
+      try {
+        await _mapboxMap!.style.setStyleLayerProperty(
+          'runs_$difficulty',
+          'line-opacity',
+          opacity,
+        );
+      } catch (e) {}
+    }
+
+    try {
+      await _mapboxMap!.style.setStyleLayerProperty(
+        'lifts',
+        'line-opacity',
+        liftOpacity,
+      );
+    } catch (e) {}
+  }
+
+  Future<void> _fitCameraToRoute(List<List<double>> coordinates) async {
+    if (_mapboxMap == null || coordinates.isEmpty) return;
+
+    double minLng = double.infinity;
+    double maxLng = double.negativeInfinity;
+    double minLat = double.infinity;
+    double maxLat = double.negativeInfinity;
+
+    for (final coord in coordinates) {
+      final lng = coord[0];
+      final lat = coord[1];
+      if (lng < minLng) minLng = lng;
+      if (lng > maxLng) maxLng = lng;
+      if (lat < minLat) minLat = lat;
+      if (lat > maxLat) maxLat = lat;
+    }
+
+    const padding = 0.002;
+    minLng -= padding;
+    maxLng += padding;
+    minLat -= padding;
+    maxLat += padding;
+
+    final bounds = CoordinateBounds(
+      southwest: Point(coordinates: Position(minLng, minLat)),
+      northeast: Point(coordinates: Position(maxLng, maxLat)),
+      infiniteBounds: false,
+    );
+
+    try {
+      final edgeInsets = _showRoutePlanningPanel
+          ? MbxEdgeInsets(top: 420, left: 20, bottom: 100, right: 70)
+          : MbxEdgeInsets(top: 100, left: 20, bottom: 100, right: 70);
+
+      final camera = await _mapboxMap!.cameraForCoordinateBounds(
+        bounds,
+        edgeInsets,
+        null,
+        null,
+        null,
+        null,
+      );
+
+      await _mapboxMap!.flyTo(
+        camera,
+        MapAnimationOptions(duration: 1000),
+      );
+    } catch (e) {
+      debugPrint('Error fitting camera to route: $e');
+    }
+  }
+
+  /// ✅ 移除路线：清理 polyline managers + 高亮层
+  Future<void> _removeRouteLayer() async {
+    if (_mapboxMap == null) return;
+
+    // 移除高亮图层
+    try {
+      await _mapboxMap!.style.removeStyleLayer('route_highlight_layer');
+    } catch (e) {}
+    try {
+      await _mapboxMap!.style.removeStyleSource('route_highlight_source');
+    } catch (e) {}
+
+    // 清理整条路线（Polyline annotations）
+    try {
+      if (_routePolylineManager != null) {
+        await _routePolylineManager!.deleteAll();
+        await _mapboxMap!.annotations
+            .removeAnnotationManager(_routePolylineManager!);
+        _routePolylineManager = null;
+      }
+    } catch (e) {}
+
+    try {
+      if (_routeOutlinePolylineManager != null) {
+        await _routeOutlinePolylineManager!.deleteAll();
+        await _mapboxMap!.annotations
+            .removeAnnotationManager(_routeOutlinePolylineManager!);
+        _routeOutlinePolylineManager = null;
+      }
+    } catch (e) {}
+
+    // 兼容旧残留（你之前用 style layer 画 route 时留下的）
+    try {
+      await _mapboxMap!.style.removeStyleLayer('route_layer');
+    } catch (e) {}
+    try {
+      await _mapboxMap!.style.removeStyleLayer('route_layer_outline');
+    } catch (e) {}
+    try {
+      await _mapboxMap!.style.removeStyleSource('route_source');
+    } catch (e) {}
+
+    await _fadeRunsAndLiftsLayers(false);
+  }
+
+  /// 高亮显示路线中的某一步（保持你原来的实现）
+  Future<void> _highlightRouteStep(int stepIndex) async {
+    if (_mapboxMap == null || _currentRoute == null) return;
+    if (stepIndex < 0 || stepIndex >= _currentRoute!.steps.length) return;
+
+    final step = _currentRoute!.steps[stepIndex];
+    if (step.geometry.isEmpty) return;
+
+    final decoded = PolylineCodec.decode(step.geometry, precision: 5);
+    final coords =
+        decoded.map((c) => [c[1].toDouble(), c[0].toDouble()]).toList();
+
+    if (coords.isEmpty) return;
+
+    try {
+      await _mapboxMap!.style.removeStyleLayer('route_highlight_layer');
+    } catch (e) {}
+    try {
+      await _mapboxMap!.style.removeStyleSource('route_highlight_source');
+    } catch (e) {}
+
     final geojson = {
       'type': 'FeatureCollection',
       'features': [
@@ -1098,48 +1482,68 @@ class _MapViewState extends State<MapView> {
           'type': 'Feature',
           'geometry': {
             'type': 'LineString',
-            'coordinates': coordinates,
+            'coordinates': coords,
           },
-          'properties': {},
+          'properties': {'name': step.name},
         }
       ],
     };
 
     try {
       await _mapboxMap!.style.addSource(
-        GeoJsonSource(id: 'route_source', data: json.encode(geojson)),
+        GeoJsonSource(id: 'route_highlight_source', data: json.encode(geojson)),
       );
 
       await _mapboxMap!.style.addLayer(
         LineLayer(
-          id: 'route_layer',
-          sourceId: 'route_source',
-          lineColor: 0xFF1A5AD0, // 路线颜色
-          lineWidth: 8.0,
-          lineOpacity: 0.8,
+          id: 'route_highlight_layer',
+          sourceId: 'route_highlight_source',
+          lineColor: SkiResorts.highlightRouteColor,
+          lineWidth: 12.0,
+          lineOpacity: 0.9,
           lineCap: LineCap.ROUND,
           lineJoin: LineJoin.ROUND,
         ),
       );
+
+      await _fitCameraToRoute(coords);
+      await _addStepMarker(coords.first);
     } catch (e) {
-      debugPrint('Error displaying route: $e');
+      debugPrint('Error highlighting route step: $e');
     }
   }
 
-  /// 移除路线图层
-  Future<void> _removeRouteLayer() async {
+  Future<void> _addStepMarker(List<double> coord) async {
     if (_mapboxMap == null) return;
 
-    try {
-      await _mapboxMap!.style.removeStyleLayer('route_layer');
-    } catch (e) {
-      // 图层可能不存在
-    }
+    await _removeStepMarker();
 
     try {
-      await _mapboxMap!.style.removeStyleSource('route_source');
+      final manager =
+          await _mapboxMap!.annotations.createCircleAnnotationManager();
+      _stepCircleManager = manager;
+
+      final options = CircleAnnotationOptions(
+        geometry: Point(coordinates: Position(coord[0], coord[1])),
+        circleRadius: 14.0,
+        circleColor: SkiResorts.highlightRouteColor,
+        circleStrokeColor: Colors.white.value,
+        circleStrokeWidth: 3.0,
+      );
+
+      await manager.create(options);
     } catch (e) {
-      // 数据源可能不存在
+      debugPrint('Error adding step marker: $e');
+    }
+  }
+
+  Future<void> _removeStepMarker() async {
+    if (_stepCircleManager != null) {
+      try {
+        await _mapboxMap!.annotations
+            .removeAnnotationManager(_stepCircleManager!);
+        _stepCircleManager = null;
+      } catch (e) {}
     }
   }
 }

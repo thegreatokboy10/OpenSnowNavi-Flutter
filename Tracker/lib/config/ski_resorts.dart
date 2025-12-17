@@ -90,8 +90,8 @@ class SkiResorts {
     'freeride': 0xFFFF885B, // 与 expert 相同
   };
 
-  /// 缆车颜色 - lift_color = Color.fromRGBO(216, 59, 59, 1)
-  static const int liftColor = 0xFFD83B3B;
+  /// 缆车颜色 - 改为深紫色，与雪道区分
+  static const int liftColor = 0xFF6B3FA0; // 深紫色
 
   /// 缆车描边颜色 - lift_stroke_color = Color.fromRGBO(255, 255, 255, 1)
   static const int liftStrokeColor = 0xFFFFFFFF;
@@ -101,8 +101,8 @@ class SkiResorts {
   /// 雪道线宽 - pisteLineWidth = 2.5
   static const double pisteLineWidth = 2.5;
 
-  /// 缆车线宽 - liftLineWidth = 4.0
-  static const double liftLineWidth = 4.0;
+  /// 缆车线宽 - 加粗
+  static const double liftLineWidth = 6.0;
 
   // ============ 透明度设置 ============
 
@@ -111,6 +111,9 @@ class SkiResorts {
 
   /// 缆车透明度 - liftStrokeOpacity = 0.8
   static const double liftStrokeOpacity = 0.8;
+
+  /// 淡化透明度（显示路线时）
+  static const double lowlightOpacity = 0.3;
 
   // ============ 缩放级别 ============
 
@@ -122,4 +125,29 @@ class SkiResorts {
 
   /// 支持的雪道类型（只显示 downhill 和 connection）
   static const List<String> supportedPisteUses = ['downhill', 'connection'];
+
+  // ============ 路线设置 ============
+
+  /// 路线颜色
+  static const int routeColor = 0xFF1A5AD0;
+
+  /// 路线线宽
+  static const double routeLineWidth = 8.0;
+
+  // ============ Marker 颜色 ============
+
+  /// POI 未选中时的颜色（红色）
+  static const int poiMarkerColor = 0xFFE53935;
+
+  /// 起点颜色（绿色）
+  static const int originMarkerColor = 0xFF4CAF50;
+
+  /// 终点颜色（蓝色）
+  static const int destinationMarkerColor = 0xFF2196F3;
+
+  /// 途径点颜色（橙色）
+  static const int stopoverMarkerColor = 0xFFFF9800;
+
+  /// 高亮路段颜色（路线详情点击时）
+  static const int highlightRouteColor = 0xFFFFD700;
 }
