@@ -363,11 +363,6 @@ class _RoutePlanningPanelState extends State<RoutePlanningPanel> {
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            GestureDetector(
-              onTap: onEdit,
-              child: const Icon(Icons.edit, color: Colors.grey, size: 16),
-            ),
-            const SizedBox(width: 4),
             const Icon(Icons.drag_handle, color: Colors.grey, size: 18),
             if (onRemove != null) ...[
               const SizedBox(width: 4),
@@ -378,7 +373,8 @@ class _RoutePlanningPanelState extends State<RoutePlanningPanel> {
             ],
           ],
         ),
-        onTap: point == null ? onEdit : null,
+        // 点击整行直接开启搜索编辑
+        onTap: onEdit,
       ),
     );
   }

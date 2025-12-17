@@ -79,19 +79,23 @@ class MarkerIconGenerator {
     required Color color,
     bool isActive = false,
     double size = 120,
+    double strokeWidth = 10,
   }) async {
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
     final paint = Paint();
 
     // 画星形
+    final outerRadius = size / 2 - strokeWidth - 2;
+    final innerRadius = outerRadius * 0.4;
     final starPath =
-        _createStarPath(size / 2, size / 2, size / 2 - 5, size / 4 - 2, 5);
+        _createStarPath(size / 2, size / 2, outerRadius, innerRadius, 5);
 
-    // 外边框
+    // 白色描边
     paint.color = Colors.white;
     paint.style = PaintingStyle.stroke;
-    paint.strokeWidth = 3;
+    paint.strokeWidth = strokeWidth;
+    paint.strokeJoin = StrokeJoin.round;
     canvas.drawPath(starPath, paint);
 
     // 填充
@@ -102,8 +106,9 @@ class MarkerIconGenerator {
     // 如果是活动集合点，添加发光效果
     if (isActive) {
       paint.color = color.withOpacity(0.3);
-      final glowPath =
-          _createStarPath(size / 2, size / 2, size / 2, size / 4, 5);
+      final glowPath = _createStarPath(
+          size / 2, size / 2, outerRadius + 4, innerRadius + 2, 5);
+      paint.style = PaintingStyle.fill;
       canvas.drawPath(glowPath, paint);
     }
 
@@ -113,40 +118,37 @@ class MarkerIconGenerator {
     return byteData!.buffer.asUint8List();
   }
 
-  /// 生成旗帜图标（用于终点）
-  static Future<Uint8List> generateFlagIcon({
-    Color color = Colors.blue,
-    double size = 60,
+  /// 生成起点图标（绿色圆形带 trip_origin 图标）
+  static Future<Uint8List> generateOriginIcon({
+    Color color = Colors.green,
+    double size = 120,
+    double strokeWidth = 4,
   }) async {
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
     final paint = Paint();
 
-    // 画旗杆
-    paint.color = Colors.grey.shade700;
-    paint.strokeWidth = 3;
-    canvas.drawLine(
-      Offset(size * 0.3, size * 0.15),
-      Offset(size * 0.3, size * 0.95),
-      paint,
-    );
+    final center = Offset(size / 2, size / 2);
+    final radius = size / 2 - strokeWidth - 2;
 
-    // 画旗帜
-    final flagPath = Path();
-    flagPath.moveTo(size * 0.3, size * 0.15);
-    flagPath.lineTo(size * 0.85, size * 0.3);
-    flagPath.lineTo(size * 0.3, size * 0.45);
-    flagPath.close();
-
-    paint.color = color;
+    // 白色描边
+    paint.color = Colors.white;
     paint.style = PaintingStyle.fill;
-    canvas.drawPath(flagPath, paint);
+    canvas.drawCircle(center, radius + strokeWidth, paint);
 
-    // 白边
+    // 填充颜色
+    paint.color = color;
+    canvas.drawCircle(center, radius, paint);
+
+    // 画 trip_origin 图标（同心圆）
     paint.color = Colors.white;
     paint.style = PaintingStyle.stroke;
-    paint.strokeWidth = 2;
-    canvas.drawPath(flagPath, paint);
+    paint.strokeWidth = size * 0.06;
+    canvas.drawCircle(center, radius * 0.5, paint);
+
+    // 中心点
+    paint.style = PaintingStyle.fill;
+    canvas.drawCircle(center, radius * 0.18, paint);
 
     final picture = recorder.endRecording();
     final image = await picture.toImage(size.toInt(), size.toInt());
@@ -154,37 +156,102 @@ class MarkerIconGenerator {
     return byteData!.buffer.asUint8List();
   }
 
-  /// 生成出发图标（用于起点）
-  static Future<Uint8List> generateStartIcon({
-    Color color = Colors.green,
-    double size = 60,
+  /// 生成终点图标（蓝色圆形带 location_on 图标）
+  static Future<Uint8List> generateDestinationIcon({
+    Color color = Colors.blue,
+    double size = 120,
+    double strokeWidth = 4,
   }) async {
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
     final paint = Paint();
 
-    // 画圆形背景
     final center = Offset(size / 2, size / 2);
-    final radius = size / 2 - 5;
+    final radius = size / 2 - strokeWidth - 2;
 
-    // 白色边框
+    // 白色描边
     paint.color = Colors.white;
     paint.style = PaintingStyle.fill;
-    canvas.drawCircle(center, radius + 3, paint);
+    canvas.drawCircle(center, radius + strokeWidth, paint);
 
     // 填充颜色
     paint.color = color;
     canvas.drawCircle(center, radius, paint);
 
-    // 画播放/出发三角形
+    // 画 location_on 图标（定位针形状简化）
+    final pinRadius = radius * 0.35;
+    final pinCenterY = center.dy - radius * 0.1;
+
+    // 外圆
+    paint.color = Colors.white;
+    paint.style = PaintingStyle.fill;
+    canvas.drawCircle(Offset(center.dx, pinCenterY), pinRadius, paint);
+
+    // 内圆（空心效果）
+    paint.color = color;
+    canvas.drawCircle(Offset(center.dx, pinCenterY), pinRadius * 0.4, paint);
+
+    // 下方三角形（针尖）
     final trianglePath = Path();
-    trianglePath.moveTo(size * 0.35, size * 0.25);
-    trianglePath.lineTo(size * 0.75, size * 0.5);
-    trianglePath.lineTo(size * 0.35, size * 0.75);
+    trianglePath.moveTo(
+        center.dx - pinRadius * 0.5, pinCenterY + pinRadius * 0.6);
+    trianglePath.lineTo(center.dx, center.dy + radius * 0.5);
+    trianglePath.lineTo(
+        center.dx + pinRadius * 0.5, pinCenterY + pinRadius * 0.6);
     trianglePath.close();
 
     paint.color = Colors.white;
     canvas.drawPath(trianglePath, paint);
+
+    final picture = recorder.endRecording();
+    final image = await picture.toImage(size.toInt(), size.toInt());
+    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    return byteData!.buffer.asUint8List();
+  }
+
+  /// 生成途径点图标（橙色圆形带数字）
+  static Future<Uint8List> generateWaypointIcon({
+    required int number,
+    Color color = Colors.orange,
+    double size = 100,
+    double strokeWidth = 4,
+  }) async {
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    final paint = Paint();
+
+    final center = Offset(size / 2, size / 2);
+    final radius = size / 2 - strokeWidth - 2;
+
+    // 白色描边
+    paint.color = Colors.white;
+    paint.style = PaintingStyle.fill;
+    canvas.drawCircle(center, radius + strokeWidth, paint);
+
+    // 填充颜色
+    paint.color = color;
+    canvas.drawCircle(center, radius, paint);
+
+    // 画数字
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: '$number',
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: radius * 1.0,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    );
+    textPainter.layout();
+    textPainter.paint(
+      canvas,
+      Offset(
+        center.dx - textPainter.width / 2,
+        center.dy - textPainter.height / 2,
+      ),
+    );
 
     final picture = recorder.endRecording();
     final image = await picture.toImage(size.toInt(), size.toInt());

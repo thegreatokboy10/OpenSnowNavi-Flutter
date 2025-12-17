@@ -127,25 +127,31 @@ class AppTheme {
   static const double memberIconSize = 160;
 
   /// 队员头像图标显示缩放比例
-  static const double memberIconScale = 0.6;
+  static const double memberIconScale = 0.9;
 
   /// 集合点星标图标尺寸（激活状态）
-  static const double meetingPointIconActiveSize = 120;
+  static const double meetingPointIconActiveSize = 150;
 
   /// 集合点星标图标尺寸（普通状态）
-  static const double meetingPointIconSize = 90;
+  static const double meetingPointIconSize = 120;
 
   /// 集合点图标显示缩放比例
-  static const double meetingPointIconScale = 0.5;
+  static const double meetingPointIconScale = 0.8;
 
-  /// 终点旗帜图标尺寸
-  static const double flagIconSize = 60;
+  /// 起点图标尺寸（与星标一致）
+  static const double originIconSize = 120;
 
-  /// 起点图标尺寸
-  static const double startIconSize = 60;
+  /// 终点图标尺寸（与星标一致）
+  static const double destinationIconSize = 120;
+
+  /// 途径点图标尺寸
+  static const double waypointIconSize = 100;
 
   /// 路线点图标缩放比例
-  static const double routePointIconScale = 0.6;
+  static const double routePointIconScale = 0.8;
+
+  /// 图标描边宽度
+  static const double markerStrokeWidth = 10.0;
 
   // ============ 装饰方法 ============
 

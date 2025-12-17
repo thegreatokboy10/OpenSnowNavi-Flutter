@@ -1099,15 +1099,13 @@ class _MapViewState extends State<MapView> {
         'Querying features at screen point: (${screenPoint.x}, ${screenPoint.y})');
 
     try {
-      // 飞到点击位置
-      _flyToPosition(coordinates);
-
       // 首先检查是否点击了团队成员标记
       if (_showMemberLocationsLayer && _memberLocations.isNotEmpty) {
         final tappedMember =
             _findNearestMemberLocation(coordinates, threshold: 50);
         if (tappedMember != null) {
           debugPrint('Tapped on member: ${tappedMember.nickname}');
+          _flyToPosition(coordinates);
           _showMemberInfoPanel(tappedMember);
           return;
         }
@@ -1119,6 +1117,7 @@ class _MapViewState extends State<MapView> {
             _findNearestMeetingPoint(coordinates, threshold: 50);
         if (tappedPoint != null) {
           debugPrint('Tapped on meeting point: ${tappedPoint.name}');
+          _flyToPosition(coordinates);
           _showMeetingPointInfoPanel(tappedPoint);
           return;
         }
@@ -1148,16 +1147,16 @@ class _MapViewState extends State<MapView> {
           final properties = featureMap['properties'] as Map<String, dynamic>?;
           if (properties != null) {
             final name = properties['name'] ?? properties['ref'] ?? '未知';
-            final type = properties['type'] ?? properties['aerialway'] ?? '';
-            debugPrint('Tapped on feature: $name (type: $type)');
-            _showFeatureInfoPanel(
-                name.toString(), type.toString(), coordinates);
+            debugPrint('Tapped on feature: $name, properties: $properties');
+            _flyToPosition(coordinates);
+            _showFeatureInfoPanel(properties, coordinates);
             return;
           }
         }
       }
 
-      debugPrint('No feature found at tap location');
+      // 没有点击到任何 feature，不做任何操作（不居中、不弹窗）
+      debugPrint('No feature found at tap location - ignoring');
     } catch (e) {
       debugPrint('Error querying features: $e');
     }
@@ -1375,14 +1374,88 @@ class _MapViewState extends State<MapView> {
   }
 
   /// 显示地图元素（雪道/缆车）信息面板
-  void _showFeatureInfoPanel(String name, String type, Position coordinates) {
+  void _showFeatureInfoPanel(
+      Map<String, dynamic> properties, Position coordinates) {
+    final name = (properties['name'] ?? properties['ref'] ?? '未知').toString();
+    final type =
+        (properties['type'] ?? properties['aerialway'] ?? '').toString();
+    final difficulty = (properties['piste:difficulty'] ?? '').toString();
+
     // 判断是雪道还是缆车
     final isLift = type.isNotEmpty &&
         (type.contains('chair') ||
             type.contains('gondola') ||
             type.contains('cable') ||
             type.contains('drag') ||
-            type.contains('t-bar'));
+            type.contains('t-bar') ||
+            type.contains('platter') ||
+            type.contains('j-bar') ||
+            type.contains('magic_carpet'));
+
+    // 缆车类型翻译
+    String liftTypeLabel = '';
+    if (isLift) {
+      if (type.contains('chair')) {
+        liftTypeLabel = '吊椅缆车';
+      } else if (type.contains('gondola')) {
+        liftTypeLabel = '厢式缆车';
+      } else if (type.contains('cable')) {
+        liftTypeLabel = '索道';
+      } else if (type.contains('drag') ||
+          type.contains('platter') ||
+          type.contains('t-bar') ||
+          type.contains('j-bar')) {
+        liftTypeLabel = '拖牵';
+      } else if (type.contains('magic_carpet')) {
+        liftTypeLabel = '魔毯';
+      } else {
+        liftTypeLabel = '缆车';
+      }
+    }
+
+    // 雪道难度图标和颜色
+    Widget difficultyWidget = const SizedBox.shrink();
+    if (!isLift && difficulty.isNotEmpty) {
+      Color difficultyColor;
+      String difficultyLabel;
+      switch (difficulty.toLowerCase()) {
+        case 'novice':
+          difficultyColor = Colors.green;
+          difficultyLabel = '初级';
+          break;
+        case 'easy':
+          difficultyColor = Colors.blue;
+          difficultyLabel = '中级';
+          break;
+        case 'intermediate':
+          difficultyColor = Colors.red;
+          difficultyLabel = '高级';
+          break;
+        case 'advanced':
+        case 'expert':
+          difficultyColor = Colors.black;
+          difficultyLabel = '专家';
+          break;
+        case 'freeride':
+          difficultyColor = Colors.orange;
+          difficultyLabel = '野雪';
+          break;
+        default:
+          difficultyColor = Colors.grey;
+          difficultyLabel = difficulty;
+      }
+      difficultyWidget = Row(
+        children: [
+          Icon(Icons.ac_unit, color: difficultyColor, size: 16),
+          const SizedBox(width: 4),
+          Text(
+            difficultyLabel,
+            style:
+                TextStyle(color: difficultyColor, fontWeight: FontWeight.bold),
+          ),
+        ],
+      );
+    }
 
     showModalBottomSheet(
       context: context,
@@ -1419,10 +1492,11 @@ class _MapViewState extends State<MapView> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      Text(
-                        isLift ? '缆车 / $type' : '雪道',
-                        style: TextStyle(color: Colors.grey[600]),
-                      ),
+                      if (isLift)
+                        Text(liftTypeLabel,
+                            style: TextStyle(color: Colors.grey[600]))
+                      else
+                        difficultyWidget,
                     ],
                   ),
                 ),
@@ -1435,7 +1509,6 @@ class _MapViewState extends State<MapView> {
                   child: ElevatedButton.icon(
                     onPressed: () {
                       Navigator.pop(context);
-                      // 设为起点
                       _routePlanningData.origin = RoutePoint(
                         id: 'origin',
                         name: name,
@@ -1457,7 +1530,6 @@ class _MapViewState extends State<MapView> {
                   child: ElevatedButton.icon(
                     onPressed: () {
                       Navigator.pop(context);
-                      // 设为终点
                       _routePlanningData.destination = RoutePoint(
                         id: 'destination',
                         name: name,
@@ -1583,72 +1655,65 @@ class _MapViewState extends State<MapView> {
       _routePointsCircleManager =
           await _mapboxMap!.annotations.createCircleAnnotationManager();
 
-      // 起点图标
+      // 起点图标 - 使用绿色圆形带 trip_origin 图标
       if (_routePlanningData.origin != null) {
-        // 判断是否从当前位置出发
-        final isCurrentLocation = _routePlanningData.origin!.name == '当前位置';
-        if (!isCurrentLocation) {
-          // 非当前位置起点，使用出发图标
-          final startIcon = await MarkerIconGenerator.generateStartIcon(
-            color: Color(SkiResorts.originMarkerColor),
-            size: AppTheme.startIconSize,
-          );
-          await _routePointsIconManager!.create(
-            PointAnnotationOptions(
-              geometry:
-                  Point(coordinates: _routePlanningData.origin!.coordinates),
-              image: startIcon,
-              iconSize: AppTheme.routePointIconScale,
-              iconAnchor: IconAnchor.CENTER,
-            ),
-          );
-        } else {
-          // 当前位置起点，使用圆形标记
-          await _routePointsCircleManager!.create(
-            CircleAnnotationOptions(
-              geometry:
-                  Point(coordinates: _routePlanningData.origin!.coordinates),
-              circleRadius: 12.0,
-              circleColor: SkiResorts.originMarkerColor,
-              circleStrokeColor: Colors.white.value,
-              circleStrokeWidth: 3.0,
-            ),
-          );
-        }
+        final originIcon = await MarkerIconGenerator.generateOriginIcon(
+          color: Color(SkiResorts.originMarkerColor),
+          size: AppTheme.originIconSize,
+          strokeWidth: AppTheme.markerStrokeWidth,
+        );
+        await _routePointsIconManager!.create(
+          PointAnnotationOptions(
+            geometry:
+                Point(coordinates: _routePlanningData.origin!.coordinates),
+            image: originIcon,
+            iconSize: AppTheme.routePointIconScale,
+            iconAnchor: IconAnchor.CENTER,
+          ),
+        );
       }
 
-      // 终点图标 - 使用旗帜
+      // 终点图标 - 使用蓝色圆形带 location_on 图标
       if (_routePlanningData.destination != null) {
-        final flagIcon = await MarkerIconGenerator.generateFlagIcon(
+        final destinationIcon =
+            await MarkerIconGenerator.generateDestinationIcon(
           color: Color(SkiResorts.destinationMarkerColor),
-          size: AppTheme.flagIconSize,
+          size: AppTheme.destinationIconSize,
+          strokeWidth: AppTheme.markerStrokeWidth,
         );
         await _routePointsIconManager!.create(
           PointAnnotationOptions(
             geometry:
                 Point(coordinates: _routePlanningData.destination!.coordinates),
-            image: flagIcon,
+            image: destinationIcon,
             iconSize: AppTheme.routePointIconScale,
-            iconAnchor: IconAnchor.BOTTOM_LEFT, // 旗杆底部对齐位置
+            iconAnchor: IconAnchor.CENTER,
           ),
         );
       }
 
-      // 途径点使用圆形标记
-      final List<CircleAnnotationOptions> stopoverOptions = [];
-      for (final stopover in _routePlanningData.stopovers) {
-        stopoverOptions.add(CircleAnnotationOptions(
-          geometry: Point(coordinates: stopover.coordinates),
-          circleRadius: 10.0,
-          circleColor: SkiResorts.stopoverMarkerColor,
-          circleStrokeColor: Colors.white.value,
-          circleStrokeWidth: 2.0,
-        ));
+      // 途径点使用带数字的圆形图标
+      for (int i = 0; i < _routePlanningData.stopovers.length; i++) {
+        final stopover = _routePlanningData.stopovers[i];
+        final waypointIcon = await MarkerIconGenerator.generateWaypointIcon(
+          number: i + 1,
+          color: Color(SkiResorts.stopoverMarkerColor),
+          size: AppTheme.waypointIconSize,
+          strokeWidth: AppTheme.markerStrokeWidth,
+        );
+        await _routePointsIconManager!.create(
+          PointAnnotationOptions(
+            geometry: Point(coordinates: stopover.coordinates),
+            image: waypointIcon,
+            iconSize: AppTheme.routePointIconScale,
+            iconAnchor: IconAnchor.CENTER,
+          ),
+        );
       }
 
-      if (stopoverOptions.isNotEmpty) {
-        debugPrint('Creating ${stopoverOptions.length} stopover markers');
-        await _routePointsCircleManager!.createMulti(stopoverOptions);
+      if (_routePlanningData.stopovers.isNotEmpty) {
+        debugPrint(
+            'Created ${_routePlanningData.stopovers.length} stopover markers with numbers');
       }
     } catch (e) {
       debugPrint('Error updating route point markers: $e');
