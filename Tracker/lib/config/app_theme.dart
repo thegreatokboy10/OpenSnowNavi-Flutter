@@ -153,6 +153,29 @@ class AppTheme {
   /// 图标描边宽度
   static const double markerStrokeWidth = 10.0;
 
+  // ============ 地图标签和箭头显示阈值 ============
+
+  /// 显示雪道/缆车名称的最小缩放级别
+  static const double labelMinZoom = 14.0;
+
+  /// 显示雪道方向箭头的最小缩放级别
+  static const double arrowMinZoom = 14.0;
+
+  /// 雪道名称字体大小
+  static const double pisteNameFontSize = 12.0;
+
+  /// 缆车名称字体大小
+  static const double liftNameFontSize = 12.0;
+
+  /// 名称标签文字光晕宽度（用于增加可读性）
+  static const double labelHaloWidth = 1.5;
+
+  /// 方向箭头间距（像素）
+  static const double arrowSpacing = 100.0;
+
+  /// 方向箭头大小
+  static const double arrowSize = 0.8;
+
   // ============ 装饰方法 ============
 
   /// 获取面板装饰

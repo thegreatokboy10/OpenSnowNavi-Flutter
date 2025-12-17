@@ -72,6 +72,12 @@ class _MapViewState extends State<MapView> {
   bool _showMeetingPointsLayer = true;
   bool _showMemberLocationsLayer = true;
 
+  // Annotation 到数据的映射（用于原生点击回调）
+  final Map<String, MemberLocation> _memberAnnotationMap = {};
+  final Map<String, MeetingPoint> _meetingPointAnnotationMap = {};
+  Cancelable? _memberTapCancelable;
+  Cancelable? _meetingPointTapCancelable;
+
   @override
   Widget build(BuildContext context) {
     return Consumer<SessionManager>(
@@ -943,6 +949,7 @@ class _MapViewState extends State<MapView> {
     for (final difficulty in difficulties) {
       final color = SkiResorts.difficultyColors[difficulty] ?? 0xFF888888;
 
+      // 添加线条图层
       await _mapboxMap!.style.addLayer(
         LineLayer(
           id: '${layerId}_$difficulty',
@@ -959,6 +966,54 @@ class _MapViewState extends State<MapView> {
           ],
         ),
       );
+
+      // 添加名称标签图层（SymbolLayer）
+      await _mapboxMap!.style.addLayer(
+        SymbolLayer(
+          id: '${layerId}_${difficulty}_labels',
+          sourceId: sourceId,
+          minZoom: AppTheme.labelMinZoom,
+          filter: [
+            '==',
+            ['get', 'difficulty'],
+            difficulty
+          ],
+          textFieldExpression: ['get', 'name'], // 使用表达式获取 name 属性
+          textSize: AppTheme.pisteNameFontSize,
+          textColor: color,
+          textHaloColor: 0xFFFFFFFF,
+          textHaloWidth: AppTheme.labelHaloWidth,
+          symbolPlacement: SymbolPlacement.LINE,
+          textRotationAlignment: TextRotationAlignment.MAP,
+          textPitchAlignment: TextPitchAlignment.VIEWPORT,
+          textAllowOverlap: false,
+          textIgnorePlacement: false,
+        ),
+      );
+
+      // 添加方向箭头图层（SymbolLayer）- 仅对非 connection 类型
+      if (difficulty != 'connection') {
+        await _mapboxMap!.style.addLayer(
+          SymbolLayer(
+            id: '${layerId}_${difficulty}_arrows',
+            sourceId: sourceId,
+            minZoom: AppTheme.arrowMinZoom,
+            filter: [
+              '==',
+              ['get', 'difficulty'],
+              difficulty
+            ],
+            iconImage: 'triangle-11', // Mapbox 内置三角形图标
+            iconSize: AppTheme.arrowSize,
+            iconColor: color,
+            iconRotationAlignment: IconRotationAlignment.MAP,
+            symbolPlacement: SymbolPlacement.LINE,
+            symbolSpacing: AppTheme.arrowSpacing,
+            iconAllowOverlap: true,
+            iconIgnorePlacement: true,
+          ),
+        );
+      }
     }
   }
 
@@ -968,6 +1023,7 @@ class _MapViewState extends State<MapView> {
 
     final effectiveOpacity = opacity ?? SkiResorts.liftStrokeOpacity;
 
+    // 添加线条图层
     await _mapboxMap!.style.addLayer(
       LineLayer(
         id: layerId,
@@ -979,12 +1035,32 @@ class _MapViewState extends State<MapView> {
         lineJoin: LineJoin.ROUND,
       ),
     );
+
+    // 添加名称标签图层（SymbolLayer）
+    await _mapboxMap!.style.addLayer(
+      SymbolLayer(
+        id: '${layerId}_labels',
+        sourceId: sourceId,
+        minZoom: AppTheme.labelMinZoom,
+        textFieldExpression: ['get', 'name'], // 使用表达式获取 name 属性
+        textSize: AppTheme.liftNameFontSize,
+        textColor: SkiResorts.liftColor,
+        textHaloColor: 0xFFFFFFFF,
+        textHaloWidth: AppTheme.labelHaloWidth,
+        symbolPlacement: SymbolPlacement.LINE,
+        textRotationAlignment: TextRotationAlignment.MAP,
+        textPitchAlignment: TextPitchAlignment.VIEWPORT,
+        textAllowOverlap: false,
+        textIgnorePlacement: false,
+      ),
+    );
   }
 
   Future<void> _removeSkiResortLayers() async {
     if (_mapboxMap == null) return;
 
-    final layersToRemove = [
+    // 基础图层
+    final baseLayersToRemove = [
       'runs_connection',
       'runs_novice',
       'runs_easy',
@@ -995,18 +1071,50 @@ class _MapViewState extends State<MapView> {
       'lifts',
     ];
 
+    // 标签图层
+    final labelLayersToRemove = [
+      'runs_connection_labels',
+      'runs_novice_labels',
+      'runs_easy_labels',
+      'runs_intermediate_labels',
+      'runs_advanced_labels',
+      'runs_expert_labels',
+      'runs_freeride_labels',
+      'lifts_labels',
+    ];
+
+    // 箭头图层（connection 没有箭头）
+    final arrowLayersToRemove = [
+      'runs_novice_arrows',
+      'runs_easy_arrows',
+      'runs_intermediate_arrows',
+      'runs_advanced_arrows',
+      'runs_expert_arrows',
+      'runs_freeride_arrows',
+    ];
+
+    final allLayersToRemove = [
+      ...baseLayersToRemove,
+      ...labelLayersToRemove,
+      ...arrowLayersToRemove,
+    ];
+
     final sourcesToRemove = ['runs_source', 'lifts_source'];
 
-    for (final layerId in layersToRemove) {
+    for (final layerId in allLayersToRemove) {
       try {
         await _mapboxMap!.style.removeStyleLayer(layerId);
-      } catch (e) {}
+      } catch (e) {
+        // 图层可能不存在，忽略错误
+      }
     }
 
     for (final sourceId in sourcesToRemove) {
       try {
         await _mapboxMap!.style.removeStyleSource(sourceId);
-      } catch (e) {}
+      } catch (e) {
+        // 数据源可能不存在，忽略错误
+      }
     }
   }
 
@@ -1094,44 +1202,17 @@ class _MapViewState extends State<MapView> {
     _showPOIMarker(coordinates);
   }
 
-  /// 查询地图元素
+  /// 查询地图元素（雪道和缆车）
+  /// 注意：成员和集合点标记使用原生 PointAnnotationManager.tapEvents 回调处理
   Future<void> _queryMapFeaturesAtPoint(
       ScreenCoordinate screenPoint, Position coordinates) async {
     if (_mapboxMap == null) return;
 
     debugPrint(
-        'Querying features at screen point: (${screenPoint.x}, ${screenPoint.y})');
-
-    // 点击检测阈值 (米) - 用于自定义标记（成员和集合点）
-    const double primaryThreshold = 100; // 主要阈值
-    const double secondaryThreshold = 150; // 备用更大阈值（用于透传机制）
+        'Querying piste/lift features at screen point: (${screenPoint.x}, ${screenPoint.y})');
 
     try {
-      // 1. 首先检查是否点击了团队成员标记（使用主要阈值）
-      if (_showMemberLocationsLayer && _memberLocations.isNotEmpty) {
-        final tappedMember = _findNearestMemberLocation(coordinates,
-            threshold: primaryThreshold);
-        if (tappedMember != null) {
-          debugPrint('Tapped on member: ${tappedMember.nickname}');
-          _flyToPosition(coordinates);
-          _showMemberInfoPanel(tappedMember);
-          return;
-        }
-      }
-
-      // 2. 检查是否点击了集合点（使用主要阈值）
-      if (_showMeetingPointsLayer && _meetingPoints.isNotEmpty) {
-        final tappedPoint =
-            _findNearestMeetingPoint(coordinates, threshold: primaryThreshold);
-        if (tappedPoint != null) {
-          debugPrint('Tapped on meeting point: ${tappedPoint.name}');
-          _flyToPosition(coordinates);
-          _showMeetingPointInfoPanel(tappedPoint);
-          return;
-        }
-      }
-
-      // 3. 查询雪道和缆车图层 - 使用实际的图层ID
+      // 查询雪道和缆车图层
       final renderedFeatures = await _mapboxMap!.queryRenderedFeatures(
         RenderedQueryGeometry.fromScreenCoordinate(screenPoint),
         RenderedQueryOptions(
@@ -1153,88 +1234,34 @@ class _MapViewState extends State<MapView> {
         if (feature != null) {
           final queriedFeature = feature.queriedFeature;
           final featureMap = queriedFeature.feature;
-          final properties = featureMap['properties'] as Map<String, dynamic>?;
-          if (properties != null) {
-            final name = properties['name'] ?? properties['ref'] ?? '未知';
-            debugPrint('Tapped on feature: $name, properties: $properties');
-            _flyToPosition(coordinates);
-            _showFeatureInfoPanel(properties, coordinates);
-            return;
+          // 安全地转换 properties 类型
+          final rawProperties = featureMap['properties'];
+          if (rawProperties != null) {
+            // 将 _Map<Object?, Object?> 转换为 Map<String, dynamic>
+            final properties = <String, dynamic>{};
+            if (rawProperties is Map) {
+              for (final entry in rawProperties.entries) {
+                if (entry.key != null) {
+                  properties[entry.key.toString()] = entry.value;
+                }
+              }
+            }
+            if (properties.isNotEmpty) {
+              final name = properties['name'] ?? properties['ref'] ?? '未知';
+              debugPrint('Tapped on feature: $name, properties: $properties');
+              _flyToPosition(coordinates);
+              _showFeatureInfoPanel(properties, coordinates);
+              return;
+            }
           }
         }
       }
 
-      // 4. 透传机制：如果没有找到雪道/缆车，再次用更大阈值检测成员/集合点
-      if (_showMemberLocationsLayer && _memberLocations.isNotEmpty) {
-        final tappedMember = _findNearestMemberLocation(coordinates,
-            threshold: secondaryThreshold);
-        if (tappedMember != null) {
-          debugPrint('Tapped on member (secondary): ${tappedMember.nickname}');
-          _flyToPosition(coordinates);
-          _showMemberInfoPanel(tappedMember);
-          return;
-        }
-      }
-
-      if (_showMeetingPointsLayer && _meetingPoints.isNotEmpty) {
-        final tappedPoint = _findNearestMeetingPoint(coordinates,
-            threshold: secondaryThreshold);
-        if (tappedPoint != null) {
-          debugPrint(
-              'Tapped on meeting point (secondary): ${tappedPoint.name}');
-          _flyToPosition(coordinates);
-          _showMeetingPointInfoPanel(tappedPoint);
-          return;
-        }
-      }
-
-      // 没有点击到任何 feature，不做任何操作（不居中、不弹窗）
-      debugPrint('No feature found at tap location - ignoring');
+      // 没有点击到雪道/缆车，不做任何操作（成员和集合点由原生回调处理）
+      debugPrint('No piste/lift feature found at tap location - ignoring');
     } catch (e) {
       debugPrint('Error querying features: $e');
     }
-  }
-
-  /// 查找最近的团队成员位置
-  MemberLocation? _findNearestMemberLocation(Position coordinates,
-      {required double threshold}) {
-    double minDistance = double.infinity;
-    MemberLocation? nearest;
-
-    for (final member in _memberLocations) {
-      final distance = _calculateDistance(
-        coordinates.lat.toDouble(),
-        coordinates.lng.toDouble(),
-        member.location.latitude,
-        member.location.longitude,
-      );
-      if (distance < minDistance && distance < threshold) {
-        minDistance = distance;
-        nearest = member;
-      }
-    }
-    return nearest;
-  }
-
-  /// 查找最近的集合点
-  MeetingPoint? _findNearestMeetingPoint(Position coordinates,
-      {required double threshold}) {
-    double minDistance = double.infinity;
-    MeetingPoint? nearest;
-
-    for (final point in _meetingPoints) {
-      final distance = _calculateDistance(
-        coordinates.lat.toDouble(),
-        coordinates.lng.toDouble(),
-        point.latitude,
-        point.longitude,
-      );
-      if (distance < minDistance && distance < threshold) {
-        minDistance = distance;
-        nearest = point;
-      }
-    }
-    return nearest;
   }
 
   /// 显示团队成员信息面板
@@ -2366,6 +2393,13 @@ class _MapViewState extends State<MapView> {
   Future<void> _updateMemberMarkers() async {
     if (_mapboxMap == null) return;
 
+    // 取消之前的点击监听
+    _memberTapCancelable?.cancel();
+    _memberTapCancelable = null;
+
+    // 清除 annotation 映射
+    _memberAnnotationMap.clear();
+
     // 移除旧的图标标记
     if (_memberIconManager != null) {
       try {
@@ -2382,6 +2416,25 @@ class _MapViewState extends State<MapView> {
     _memberIconManager =
         await _mapboxMap!.annotations.createPointAnnotationManager();
 
+    // 设置允许图标重叠，确保点击区域足够大
+    await _memberIconManager!.setIconAllowOverlap(true);
+    await _memberIconManager!.setIconIgnorePlacement(true);
+
+    // 注册原生点击回调
+    _memberTapCancelable = _memberIconManager!.tapEvents(
+      onTap: (annotation) {
+        final member = _memberAnnotationMap[annotation.id];
+        if (member != null) {
+          debugPrint('[Native Tap] Tapped on member: ${member.nickname}');
+          _flyToPosition(Position(
+            member.location.longitude,
+            member.location.latitude,
+          ));
+          _showMemberInfoPanel(member);
+        }
+      },
+    );
+
     // 为每个成员创建带头像的标记
     for (final member in _memberLocations) {
       // 生成头像图标
@@ -2391,7 +2444,7 @@ class _MapViewState extends State<MapView> {
         size: AppTheme.memberIconSize,
       );
 
-      await _memberIconManager!.create(
+      final annotation = await _memberIconManager!.create(
         PointAnnotationOptions(
           geometry: Point(
             coordinates: Position(
@@ -2404,6 +2457,9 @@ class _MapViewState extends State<MapView> {
           iconAnchor: IconAnchor.BOTTOM, // 箭头指向实际位置
         ),
       );
+
+      // 存储 annotation ID 到成员的映射
+      _memberAnnotationMap[annotation.id] = member;
     }
   }
 
@@ -2434,6 +2490,13 @@ class _MapViewState extends State<MapView> {
   Future<void> _updateMeetingPointMarkers() async {
     if (_mapboxMap == null) return;
 
+    // 取消之前的点击监听
+    _meetingPointTapCancelable?.cancel();
+    _meetingPointTapCancelable = null;
+
+    // 清除 annotation 映射
+    _meetingPointAnnotationMap.clear();
+
     // 移除旧的星标图标
     if (_meetingPointIconManager != null) {
       try {
@@ -2449,6 +2512,22 @@ class _MapViewState extends State<MapView> {
     _meetingPointIconManager =
         await _mapboxMap!.annotations.createPointAnnotationManager();
 
+    // 设置允许图标重叠，确保点击区域足够大
+    await _meetingPointIconManager!.setIconAllowOverlap(true);
+    await _meetingPointIconManager!.setIconIgnorePlacement(true);
+
+    // 注册原生点击回调
+    _meetingPointTapCancelable = _meetingPointIconManager!.tapEvents(
+      onTap: (annotation) {
+        final point = _meetingPointAnnotationMap[annotation.id];
+        if (point != null) {
+          debugPrint('[Native Tap] Tapped on meeting point: ${point.name}');
+          _flyToPosition(Position(point.longitude, point.latitude));
+          _showMeetingPointInfoPanel(point);
+        }
+      },
+    );
+
     // 为每个集合点创建星标图标
     for (final point in _meetingPoints) {
       final isActive = point.isActive;
@@ -2463,7 +2542,7 @@ class _MapViewState extends State<MapView> {
             : AppTheme.meetingPointIconSize,
       );
 
-      await _meetingPointIconManager!.create(
+      final annotation = await _meetingPointIconManager!.create(
         PointAnnotationOptions(
           geometry: Point(
             coordinates: Position(point.longitude, point.latitude),
@@ -2473,6 +2552,9 @@ class _MapViewState extends State<MapView> {
           iconAnchor: IconAnchor.CENTER,
         ),
       );
+
+      // 存储 annotation ID 到集合点的映射
+      _meetingPointAnnotationMap[annotation.id] = point;
     }
   }
 
