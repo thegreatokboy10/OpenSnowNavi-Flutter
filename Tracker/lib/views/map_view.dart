@@ -823,6 +823,9 @@ class _MapViewState extends State<MapView> {
     await _removeSkiResortLayers();
 
     try {
+      // 先添加方向箭头图标到样式中（如果还没有添加）
+      await _addArrowImagesToStyle();
+
       // 加载雪道数据
       await _loadGeoJsonLayer(
         'runs',
@@ -838,6 +841,51 @@ class _MapViewState extends State<MapView> {
       );
     } catch (e) {
       debugPrint('Error loading ski resort data: $e');
+    }
+  }
+
+  /// 添加方向箭头图标到样式中
+  Future<void> _addArrowImagesToStyle() async {
+    if (_mapboxMap == null) return;
+
+    final difficulties = [
+      'novice',
+      'easy',
+      'intermediate',
+      'advanced',
+      'expert',
+      'freeride'
+    ];
+
+    for (final difficulty in difficulties) {
+      final imageName = 'piste-arrow-$difficulty';
+
+      // 检查图标是否已存在
+      try {
+        final exists = await _mapboxMap!.style.getStyleImage(imageName);
+        if (exists != null) continue; // 图标已存在，跳过
+      } catch (e) {
+        // 图标不存在，继续添加
+      }
+
+      // 获取难度对应的颜色
+      final colorValue = SkiResorts.difficultyColors[difficulty] ?? 0xFF888888;
+      final color = Color(colorValue);
+
+      // 生成箭头图标
+      final arrowBytes = await MarkerIconGenerator.generateArrowIcon(
+        color: color,
+        size: AppTheme.arrowIconSize,
+      );
+
+      // 添加到样式
+      final mbImage = MbxImage(
+        width: AppTheme.arrowIconSize.toInt(),
+        height: AppTheme.arrowIconSize.toInt(),
+        data: arrowBytes,
+      );
+      await _mapboxMap!.style
+          .addStyleImage(imageName, 1.0, mbImage, false, [], [], null);
     }
   }
 
@@ -1003,9 +1051,8 @@ class _MapViewState extends State<MapView> {
               ['get', 'difficulty'],
               difficulty
             ],
-            iconImage: 'triangle-11', // Mapbox 内置三角形图标
+            iconImage: 'piste-arrow-$difficulty', // 使用自定义箭头图标
             iconSize: AppTheme.arrowSize,
-            iconColor: color,
             iconRotationAlignment: IconRotationAlignment.MAP,
             symbolPlacement: SymbolPlacement.LINE,
             symbolSpacing: AppTheme.arrowSpacing,

@@ -59,6 +59,9 @@ class MeetingPointService {
     _deviceId = null;
     _nickname = null;
     _meetingPoints = [];
+    // 通知监听者清空集合点
+    onMeetingPointsUpdated?.call(_meetingPoints);
+    onActiveMeetingPointChanged?.call(null);
   }
 
   /// 加载集合点列表

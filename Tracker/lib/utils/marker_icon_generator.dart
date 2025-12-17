@@ -309,5 +309,35 @@ class MarkerIconGenerator {
 
   static double _cos(double radians) => math.cos(radians);
 
+  /// 生成方向箭头图标（用于雪道方向指示）
+  static Future<Uint8List> generateArrowIcon({
+    required Color color,
+    double size = 32,
+  }) async {
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    final paint = Paint();
+
+    // 画向右的三角形箭头（会被 Mapbox 根据线段方向旋转）
+    final path = Path();
+    final halfSize = size / 2;
+
+    // 三角形顶点朝右
+    path.moveTo(size * 0.85, halfSize); // 右边顶点
+    path.lineTo(size * 0.15, size * 0.15); // 左上
+    path.lineTo(size * 0.15, size * 0.85); // 左下
+    path.close();
+
+    // 填充
+    paint.color = color;
+    paint.style = PaintingStyle.fill;
+    canvas.drawPath(path, paint);
+
+    final picture = recorder.endRecording();
+    final image = await picture.toImage(size.toInt(), size.toInt());
+    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    return byteData!.buffer.asUint8List();
+  }
+
   static double _sin(double radians) => math.sin(radians);
 }

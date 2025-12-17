@@ -171,10 +171,13 @@ class AppTheme {
   static const double labelHaloWidth = 1.5;
 
   /// 方向箭头间距（像素）
-  static const double arrowSpacing = 100.0;
+  static const double arrowSpacing = 300.0;
 
-  /// 方向箭头大小
-  static const double arrowSize = 0.8;
+  /// 方向箭头图标大小（像素，用于生成图标）
+  static const double arrowIconSize = 32.0;
+
+  /// 方向箭头显示缩放比例
+  static const double arrowSize = 0.5;
 
   // ============ 装饰方法 ============
 
