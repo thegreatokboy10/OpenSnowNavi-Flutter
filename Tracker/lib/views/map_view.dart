@@ -2,11 +2,13 @@ import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:geolocator/geolocator.dart' as geo;
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' hide Size;
 import 'package:polyline_codec/polyline_codec.dart';
 import 'package:provider/provider.dart';
 import '../config/mapbox_config.dart';
 import '../config/ski_resorts.dart';
+import '../config/app_theme.dart';
 import '../models/piste.dart';
 import '../models/lift.dart';
 import '../models/route_planning_state.dart';
@@ -15,6 +17,10 @@ import '../services/route_engine.dart' as re;
 import '../services/search_service.dart';
 import '../widgets/route_planning_panel.dart';
 import '../widgets/poi_info_panel.dart';
+import '../widgets/team_panel.dart';
+import '../team/team_service.dart';
+import '../meeting_point/meeting_point_service.dart';
+import '../meeting_point/meeting_point_model.dart';
 
 /// 地图视图 - 用于滑雪路线规划
 class MapView extends StatefulWidget {
@@ -54,6 +60,14 @@ class _MapViewState extends State<MapView> {
   // ✅ Route polyline managers (用 annotations 画整条路线，保证稳定显示)
   PolylineAnnotationManager? _routePolylineManager;
   PolylineAnnotationManager? _routeOutlinePolylineManager;
+
+  // 团队相关状态
+  bool _showTeamPanel = false;
+  List<MemberLocation> _memberLocations = [];
+  CircleAnnotationManager? _memberCircleManager;
+  CircleAnnotationManager? _meetingPointCircleManager;
+  List<MeetingPoint> _meetingPoints = [];
+  bool _showMeetingPointsLayer = true;
 
   @override
   Widget build(BuildContext context) {
@@ -126,6 +140,8 @@ class _MapViewState extends State<MapView> {
                           _setPOIAsRoutePoint(RoutePointType.destination),
                       onAddAsStopover: () =>
                           _setPOIAsRoutePoint(RoutePointType.stopover),
+                      isInTeamMode: TeamService.instance.currentTeam != null,
+                      onAddAsMeetingPoint: _addPOIAsMeetingPoint,
                     ),
                   ),
 
@@ -134,6 +150,21 @@ class _MapViewState extends State<MapView> {
 
                 // 图层选择器弹窗
                 if (_showLayerSelector) _buildLayerSelectorOverlay(),
+
+                // 团队面板
+                if (_showTeamPanel)
+                  Positioned(
+                    left: 16,
+                    right: 16,
+                    top: 60,
+                    child: TeamPanel(
+                      resortKey: _selectedResortKey,
+                      onClose: () => setState(() => _showTeamPanel = false),
+                      onMemberLocationsUpdate: _onMemberLocationsUpdate,
+                      onMemberTapped: _onMemberTapped,
+                      onTeamJoined: _onTeamJoined,
+                    ),
+                  ),
               ],
             ),
           ),
@@ -295,6 +326,14 @@ class _MapViewState extends State<MapView> {
         ),
         const SizedBox(height: 8),
 
+        // 团队滑雪按钮
+        _buildFloatingButton(
+          icon: Icons.group,
+          onPressed: () => setState(() => _showTeamPanel = !_showTeamPanel),
+          isActive: _showTeamPanel,
+        ),
+        const SizedBox(height: 8),
+
         // 3D/2D 切换按钮（使用文字）
         _build3DToggleButton(),
         const SizedBox(height: 8),
@@ -339,11 +378,13 @@ class _MapViewState extends State<MapView> {
     required IconData icon,
     required VoidCallback onPressed,
     bool isActive = false,
+    Color? color,
   }) {
+    final buttonColor = color ?? Colors.blue;
     return Material(
       elevation: 4,
       borderRadius: BorderRadius.circular(8),
-      color: isActive ? Colors.blue : Colors.white,
+      color: isActive ? buttonColor : Colors.white,
       child: InkWell(
         onTap: onPressed,
         borderRadius: BorderRadius.circular(8),
@@ -354,7 +395,7 @@ class _MapViewState extends State<MapView> {
           child: Icon(
             icon,
             size: 24,
-            color: isActive ? Colors.white : Colors.blue,
+            color: isActive ? Colors.white : buttonColor,
           ),
         ),
       ),
@@ -1175,6 +1216,76 @@ class _MapViewState extends State<MapView> {
     _closePOIPanel();
   }
 
+  /// 将当前选中的 POI 添加为集合点
+  Future<void> _addPOIAsMeetingPoint() async {
+    if (_selectedPOIPosition == null) return;
+
+    final team = TeamService.instance.currentTeam;
+    if (team == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('请先加入或创建团队')),
+      );
+      return;
+    }
+
+    // 弹出对话框让用户输入集合点名称
+    final nameController = TextEditingController(
+      text: _selectedPOIName ?? '集合点',
+    );
+
+    final name = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('添加集合点'),
+        content: TextField(
+          controller: nameController,
+          decoration: const InputDecoration(
+            labelText: '集合点名称',
+            hintText: '请输入集合点名称',
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, nameController.text),
+            child: const Text('确定'),
+          ),
+        ],
+      ),
+    );
+
+    if (name == null || name.isEmpty) return;
+
+    try {
+      await MeetingPointService.instance.addMeetingPoint(
+        name: name,
+        latitude: _selectedPOIPosition!.lat.toDouble(),
+        longitude: _selectedPOIPosition!.lng.toDouble(),
+      );
+
+      // 刷新集合点列表
+      await MeetingPointService.instance.loadMeetingPoints();
+
+      _closePOIPanel();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('集合点 "$name" 已添加')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('添加集合点失败: $e')),
+        );
+      }
+    }
+  }
+
   /// ✅ 整段替换后的版本：先 displayRoute，再 setState（你之前已经替换过也没问题）
   Future<void> _tryGenerateRoute() async {
     if (!_routePlanningData.canGenerateRoute) {
@@ -1544,6 +1655,193 @@ class _MapViewState extends State<MapView> {
             .removeAnnotationManager(_stepCircleManager!);
         _stepCircleManager = null;
       } catch (e) {}
+    }
+  }
+
+  // ==================== 团队功能 ====================
+
+  /// 成员位置更新回调
+  void _onMemberLocationsUpdate(List<MemberLocation> locations) {
+    _memberLocations = locations;
+    _updateMemberMarkers();
+  }
+
+  /// 成员点击回调 - 定位到成员位置
+  void _onMemberTapped(MemberLocation member) {
+    if (_mapboxMap == null) return;
+
+    _mapboxMap!.flyTo(
+      CameraOptions(
+        center: Point(
+          coordinates:
+              Position(member.location.longitude, member.location.latitude),
+        ),
+        zoom: 16.0,
+      ),
+      MapAnimationOptions(duration: 500),
+    );
+  }
+
+  /// 团队加入成功回调 - 初始化集合点服务
+  void _onTeamJoined() {
+    final teamService = TeamService.instance;
+    final team = teamService.currentTeam;
+    if (team != null) {
+      MeetingPointService.instance.setContext(
+        teamId: team.id,
+        deviceId: teamService.deviceId,
+        nickname: teamService.currentMember?.nickname ?? '',
+      );
+      _initializeMeetingPointService();
+      MeetingPointService.instance.loadMeetingPoints();
+    }
+  }
+
+  /// 更新成员位置标记
+  Future<void> _updateMemberMarkers() async {
+    if (_mapboxMap == null) return;
+
+    // 移除旧的标记
+    if (_memberCircleManager != null) {
+      try {
+        await _mapboxMap!.annotations
+            .removeAnnotationManager(_memberCircleManager!);
+        _memberCircleManager = null;
+      } catch (e) {}
+    }
+
+    if (_memberLocations.isEmpty) return;
+
+    // 创建新的标记管理器
+    _memberCircleManager =
+        await _mapboxMap!.annotations.createCircleAnnotationManager();
+
+    // 为每个成员创建标记
+    for (final member in _memberLocations) {
+      await _memberCircleManager!.create(
+        CircleAnnotationOptions(
+          geometry: Point(
+            coordinates: Position(
+              member.location.longitude,
+              member.location.latitude,
+            ),
+          ),
+          circleRadius: 12.0,
+          circleColor: member.color,
+          circleStrokeWidth: 3.0,
+          circleStrokeColor: 0xFFFFFFFF,
+        ),
+      );
+    }
+  }
+
+  /// 初始化集合点服务
+  void _initializeMeetingPointService() {
+    final meetingPointService = MeetingPointService.instance;
+
+    // 设置回调 - 集合点列表更新时刷新图层
+    meetingPointService.onMeetingPointsUpdated = (points) {
+      _meetingPoints = points;
+      _updateMeetingPointMarkers();
+    };
+
+    // 设置回调 - 活动集合点变化时更新图层和规划路线
+    meetingPointService.onActiveMeetingPointChanged = (activePoint) {
+      _updateMeetingPointMarkers();
+      // 如果有活动集合点，自动规划路线
+      if (activePoint != null && _currentRoute == null) {
+        _planRouteToMeetingPoint(activePoint);
+      }
+    };
+  }
+
+  /// 更新集合点标记
+  Future<void> _updateMeetingPointMarkers() async {
+    if (_mapboxMap == null) return;
+
+    // 移除旧的标记
+    if (_meetingPointCircleManager != null) {
+      try {
+        await _mapboxMap!.annotations
+            .removeAnnotationManager(_meetingPointCircleManager!);
+        _meetingPointCircleManager = null;
+      } catch (e) {}
+    }
+
+    if (!_showMeetingPointsLayer || _meetingPoints.isEmpty) return;
+
+    // 创建新的标记管理器
+    _meetingPointCircleManager =
+        await _mapboxMap!.annotations.createCircleAnnotationManager();
+
+    // 为每个集合点创建标记
+    for (final point in _meetingPoints) {
+      // 活动集合点使用更大的圆圈和不同的颜色
+      final isActive = point.isActive;
+      await _meetingPointCircleManager!.create(
+        CircleAnnotationOptions(
+          geometry: Point(
+            coordinates: Position(point.longitude, point.latitude),
+          ),
+          circleRadius: isActive ? 15.0 : 12.0,
+          circleColor: isActive
+              ? AppTheme.meetingPointActiveColorInt
+              : AppTheme.meetingPointColorInt,
+          circleStrokeWidth: isActive ? 4.0 : 2.0,
+          circleStrokeColor: isActive ? 0xFFFFFFFF : 0xFFE3F2FD,
+        ),
+      );
+    }
+  }
+
+  /// 规划路线到集合点
+  Future<void> _planRouteToMeetingPoint(MeetingPoint meetingPoint) async {
+    try {
+      // 获取当前位置作为起点
+      final currentPosition = await _getCurrentPosition();
+      if (currentPosition == null) {
+        debugPrint('Cannot plan route: current position not available');
+        return;
+      }
+
+      // 设置起点和终点
+      _routePlanningData.origin = RoutePoint(
+        id: 'origin',
+        name: '当前位置',
+        coordinates: currentPosition,
+        type: RoutePointType.origin,
+      );
+      _routePlanningData.destination = RoutePoint(
+        id: 'destination',
+        name: meetingPoint.name,
+        coordinates: Position(meetingPoint.longitude, meetingPoint.latitude),
+        type: RoutePointType.destination,
+      );
+
+      // 显示路线规划面板
+      setState(() {
+        _showRoutePlanningPanel = true;
+      });
+
+      // 自动算路
+      await _tryGenerateRoute();
+
+      debugPrint('Auto-planned route to meeting point: ${meetingPoint.name}');
+    } catch (e) {
+      debugPrint('Failed to plan route to meeting point: $e');
+    }
+  }
+
+  /// 获取当前位置
+  Future<Position?> _getCurrentPosition() async {
+    try {
+      final position = await geo.Geolocator.getCurrentPosition(
+        desiredAccuracy: geo.LocationAccuracy.high,
+      );
+      return Position(position.longitude, position.latitude);
+    } catch (e) {
+      debugPrint('Error getting current position: $e');
+      return null;
     }
   }
 }

@@ -68,6 +68,9 @@ dependencies:
   # Polyline decoding (same version as web)
   polyline_codec: ^0.1.6
 
+  # Local storage
+  shared_preferences: ^2.3.3
+
 
 
 dev_dependencies:

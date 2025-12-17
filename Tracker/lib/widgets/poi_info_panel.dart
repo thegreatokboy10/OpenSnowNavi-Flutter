@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' show Position;
+import '../config/app_theme.dart';
 
 /// POI 信息面板 - 点击地图时显示的位置详情
 class POIInfoPanel extends StatelessWidget {
@@ -9,6 +10,8 @@ class POIInfoPanel extends StatelessWidget {
   final VoidCallback onSetAsOrigin;
   final VoidCallback onSetAsDestination;
   final VoidCallback onAddAsStopover;
+  final bool isInTeamMode;
+  final VoidCallback? onAddAsMeetingPoint;
 
   const POIInfoPanel({
     super.key,
@@ -18,6 +21,8 @@ class POIInfoPanel extends StatelessWidget {
     required this.onSetAsOrigin,
     required this.onSetAsDestination,
     required this.onAddAsStopover,
+    this.isInTeamMode = false,
+    this.onAddAsMeetingPoint,
   });
 
   @override
@@ -129,6 +134,20 @@ class POIInfoPanel extends StatelessWidget {
                     onTap: onAddAsStopover,
                   ),
                 ),
+                // 组队模式下显示集合点按钮
+                if (isInTeamMode && onAddAsMeetingPoint != null) ...[
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: _buildActionButton(
+                      context,
+                      icon: Icons.star,
+                      label: '添加为集合点',
+                      color: AppTheme.meetingPointActiveColor,
+                      onTap: onAddAsMeetingPoint!,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -155,4 +174,3 @@ class POIInfoPanel extends StatelessWidget {
     );
   }
 }
-
