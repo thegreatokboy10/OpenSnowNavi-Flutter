@@ -22,11 +22,17 @@ class AppTheme {
   /// 面板背景色
   static const Color panelBackground = Colors.white;
 
-  /// 面板标题栏背景色 (使用主色调)
-  static Color get panelHeaderBackground => primaryColor;
+  /// 面板标题栏背景色 (黑色，与路线规划面板一致)
+  static const Color panelHeaderBackground = Color(0xFF212121);
 
   /// 面板标题栏文字色
   static const Color panelHeaderText = Colors.white;
+
+  /// Toggle 开启时的颜色 (蓝色)
+  static Color get toggleActiveColor => primaryColor;
+
+  /// Toggle 关闭时的轨道颜色
+  static const Color toggleInactiveTrackColor = Color(0xFFE0E0E0);
 
   /// 面板阴影
   static List<BoxShadow> get panelShadow => [
@@ -115,6 +121,32 @@ class AppTheme {
   /// 集合点激活颜色 (int 格式，用于 Mapbox)
   static const int meetingPointActiveColorInt = 0xFFFF9800;
 
+  // ============ 图标尺寸配置 ============
+
+  /// 队员头像图标尺寸
+  static const double memberIconSize = 160;
+
+  /// 队员头像图标显示缩放比例
+  static const double memberIconScale = 0.6;
+
+  /// 集合点星标图标尺寸（激活状态）
+  static const double meetingPointIconActiveSize = 120;
+
+  /// 集合点星标图标尺寸（普通状态）
+  static const double meetingPointIconSize = 90;
+
+  /// 集合点图标显示缩放比例
+  static const double meetingPointIconScale = 0.5;
+
+  /// 终点旗帜图标尺寸
+  static const double flagIconSize = 60;
+
+  /// 起点图标尺寸
+  static const double startIconSize = 60;
+
+  /// 路线点图标缩放比例
+  static const double routePointIconScale = 0.6;
+
   // ============ 装饰方法 ============
 
   /// 获取面板装饰
@@ -125,8 +157,8 @@ class AppTheme {
       );
 
   /// 获取面板头部装饰
-  static BoxDecoration get panelHeaderDecoration => BoxDecoration(
-        color: panelHeaderBackground,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-      );
+  static const BoxDecoration panelHeaderDecoration = BoxDecoration(
+    color: panelHeaderBackground,
+    borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+  );
 }

@@ -97,7 +97,7 @@ class _TeamPanelState extends State<TeamPanel> {
     }
 
     return Container(
-      width: 320,
+      width: 280,
       constraints: const BoxConstraints(maxHeight: 500),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -438,6 +438,7 @@ class _TeamPanelState extends State<TeamPanel> {
             title: const Text('共享我的位置'),
             subtitle: const Text('让队友看到你的实时位置'),
             value: currentMember.shareLocation,
+            activeColor: AppTheme.toggleActiveColor,
             onChanged: (value) async {
               await _teamService.setLocationSharing(value);
               setState(() {});

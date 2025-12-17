@@ -15,6 +15,7 @@ import '../models/route_planning_state.dart';
 import '../services/session_manager.dart';
 import '../services/route_engine.dart' as re;
 import '../services/search_service.dart';
+import '../utils/marker_icon_generator.dart';
 import '../widgets/route_planning_panel.dart';
 import '../widgets/poi_info_panel.dart';
 import '../widgets/team_panel.dart';
@@ -54,7 +55,8 @@ class _MapViewState extends State<MapView> {
 
   // Marker 管理器
   CircleAnnotationManager? _poiCircleManager;
-  CircleAnnotationManager? _routePointsCircleManager;
+  PointAnnotationManager? _routePointsIconManager; // 用于起点终点图标
+  CircleAnnotationManager? _routePointsCircleManager; // 用于途径点圆形
   CircleAnnotationManager? _stepCircleManager;
 
   // ✅ Route polyline managers (用 annotations 画整条路线，保证稳定显示)
@@ -64,10 +66,11 @@ class _MapViewState extends State<MapView> {
   // 团队相关状态
   bool _showTeamPanel = false;
   List<MemberLocation> _memberLocations = [];
-  CircleAnnotationManager? _memberCircleManager;
-  CircleAnnotationManager? _meetingPointCircleManager;
+  PointAnnotationManager? _meetingPointIconManager; // 用于星标图标
+  PointAnnotationManager? _memberIconManager; // 用于队员头像图标
   List<MeetingPoint> _meetingPoints = [];
   bool _showMeetingPointsLayer = true;
+  bool _showMemberLocationsLayer = true;
 
   @override
   Widget build(BuildContext context) {
@@ -95,7 +98,8 @@ class _MapViewState extends State<MapView> {
                   ),
                   styleUri: MapboxConfig.styleUrl,
                   onMapCreated: _onMapCreated,
-                  onTapListener: _onMapTap,
+                  onTapListener: _onMapSingleTap,
+                  onLongTapListener: _onMapLongTap,
                 ),
 
                 // 左上角：路线规划面板（避开比例尺，放在下方）
@@ -214,6 +218,47 @@ class _MapViewState extends State<MapView> {
     // 自动定位到当前位置
     await _goToCurrentLocation();
     _initialLocationSet = true;
+
+    // 恢复团队状态（如果之前加入过团队）
+    await _restoreTeamIfNeeded();
+  }
+
+  /// 恢复团队状态（app 重启后恢复之前加入的团队）
+  Future<void> _restoreTeamIfNeeded() async {
+    final teamService = TeamService.instance;
+
+    // 初始化团队服务（会自动恢复之前保存的团队）
+    await teamService.initialize();
+
+    // 如果恢复成功，初始化相关服务
+    final team = teamService.currentTeam;
+    if (team != null) {
+      debugPrint('[MapView] Restored team: ${team.id}');
+
+      // 设置团队更新回调
+      teamService.onMembersLocationUpdate = (members) {
+        _memberLocations = teamService.getMemberLocations();
+        _updateMemberMarkers();
+      };
+
+      // 初始化集合点服务
+      MeetingPointService.instance.setContext(
+        teamId: team.id,
+        deviceId: teamService.deviceId,
+        nickname: teamService.currentMember?.nickname ?? '',
+      );
+      _initializeMeetingPointService();
+
+      // 加载集合点
+      await MeetingPointService.instance.loadMeetingPoints();
+
+      // 加载成员位置
+      _memberLocations = teamService.getMemberLocations();
+      await _updateMemberMarkers();
+
+      debugPrint(
+          '[MapView] Team restored, members: ${_memberLocations.length}, meeting points: ${_meetingPoints.length}');
+    }
   }
 
   /// 选择最近的雪场并重新加载数据
@@ -539,6 +584,7 @@ class _MapViewState extends State<MapView> {
                     title: const Text('雪道和缆车'),
                     subtitle: const Text('显示当前雪场的雪道和缆车数据'),
                     value: _showResortData,
+                    activeColor: AppTheme.toggleActiveColor,
                     onChanged: (value) {
                       setState(() => _showLayerSelector = false);
                       _toggleResortData();
@@ -548,6 +594,7 @@ class _MapViewState extends State<MapView> {
                     title: const Text('OpenSnowMap'),
                     subtitle: const Text('显示 OpenSnowMap 滑雪地图图层'),
                     value: _showOpenSnowMap,
+                    activeColor: AppTheme.toggleActiveColor,
                     onChanged: (value) {
                       setState(() {
                         _showOpenSnowMap = value;
@@ -556,6 +603,47 @@ class _MapViewState extends State<MapView> {
                       _toggleOpenSnowMapLayer();
                     },
                   ),
+                  // 团队模式下的图层开关
+                  if (TeamService.instance.currentTeam != null) ...[
+                    const Divider(),
+                    const Padding(
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      child: Text(
+                        '组队滑雪',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ),
+                    SwitchListTile(
+                      title: const Text('队友位置'),
+                      subtitle: const Text('显示团队成员的实时位置'),
+                      value: _showMemberLocationsLayer,
+                      activeColor: AppTheme.toggleActiveColor,
+                      onChanged: (value) {
+                        setState(() {
+                          _showMemberLocationsLayer = value;
+                          _showLayerSelector = false;
+                        });
+                        _updateMemberMarkers();
+                      },
+                    ),
+                    SwitchListTile(
+                      title: const Text('集合点'),
+                      subtitle: const Text('显示团队集合点'),
+                      value: _showMeetingPointsLayer,
+                      activeColor: AppTheme.toggleActiveColor,
+                      onChanged: (value) {
+                        setState(() {
+                          _showMeetingPointsLayer = value;
+                          _showLayerSelector = false;
+                        });
+                        _updateMeetingPointMarkers();
+                      },
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -662,7 +750,33 @@ class _MapViewState extends State<MapView> {
     if (_mapboxMap == null) return;
 
     final manager = Provider.of<SessionManager>(context, listen: false);
-    final position = manager.currentPosition;
+    var position = manager.currentPosition;
+
+    // 如果 SessionManager 中没有位置，尝试直接获取
+    if (position == null) {
+      try {
+        final geoPosition = await geo.Geolocator.getCurrentPosition(
+          locationSettings: const geo.LocationSettings(
+            accuracy: geo.LocationAccuracy.high,
+            timeLimit: Duration(seconds: 5),
+          ),
+        );
+        position = geo.Position(
+          longitude: geoPosition.longitude,
+          latitude: geoPosition.latitude,
+          timestamp: geoPosition.timestamp,
+          accuracy: geoPosition.accuracy,
+          altitude: geoPosition.altitude,
+          altitudeAccuracy: geoPosition.altitudeAccuracy,
+          heading: geoPosition.heading,
+          headingAccuracy: geoPosition.headingAccuracy,
+          speed: geoPosition.speed,
+          speedAccuracy: geoPosition.speedAccuracy,
+        );
+      } catch (e) {
+        debugPrint('Could not get current location: $e');
+      }
+    }
 
     if (position != null) {
       await _mapboxMap!.flyTo(
@@ -937,16 +1051,35 @@ class _MapViewState extends State<MapView> {
     _removePOIMarker();
   }
 
-  void _onMapTap(MapContentGestureContext context) {
+  /// 地图单击 - 查询地图元素（雪道、缆车、集合点、队员位置）
+  void _onMapSingleTap(MapContentGestureContext context) {
+    final point = context.point;
+    final coordinates = point.coordinates;
+    final screenPoint = context.touchPosition;
+
+    debugPrint('Map single tapped at: ${coordinates.lat}, ${coordinates.lng}');
+
+    // 如果正在编辑路线点，处理路线编辑
+    if (_currentEditingType != EditingPointType.none) {
+      _handleMapTapForRouteEditing(coordinates);
+      _flyToPosition(coordinates);
+      return;
+    }
+
+    // 查询点击的地图元素
+    _queryMapFeaturesAtPoint(
+        ScreenCoordinate(x: screenPoint.x, y: screenPoint.y), coordinates);
+  }
+
+  /// 地图长按 - 打开 POI 详情面板
+  void _onMapLongTap(MapContentGestureContext context) {
     final point = context.point;
     final coordinates = point.coordinates;
 
-    debugPrint('Map tapped at: ${coordinates.lat}, ${coordinates.lng}');
+    debugPrint('Map long tapped at: ${coordinates.lat}, ${coordinates.lng}');
 
-    if (_currentEditingType != EditingPointType.none) {
-      _handleMapTapForRouteEditing(coordinates);
-      return;
-    }
+    // 飞到点击位置
+    _flyToPosition(coordinates);
 
     setState(() {
       _selectedPOIPosition = coordinates;
@@ -955,6 +1088,448 @@ class _MapViewState extends State<MapView> {
     });
 
     _showPOIMarker(coordinates);
+  }
+
+  /// 查询地图元素
+  Future<void> _queryMapFeaturesAtPoint(
+      ScreenCoordinate screenPoint, Position coordinates) async {
+    if (_mapboxMap == null) return;
+
+    debugPrint(
+        'Querying features at screen point: (${screenPoint.x}, ${screenPoint.y})');
+
+    try {
+      // 飞到点击位置
+      _flyToPosition(coordinates);
+
+      // 首先检查是否点击了团队成员标记
+      if (_showMemberLocationsLayer && _memberLocations.isNotEmpty) {
+        final tappedMember =
+            _findNearestMemberLocation(coordinates, threshold: 50);
+        if (tappedMember != null) {
+          debugPrint('Tapped on member: ${tappedMember.nickname}');
+          _showMemberInfoPanel(tappedMember);
+          return;
+        }
+      }
+
+      // 检查是否点击了集合点
+      if (_showMeetingPointsLayer && _meetingPoints.isNotEmpty) {
+        final tappedPoint =
+            _findNearestMeetingPoint(coordinates, threshold: 50);
+        if (tappedPoint != null) {
+          debugPrint('Tapped on meeting point: ${tappedPoint.name}');
+          _showMeetingPointInfoPanel(tappedPoint);
+          return;
+        }
+      }
+
+      // 查询雪道和缆车图层
+      final renderedFeatures = await _mapboxMap!.queryRenderedFeatures(
+        RenderedQueryGeometry.fromScreenCoordinate(screenPoint),
+        RenderedQueryOptions(
+          layerIds: [
+            'piste_green',
+            'piste_blue',
+            'piste_red',
+            'piste_black',
+            'piste_freeride',
+            'piste_connection',
+            'lift_layer',
+          ],
+        ),
+      );
+
+      if (renderedFeatures.isNotEmpty) {
+        final feature = renderedFeatures.first;
+        if (feature != null) {
+          final queriedFeature = feature.queriedFeature;
+          final featureMap = queriedFeature.feature;
+          final properties = featureMap['properties'] as Map<String, dynamic>?;
+          if (properties != null) {
+            final name = properties['name'] ?? properties['ref'] ?? '未知';
+            final type = properties['type'] ?? properties['aerialway'] ?? '';
+            debugPrint('Tapped on feature: $name (type: $type)');
+            _showFeatureInfoPanel(
+                name.toString(), type.toString(), coordinates);
+            return;
+          }
+        }
+      }
+
+      debugPrint('No feature found at tap location');
+    } catch (e) {
+      debugPrint('Error querying features: $e');
+    }
+  }
+
+  /// 查找最近的团队成员位置
+  MemberLocation? _findNearestMemberLocation(Position coordinates,
+      {required double threshold}) {
+    double minDistance = double.infinity;
+    MemberLocation? nearest;
+
+    for (final member in _memberLocations) {
+      final distance = _calculateDistance(
+        coordinates.lat.toDouble(),
+        coordinates.lng.toDouble(),
+        member.location.latitude,
+        member.location.longitude,
+      );
+      if (distance < minDistance && distance < threshold) {
+        minDistance = distance;
+        nearest = member;
+      }
+    }
+    return nearest;
+  }
+
+  /// 查找最近的集合点
+  MeetingPoint? _findNearestMeetingPoint(Position coordinates,
+      {required double threshold}) {
+    double minDistance = double.infinity;
+    MeetingPoint? nearest;
+
+    for (final point in _meetingPoints) {
+      final distance = _calculateDistance(
+        coordinates.lat.toDouble(),
+        coordinates.lng.toDouble(),
+        point.latitude,
+        point.longitude,
+      );
+      if (distance < minDistance && distance < threshold) {
+        minDistance = distance;
+        nearest = point;
+      }
+    }
+    return nearest;
+  }
+
+  /// 显示团队成员信息面板
+  void _showMemberInfoPanel(MemberLocation member) {
+    String timeAgoStr = '';
+    if (member.lastUpdate != null) {
+      final timeAgo = DateTime.now().difference(member.lastUpdate!);
+      timeAgoStr = timeAgo.inMinutes < 1
+          ? '刚刚'
+          : timeAgo.inMinutes < 60
+              ? '${timeAgo.inMinutes} 分钟前'
+              : '${timeAgo.inHours} 小时前';
+    }
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        margin: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: Color(member.color),
+                  child: Text(
+                    member.nickname.isNotEmpty
+                        ? member.nickname.substring(0, 1).toUpperCase()
+                        : '?',
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        member.nickname,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      if (timeAgoStr.isNotEmpty)
+                        Text(
+                          '位置更新于 $timeAgoStr',
+                          style: TextStyle(color: Colors.grey[600]),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _planRouteToMember(member);
+                },
+                icon: const Icon(Icons.directions),
+                label: const Text('规划路线到 TA'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryColor,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 显示集合点信息面板
+  void _showMeetingPointInfoPanel(MeetingPoint point) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        margin: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.star,
+                  color: point.isActive
+                      ? AppTheme.meetingPointActiveColor
+                      : AppTheme.meetingPointColor,
+                  size: 32,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        point.name,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        point.isActive ? '当前活动集合点' : '集合点',
+                        style: TextStyle(color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _planRouteToMeetingPoint(point);
+                    },
+                    icon: const Icon(Icons.directions),
+                    label: const Text('规划路线'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryColor,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                if (!point.isActive)
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        MeetingPointService.instance
+                            .setActiveMeetingPoint(point.id);
+                      },
+                      icon: const Icon(Icons.check_circle),
+                      label: const Text('设为活动'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.meetingPointActiveColor,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 显示地图元素（雪道/缆车）信息面板
+  void _showFeatureInfoPanel(String name, String type, Position coordinates) {
+    // 判断是雪道还是缆车
+    final isLift = type.isNotEmpty &&
+        (type.contains('chair') ||
+            type.contains('gondola') ||
+            type.contains('cable') ||
+            type.contains('drag') ||
+            type.contains('t-bar'));
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        margin: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  isLift
+                      ? Icons.airline_seat_recline_extra
+                      : Icons.downhill_skiing,
+                  color: isLift ? Colors.deepPurple : Colors.blue,
+                  size: 32,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        name,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        isLift ? '缆车 / $type' : '雪道',
+                        style: TextStyle(color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      // 设为起点
+                      _routePlanningData.origin = RoutePoint(
+                        id: 'origin',
+                        name: name,
+                        coordinates: coordinates,
+                        type: RoutePointType.origin,
+                      );
+                      _showRoutePlanningPanelWithAutoRoute();
+                    },
+                    icon: const Icon(Icons.trip_origin),
+                    label: const Text('设为起点'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.originColor,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      // 设为终点
+                      _routePlanningData.destination = RoutePoint(
+                        id: 'destination',
+                        name: name,
+                        coordinates: coordinates,
+                        type: RoutePointType.destination,
+                      );
+                      _showRoutePlanningPanelWithAutoRoute();
+                    },
+                    icon: const Icon(Icons.flag),
+                    label: const Text('设为终点'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.destinationColor,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 规划路线到团队成员位置
+  Future<void> _planRouteToMember(MemberLocation member) async {
+    final currentPosition = await _getCurrentPosition();
+    if (currentPosition == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('无法获取当前位置')),
+        );
+      }
+      return;
+    }
+
+    _routePlanningData.origin = RoutePoint(
+      id: 'origin',
+      name: '当前位置',
+      coordinates: currentPosition,
+      type: RoutePointType.origin,
+    );
+    _routePlanningData.destination = RoutePoint(
+      id: 'destination',
+      name: member.nickname,
+      coordinates:
+          Position(member.location.longitude, member.location.latitude),
+      type: RoutePointType.destination,
+    );
+
+    _showRoutePlanningPanelWithAutoRoute();
+  }
+
+  /// 显示路线规划面板并自动算路
+  void _showRoutePlanningPanelWithAutoRoute() {
+    setState(() {
+      _showRoutePlanningPanel = true;
+      _showPOIPanel = false;
+    });
+    _updateRoutePointMarkers();
+    _tryGenerateRoute();
+  }
+
+  /// 飞到指定位置
+  void _flyToPosition(Position coordinates) {
+    _mapboxMap?.flyTo(
+      CameraOptions(
+        center: Point(coordinates: coordinates),
+        zoom: 16.0,
+      ),
+      MapAnimationOptions(duration: 500),
+    );
   }
 
   Future<void> _showPOIMarker(Position coordinates) async {
@@ -1000,35 +1575,69 @@ class _MapViewState extends State<MapView> {
     await _removeRoutePointMarkers();
 
     try {
-      final manager =
+      // 创建图标管理器用于起点和终点
+      _routePointsIconManager =
+          await _mapboxMap!.annotations.createPointAnnotationManager();
+
+      // 创建圆形管理器用于途径点
+      _routePointsCircleManager =
           await _mapboxMap!.annotations.createCircleAnnotationManager();
-      _routePointsCircleManager = manager;
 
-      final List<CircleAnnotationOptions> options = [];
-
+      // 起点图标
       if (_routePlanningData.origin != null) {
-        options.add(CircleAnnotationOptions(
-          geometry: Point(coordinates: _routePlanningData.origin!.coordinates),
-          circleRadius: 12.0,
-          circleColor: SkiResorts.originMarkerColor,
-          circleStrokeColor: Colors.white.value,
-          circleStrokeWidth: 3.0,
-        ));
+        // 判断是否从当前位置出发
+        final isCurrentLocation = _routePlanningData.origin!.name == '当前位置';
+        if (!isCurrentLocation) {
+          // 非当前位置起点，使用出发图标
+          final startIcon = await MarkerIconGenerator.generateStartIcon(
+            color: Color(SkiResorts.originMarkerColor),
+            size: AppTheme.startIconSize,
+          );
+          await _routePointsIconManager!.create(
+            PointAnnotationOptions(
+              geometry:
+                  Point(coordinates: _routePlanningData.origin!.coordinates),
+              image: startIcon,
+              iconSize: AppTheme.routePointIconScale,
+              iconAnchor: IconAnchor.CENTER,
+            ),
+          );
+        } else {
+          // 当前位置起点，使用圆形标记
+          await _routePointsCircleManager!.create(
+            CircleAnnotationOptions(
+              geometry:
+                  Point(coordinates: _routePlanningData.origin!.coordinates),
+              circleRadius: 12.0,
+              circleColor: SkiResorts.originMarkerColor,
+              circleStrokeColor: Colors.white.value,
+              circleStrokeWidth: 3.0,
+            ),
+          );
+        }
       }
 
+      // 终点图标 - 使用旗帜
       if (_routePlanningData.destination != null) {
-        options.add(CircleAnnotationOptions(
-          geometry:
-              Point(coordinates: _routePlanningData.destination!.coordinates),
-          circleRadius: 12.0,
-          circleColor: SkiResorts.destinationMarkerColor,
-          circleStrokeColor: Colors.white.value,
-          circleStrokeWidth: 3.0,
-        ));
+        final flagIcon = await MarkerIconGenerator.generateFlagIcon(
+          color: Color(SkiResorts.destinationMarkerColor),
+          size: AppTheme.flagIconSize,
+        );
+        await _routePointsIconManager!.create(
+          PointAnnotationOptions(
+            geometry:
+                Point(coordinates: _routePlanningData.destination!.coordinates),
+            image: flagIcon,
+            iconSize: AppTheme.routePointIconScale,
+            iconAnchor: IconAnchor.BOTTOM_LEFT, // 旗杆底部对齐位置
+          ),
+        );
       }
 
+      // 途径点使用圆形标记
+      final List<CircleAnnotationOptions> stopoverOptions = [];
       for (final stopover in _routePlanningData.stopovers) {
-        options.add(CircleAnnotationOptions(
+        stopoverOptions.add(CircleAnnotationOptions(
           geometry: Point(coordinates: stopover.coordinates),
           circleRadius: 10.0,
           circleColor: SkiResorts.stopoverMarkerColor,
@@ -1037,10 +1646,9 @@ class _MapViewState extends State<MapView> {
         ));
       }
 
-      if (options.isNotEmpty) {
-        debugPrint('Creating ${options.length} route point markers');
-        final annotations = await manager.createMulti(options);
-        debugPrint('Created ${annotations.length} route point markers');
+      if (stopoverOptions.isNotEmpty) {
+        debugPrint('Creating ${stopoverOptions.length} stopover markers');
+        await _routePointsCircleManager!.createMulti(stopoverOptions);
       }
     } catch (e) {
       debugPrint('Error updating route point markers: $e');
@@ -1048,12 +1656,25 @@ class _MapViewState extends State<MapView> {
   }
 
   Future<void> _removeRoutePointMarkers() async {
+    // 移除图标管理器
+    if (_routePointsIconManager != null && _mapboxMap != null) {
+      try {
+        await _mapboxMap!.annotations
+            .removeAnnotationManager(_routePointsIconManager!);
+        _routePointsIconManager = null;
+      } catch (e) {
+        // 忽略移除错误
+      }
+    }
+    // 移除圆形管理器
     if (_routePointsCircleManager != null && _mapboxMap != null) {
       try {
         await _mapboxMap!.annotations
             .removeAnnotationManager(_routePointsCircleManager!);
         _routePointsCircleManager = null;
-      } catch (e) {}
+      } catch (e) {
+        // 忽略移除错误
+      }
     }
   }
 
@@ -1701,35 +2322,42 @@ class _MapViewState extends State<MapView> {
   Future<void> _updateMemberMarkers() async {
     if (_mapboxMap == null) return;
 
-    // 移除旧的标记
-    if (_memberCircleManager != null) {
+    // 移除旧的图标标记
+    if (_memberIconManager != null) {
       try {
         await _mapboxMap!.annotations
-            .removeAnnotationManager(_memberCircleManager!);
-        _memberCircleManager = null;
+            .removeAnnotationManager(_memberIconManager!);
+        _memberIconManager = null;
       } catch (e) {}
     }
 
-    if (_memberLocations.isEmpty) return;
+    // 如果图层关闭或没有成员位置，直接返回
+    if (!_showMemberLocationsLayer || _memberLocations.isEmpty) return;
 
-    // 创建新的标记管理器
-    _memberCircleManager =
-        await _mapboxMap!.annotations.createCircleAnnotationManager();
+    // 创建新的 PointAnnotationManager
+    _memberIconManager =
+        await _mapboxMap!.annotations.createPointAnnotationManager();
 
-    // 为每个成员创建标记
+    // 为每个成员创建带头像的标记
     for (final member in _memberLocations) {
-      await _memberCircleManager!.create(
-        CircleAnnotationOptions(
+      // 生成头像图标
+      final iconData = await MarkerIconGenerator.generateMemberIcon(
+        nickname: member.nickname,
+        color: Color(member.color),
+        size: AppTheme.memberIconSize,
+      );
+
+      await _memberIconManager!.create(
+        PointAnnotationOptions(
           geometry: Point(
             coordinates: Position(
               member.location.longitude,
               member.location.latitude,
             ),
           ),
-          circleRadius: 12.0,
-          circleColor: member.color,
-          circleStrokeWidth: 3.0,
-          circleStrokeColor: 0xFFFFFFFF,
+          image: iconData,
+          iconSize: AppTheme.memberIconScale,
+          iconAnchor: IconAnchor.BOTTOM, // 箭头指向实际位置
         ),
       );
     }
@@ -1759,36 +2387,43 @@ class _MapViewState extends State<MapView> {
   Future<void> _updateMeetingPointMarkers() async {
     if (_mapboxMap == null) return;
 
-    // 移除旧的标记
-    if (_meetingPointCircleManager != null) {
+    // 移除旧的星标图标
+    if (_meetingPointIconManager != null) {
       try {
         await _mapboxMap!.annotations
-            .removeAnnotationManager(_meetingPointCircleManager!);
-        _meetingPointCircleManager = null;
+            .removeAnnotationManager(_meetingPointIconManager!);
+        _meetingPointIconManager = null;
       } catch (e) {}
     }
 
     if (!_showMeetingPointsLayer || _meetingPoints.isEmpty) return;
 
-    // 创建新的标记管理器
-    _meetingPointCircleManager =
-        await _mapboxMap!.annotations.createCircleAnnotationManager();
+    // 创建新的 PointAnnotationManager
+    _meetingPointIconManager =
+        await _mapboxMap!.annotations.createPointAnnotationManager();
 
-    // 为每个集合点创建标记
+    // 为每个集合点创建星标图标
     for (final point in _meetingPoints) {
-      // 活动集合点使用更大的圆圈和不同的颜色
       final isActive = point.isActive;
-      await _meetingPointCircleManager!.create(
-        CircleAnnotationOptions(
+      // 生成星标图标
+      final iconData = await MarkerIconGenerator.generateStarIcon(
+        color: isActive
+            ? AppTheme.meetingPointActiveColor
+            : AppTheme.meetingPointColor,
+        isActive: isActive,
+        size: isActive
+            ? AppTheme.meetingPointIconActiveSize
+            : AppTheme.meetingPointIconSize,
+      );
+
+      await _meetingPointIconManager!.create(
+        PointAnnotationOptions(
           geometry: Point(
             coordinates: Position(point.longitude, point.latitude),
           ),
-          circleRadius: isActive ? 15.0 : 12.0,
-          circleColor: isActive
-              ? AppTheme.meetingPointActiveColorInt
-              : AppTheme.meetingPointColorInt,
-          circleStrokeWidth: isActive ? 4.0 : 2.0,
-          circleStrokeColor: isActive ? 0xFFFFFFFF : 0xFFE3F2FD,
+          image: iconData,
+          iconSize: AppTheme.meetingPointIconScale,
+          iconAnchor: IconAnchor.CENTER,
         ),
       );
     }
