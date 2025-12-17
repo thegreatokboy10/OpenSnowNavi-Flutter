@@ -6,6 +6,7 @@ import 'services/session_manager.dart';
 import 'views/recording_view.dart';
 import 'views/session_list_view.dart';
 import 'views/map_view.dart';
+import 'views/me_view.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -64,15 +65,23 @@ class _MainPageState extends State<MainPage> {
     await manager.requestPermission();
   }
 
+  /// 导航到 Me 页面（用于从其他页面跳转）
+  void _navigateToMePage() {
+    setState(() {
+      _selectedIndex = 3; // Me 页面的索引
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: IndexedStack(
         index: _selectedIndex,
-        children: const [
-          RecordingView(),
-          MapView(),
-          SessionListView(),
+        children: [
+          const RecordingView(),
+          MapView(onNavigateToLogin: _navigateToMePage),
+          const SessionListView(),
+          const MeView(),
         ],
       ),
       bottomNavigationBar: NavigationBar(
@@ -97,6 +106,11 @@ class _MainPageState extends State<MainPage> {
             icon: Icon(Icons.history),
             selectedIcon: Icon(Icons.history, color: Colors.orange),
             label: 'History',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person, color: Colors.deepPurple),
+            label: 'Me',
           ),
         ],
       ),

@@ -25,7 +25,9 @@ import '../meeting_point/meeting_point_model.dart';
 
 /// 地图视图 - 用于滑雪路线规划
 class MapView extends StatefulWidget {
-  const MapView({super.key});
+  final VoidCallback? onNavigateToLogin;
+
+  const MapView({super.key, this.onNavigateToLogin});
 
   @override
   State<MapView> createState() => _MapViewState();
@@ -173,6 +175,10 @@ class _MapViewState extends State<MapView> {
                       onMemberLocationsUpdate: _onMemberLocationsUpdate,
                       onMemberTapped: _onMemberTapped,
                       onTeamJoined: _onTeamJoined,
+                      onNavigateToLogin: () {
+                        setState(() => _showTeamPanel = false);
+                        widget.onNavigateToLogin?.call();
+                      },
                     ),
                   ),
               ],
@@ -236,12 +242,24 @@ class _MapViewState extends State<MapView> {
     // 初始化团队服务（会自动恢复之前保存的团队）
     await teamService.initialize();
 
+    // 设置团队更新回调 - 用于处理团队清除时清理 markers
+    teamService.onTeamUpdated = (team) {
+      if (team == null) {
+        // 团队已清除，清理地图上的相关标记
+        debugPrint('[MapView] Team cleared, removing markers');
+        _memberLocations = [];
+        _meetingPoints = [];
+        _updateMemberMarkers();
+        _updateMeetingPointMarkers();
+      }
+    };
+
     // 如果恢复成功，初始化相关服务
     final team = teamService.currentTeam;
     if (team != null) {
       debugPrint('[MapView] Restored team: ${team.id}');
 
-      // 设置团队更新回调
+      // 设置成员位置更新回调
       teamService.onMembersLocationUpdate = (members) {
         _memberLocations = teamService.getMemberLocations();
         _updateMemberMarkers();

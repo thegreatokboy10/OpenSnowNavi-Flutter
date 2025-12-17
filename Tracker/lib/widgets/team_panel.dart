@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../config/app_theme.dart';
+import '../member/member_service.dart';
 import '../team/team_models.dart';
 import '../team/team_service.dart';
 import '../meeting_point/meeting_point_service.dart';
@@ -13,6 +14,7 @@ class TeamPanel extends StatefulWidget {
   final Function(List<MemberLocation>)? onMemberLocationsUpdate;
   final Function(MemberLocation)? onMemberTapped;
   final VoidCallback? onTeamJoined;
+  final VoidCallback? onNavigateToLogin;
 
   const TeamPanel({
     super.key,
@@ -21,6 +23,7 @@ class TeamPanel extends StatefulWidget {
     this.onMemberLocationsUpdate,
     this.onMemberTapped,
     this.onTeamJoined,
+    this.onNavigateToLogin,
   });
 
   @override
@@ -29,9 +32,10 @@ class TeamPanel extends StatefulWidget {
 
 class _TeamPanelState extends State<TeamPanel> {
   final TeamService _teamService = TeamService.instance;
-  final TextEditingController _nicknameController = TextEditingController();
+  final MemberService _memberService = MemberService.instance;
   final TextEditingController _teamNameController = TextEditingController();
   final TextEditingController _teamIdController = TextEditingController();
+  int _maxMembers = 6; // 默认团队人数
 
   bool _isLoading = true;
   String? _errorMessage;
@@ -63,18 +67,11 @@ class _TeamPanelState extends State<TeamPanel> {
       if (mounted) setState(() {});
     };
 
-    // 设置默认昵称
-    final member = _teamService.currentMember;
-    if (member != null) {
-      _nicknameController.text = member.nickname;
-    }
-
     setState(() => _isLoading = false);
   }
 
   @override
   void dispose() {
-    _nicknameController.dispose();
     _teamNameController.dispose();
     _teamIdController.dispose();
     super.dispose();
@@ -157,6 +154,11 @@ class _TeamPanelState extends State<TeamPanel> {
   }
 
   Widget _buildNoTeamView() {
+    // 检查是否已登录会员
+    if (!_memberService.isLoggedIn) {
+      return _buildLoginRequiredView();
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -172,42 +174,102 @@ class _TeamPanelState extends State<TeamPanel> {
                 style: TextStyle(color: Colors.red.shade700)),
           ),
 
-        TextField(
-          controller: _nicknameController,
-          decoration: const InputDecoration(
-            labelText: '你的昵称',
-            prefixIcon: Icon(Icons.person),
-            border: OutlineInputBorder(),
+        // 显示当前会员信息
+        Container(
+          padding: const EdgeInsets.all(12),
+          margin: const EdgeInsets.only(bottom: 16),
+          decoration: BoxDecoration(
+            color: Colors.green.shade50,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.green.shade200),
+          ),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: Colors.green.shade400,
+                child: Text(
+                  _memberService.currentMember?.initials ?? '?',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _memberService.currentMember?.name ?? '会员',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      _memberService.isSuperAdmin || _memberService.isAdmin
+                          ? '管理员'
+                          : '会员',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
-        const SizedBox(height: 16),
 
-        // 创建团队
-        const Text('创建新团队', style: TextStyle(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-        TextField(
-          controller: _teamNameController,
-          decoration: const InputDecoration(
-            labelText: '团队名称',
-            hintText: '例如：快乐滑雪队',
-            prefixIcon: Icon(Icons.groups),
-            border: OutlineInputBorder(),
+        // 只有 super_admin 或 admin 可以创建团队
+        if (_memberService.isSuperAdmin || _memberService.isAdmin) ...[
+          const Text('创建新团队', style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _teamNameController,
+            decoration: const InputDecoration(
+              labelText: '团队名称',
+              hintText: '例如：SnowNavi',
+              prefixIcon: Icon(Icons.groups),
+              border: OutlineInputBorder(),
+            ),
           ),
-        ),
-        const SizedBox(height: 8),
-        ElevatedButton.icon(
-          onPressed: _createTeam,
-          icon: const Icon(Icons.add),
-          label: const Text('创建团队'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppTheme.primaryColor,
-            foregroundColor: Colors.white,
+          const SizedBox(height: 8),
+          // 团队人数选择
+          Row(
+            children: [
+              const Text('团队人数: '),
+              const SizedBox(width: 8),
+              DropdownButton<int>(
+                value: _maxMembers,
+                items: [4, 6, 8, 10, 12, 15, 20]
+                    .map((n) => DropdownMenuItem(
+                          value: n,
+                          child: Text('$n 人'),
+                        ))
+                    .toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() => _maxMembers = value);
+                  }
+                },
+              ),
+            ],
           ),
-        ),
-
-        const SizedBox(height: 24),
-        const Divider(),
-        const SizedBox(height: 16),
+          const SizedBox(height: 8),
+          ElevatedButton.icon(
+            onPressed: _createTeam,
+            icon: const Icon(Icons.add),
+            label: const Text('创建团队'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryColor,
+              foregroundColor: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 24),
+          const Divider(),
+          const SizedBox(height: 16),
+        ],
 
         // 加入团队
         const Text('加入已有团队', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -216,7 +278,7 @@ class _TeamPanelState extends State<TeamPanel> {
           controller: _teamIdController,
           decoration: const InputDecoration(
             labelText: '团队代码',
-            hintText: '输入6位团队代码',
+            hintText: '输入团队代码',
             prefixIcon: Icon(Icons.vpn_key),
             border: OutlineInputBorder(),
           ),
@@ -232,38 +294,73 @@ class _TeamPanelState extends State<TeamPanel> {
     );
   }
 
+  /// 未登录时显示的视图
+  Widget _buildLoginRequiredView() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.orange.shade50,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.orange.shade200),
+          ),
+          child: Column(
+            children: [
+              Icon(
+                Icons.person_off,
+                size: 48,
+                color: Colors.orange.shade400,
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                '需要登录会员',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '组队滑雪功能需要先登录会员账号',
+                style: TextStyle(
+                  color: Colors.grey.shade600,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: () {
+                  widget.onNavigateToLogin?.call();
+                },
+                icon: const Icon(Icons.login),
+                label: const Text('前往登录'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryColor,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   Future<void> _createTeam() async {
-    if (_nicknameController.text.trim().isEmpty) {
-      setState(() => _errorMessage = '请输入昵称');
-      return;
-    }
     if (_teamNameController.text.trim().isEmpty) {
       setState(() => _errorMessage = '请输入团队名称');
       return;
     }
 
-    // 弹窗要求输入管理员邮箱进行权限验证
-    final email = await _showAdminEmailDialog();
-    if (email == null || email.isEmpty) {
-      return;
-    }
-
+    // 权限检查已在 TeamService 中完成
     setState(() => _isLoading = true);
     try {
-      // 验证权限
-      final permissionResult = await _teamService.checkPermission(email);
-      if (!permissionResult.isSuperAdmin) {
-        setState(() {
-          _errorMessage = '没有创建团队的权限';
-          _isLoading = false;
-        });
-        return;
-      }
-
       final result = await _teamService.createTeam(
         name: _teamNameController.text.trim(),
         resortKey: widget.resortKey,
-        nickname: _nicknameController.text.trim(),
+        maxMembers: _maxMembers,
       );
       if (result.success) {
         setState(() => _errorMessage = null);
@@ -278,49 +375,7 @@ class _TeamPanelState extends State<TeamPanel> {
     }
   }
 
-  Future<String?> _showAdminEmailDialog() async {
-    final emailController = TextEditingController();
-    return showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('管理员验证'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('创建团队需要管理员权限，请输入管理员邮箱进行验证'),
-            const SizedBox(height: 12),
-            TextField(
-              controller: emailController,
-              keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(
-                labelText: '管理员邮箱',
-                hintText: 'admin@example.com',
-                prefixIcon: Icon(Icons.email),
-                border: OutlineInputBorder(),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, null),
-            child: const Text('取消'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, emailController.text.trim()),
-            child: const Text('验证'),
-          ),
-        ],
-      ),
-    );
-  }
-
   Future<void> _joinTeam() async {
-    if (_nicknameController.text.trim().isEmpty) {
-      setState(() => _errorMessage = '请输入昵称');
-      return;
-    }
     if (_teamIdController.text.trim().isEmpty) {
       setState(() => _errorMessage = '请输入团队代码');
       return;
@@ -330,7 +385,6 @@ class _TeamPanelState extends State<TeamPanel> {
     try {
       final result = await _teamService.joinTeam(
         _teamIdController.text.trim().toUpperCase(),
-        nickname: _nicknameController.text.trim(),
       );
 
       if (result.success) {

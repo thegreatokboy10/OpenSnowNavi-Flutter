@@ -1,0 +1,4079 @@
+from flask import Flask, send_from_directory, request, jsonify
+from flask_cors import CORS
+import os
+import json
+import mimetypes
+import uuid
+import time
+import datetime
+import hashlib
+import re
+import requests
+import fcntl
+from werkzeug.utils import secure_filename
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+env_path = os.path.join(os.path.dirname(__file__), '.env')
+load_dotenv(env_path)
+
+# Root directory of the project
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+DATA_DIR = os.path.join(ROOT_DIR, 'data')
+ASSETS_DIR = os.path.join(ROOT_DIR, 'assets')
+UPLOADS_DIR = os.path.join(ROOT_DIR, 'uploads')
+JSON_FILE = os.path.join(DATA_DIR, 'courses.json')
+NAVIGATION_FILE = os.path.join(DATA_DIR, 'navigation.json')
+
+# Password generation and hashing functions
+def generate_default_password(member_id):
+    """Generate a default password based on member ID using a fixed algorithm"""
+    # Use a combination of member_id and a fixed salt for generating the password
+    salt = "SnowNavi2025Salt"  # Fixed salt for all passwords
+    raw_password = f"{member_id}{salt}"
+    # Create a SHA-256 hash of the raw password
+    hashed = hashlib.sha256(raw_password.encode()).hexdigest()
+    # Return the first 8 characters as the password
+    return hashed[:8]
+
+def hash_password(password):
+    """Hash a password for storing"""
+    # Use SHA-256 for password hashing
+    return hashlib.sha256(password.encode()).hexdigest()
+
+# Create uploads directory if it doesn't exist
+if not os.path.exists(UPLOADS_DIR):
+    os.makedirs(UPLOADS_DIR)
+
+# Create subdirectories for images and PDFs
+images_dir = os.path.join(UPLOADS_DIR, 'images')
+pdfs_dir = os.path.join(UPLOADS_DIR, 'pdfs')
+
+if not os.path.exists(images_dir):
+    os.makedirs(images_dir)
+
+if not os.path.exists(pdfs_dir):
+    os.makedirs(pdfs_dir)
+
+# Allowed file extensions
+ALLOWED_EXTENSIONS = {
+    'images': {'png', 'jpg', 'jpeg', 'gif', 'webp'},
+    'pdfs': {'pdf'}
+}
+
+# Initialize Flask app
+app = Flask(__name__, static_folder=None)  # Disable default static folder
+CORS(app)  # Enable CORS
+
+# Set maximum content length for file uploads (16MB)
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+
+# Ensure proper MIME types are registered
+mimetypes.add_type('text/javascript', '.js')
+mimetypes.add_type('text/css', '.css')
+mimetypes.add_type('image/svg+xml', '.svg')
+
+# Main routes
+@app.route('/')
+def index():
+    return send_from_directory(ROOT_DIR, 'index.html')
+
+@app.route('/index.html')
+def serve_index():
+    return send_from_directory(ROOT_DIR, 'index.html')
+
+@app.route('/course.html')
+def serve_course():
+    return send_from_directory(ROOT_DIR, 'course.html')
+
+@app.route('/admin.html')
+def serve_admin_page():
+    return send_from_directory(ROOT_DIR, 'admin.html')
+
+@app.route('/course_admin.html')
+def serve_course_admin_page():
+    return send_from_directory(ROOT_DIR, 'course_admin.html')
+
+@app.route('/member_admin.html')
+def serve_member_admin_page():
+    return send_from_directory(ROOT_DIR, 'member_admin.html')
+
+@app.route('/navigation_admin.html')
+def serve_navigation_admin_page():
+    return send_from_directory(ROOT_DIR, 'navigation_admin.html')
+
+@app.route('/activity_admin.html')
+def serve_activity_admin_page():
+    return send_from_directory(ROOT_DIR, 'activity_admin.html')
+
+@app.route('/checkin_admin.html')
+def serve_checkin_admin_page():
+    return send_from_directory(ROOT_DIR, 'checkin_admin.html')
+
+@app.route('/feedback_template_admin.html')
+def serve_feedback_template_admin_page():
+    return send_from_directory(ROOT_DIR, 'feedback_template_admin.html')
+
+@app.route('/email_template_admin.html')
+def serve_email_template_admin_page():
+    return send_from_directory(ROOT_DIR, 'email_template_admin.html')
+
+@app.route('/team_api_tester.html')
+def serve_team_api_tester():
+    return send_from_directory(ROOT_DIR, 'team_api_tester.html')
+
+
+@app.route('/email_preview.html')
+def serve_email_preview_page():
+    return send_from_directory(ROOT_DIR, 'email_preview.html')
+
+# Group Buy pages
+@app.route('/group_buy.html')
+def serve_group_buy_page():
+    return send_from_directory(ROOT_DIR, 'group_buy.html')
+
+@app.route('/group_buy_batch.html')
+def serve_group_buy_batch_page():
+    return send_from_directory(ROOT_DIR, 'group_buy_batch.html')
+
+@app.route('/group_buy_product.html')
+def serve_group_buy_product_page():
+    return send_from_directory(ROOT_DIR, 'group_buy_product.html')
+
+@app.route('/group_buy_cart.html')
+def serve_group_buy_cart_page():
+    return send_from_directory(ROOT_DIR, 'group_buy_cart.html')
+
+@app.route('/group_buy_success.html')
+def serve_group_buy_success_page():
+    return send_from_directory(ROOT_DIR, 'group_buy_success.html')
+
+@app.route('/group_buy_orders.html')
+def serve_group_buy_orders_page():
+    return send_from_directory(ROOT_DIR, 'group_buy_orders.html')
+
+@app.route('/group_buy_admin.html')
+def serve_group_buy_admin_page():
+    return send_from_directory(ROOT_DIR, 'group_buy_admin.html')
+
+@app.route('/student_feedback.html')
+def serve_student_feedback_page():
+    return send_from_directory(ROOT_DIR, 'student_feedback.html')
+
+@app.route('/login.html')
+def serve_login_page():
+    return send_from_directory(ROOT_DIR, 'login.html')
+
+@app.route('/auth_callback.html')
+def serve_auth_callback_page():
+    return send_from_directory(ROOT_DIR, 'auth_callback.html')
+
+@app.route('/member.html')
+def serve_member_page():
+    return send_from_directory(ROOT_DIR, 'member.html')
+
+# SEO and sitemap routes
+@app.route('/team_api_tester.html')
+def serve_team_api_tester_page():
+    return send_from_directory(ROOT_DIR, 'team_api_tester.html')
+
+
+@app.route('/sitemap.xml')
+def serve_sitemap():
+    return send_from_directory(ROOT_DIR, 'sitemap.xml', mimetype='application/xml')
+
+@app.route('/robots.txt')
+def serve_robots():
+    return send_from_directory(ROOT_DIR, 'robots.txt', mimetype='text/plain')
+
+# API routes
+@app.route('/api/config')
+def get_config():
+    # Get environment variables
+    google_client_id = os.environ.get('GOOGLE_CLIENT_ID', '')
+    allowed_emails_str = os.environ.get('ALLOWED_EMAILS', '')
+
+    # Parse allowed emails into a list
+    allowed_emails = [email.strip() for email in allowed_emails_str.split(',') if email.strip()]
+
+    # Log the values being returned (remove in production)
+    app.logger.info(f"Returning config: googleClientId={google_client_id}, allowedEmails={allowed_emails}")
+
+    # Return the necessary configuration from environment variables
+    return jsonify({
+        'googleClientId': google_client_id,
+        'allowedEmails': allowed_emails,
+        # Keep backward compatibility for now
+        'authorizedEmail': allowed_emails_str
+    })
+
+@app.route('/api/check-permission')
+def check_permission():
+    """Check user permission level and page access"""
+    try:
+        # Get user email from request headers or query params
+        user_email = request.headers.get('X-User-Email') or request.args.get('email')
+        page = request.args.get('page', '')
+
+        if not user_email:
+            return jsonify({'error': 'User email required'}), 400
+
+        # Get super admin emails from environment
+        allowed_emails_str = os.environ.get('ALLOWED_EMAILS', '')
+        super_admin_emails = [email.strip() for email in allowed_emails_str.split(',') if email.strip()]
+
+        # Check if user is super admin
+        if user_email in super_admin_emails:
+            return jsonify({
+                'permission_level': 'super_admin',
+                'can_access': True,
+                'user_role': 'super_admin'
+            })
+
+        # Load members data to check role
+        try:
+            with open(os.path.join(DATA_DIR, 'members.json'), 'r', encoding='utf-8') as f:
+                members = json.load(f)
+        except FileNotFoundError:
+            members = {}
+
+        # Find user by admin email in members (prioritize admin field over email field)
+        user_member = None
+        user_role = None
+        for member_id, member_data in members.items():
+            # First check admin field, then fallback to email field for backward compatibility
+            admin_email = member_data.get('admin')
+            contact_email = member_data.get('email')
+
+            if admin_email == user_email or (not admin_email and contact_email == user_email):
+                user_member = member_data
+                user_role = member_data.get('role')
+                break
+
+        # Determine permission level
+        if user_role == 'admin':
+            permission_level = 'admin'
+        elif user_role == 'instructor':
+            permission_level = 'instructor'
+        else:
+            permission_level = 'none'
+
+        # Define page permissions
+        page_permissions = {
+            'admin.html': ['super_admin', 'admin', 'instructor'],  # Dashboard accessible to all admin roles
+            'course_admin.html': ['super_admin', 'admin'],
+            'member_admin.html': ['super_admin', 'admin'],
+            'email_template_admin.html': ['super_admin', 'admin'],
+            'navigation_admin.html': ['super_admin', 'admin'],  # Navigation structure management
+            'activity_admin.html': ['super_admin', 'admin', 'instructor'],
+            'checkin_admin.html': ['super_admin', 'admin', 'instructor'],
+            'feedback_template_admin.html': ['super_admin', 'admin', 'instructor'],
+            'group_buy_admin.html': ['super_admin', 'admin']  # Group buy management
+        }
+
+        # Check if user can access the requested page
+        can_access = False
+        if page in page_permissions:
+            can_access = permission_level in page_permissions[page]
+
+        return jsonify({
+            'permission_level': permission_level,
+            'can_access': can_access,
+            'user_role': user_role,
+            'user_member': user_member
+        })
+
+    except Exception as e:
+        app.logger.error(f"Error checking permission: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+# Data routes
+@app.route('/data/courses.json', methods=['GET'])
+def get_courses():
+    return send_from_directory(DATA_DIR, 'courses.json')
+
+@app.route('/data/courses.json', methods=['POST'])
+def update_courses():
+    data = request.get_json()
+    with open(JSON_FILE, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    return jsonify({'status': 'success'}), 200
+
+@app.route('/data/members.json', methods=['GET'])
+def get_members():
+    return send_from_directory(DATA_DIR, 'members.json')
+
+@app.route('/data/members.json', methods=['POST'])
+def update_members():
+    data = request.get_json()
+    members_file = os.path.join(DATA_DIR, 'members.json')
+    with open(members_file, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    return jsonify({'status': 'success'}), 200
+
+# Activities routes
+@app.route('/data/activities.json', methods=['GET'])
+def get_activities():
+    return send_from_directory(DATA_DIR, 'activities.json')
+
+@app.route('/data/activities.json', methods=['POST'])
+def update_activities():
+    data = request.get_json()
+    activities_file = os.path.join(DATA_DIR, 'activities.json')
+    with open(activities_file, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    return jsonify({'status': 'success'}), 200
+
+# Checkins routes
+@app.route('/data/checkins.json', methods=['GET'])
+def get_checkins():
+    return send_from_directory(DATA_DIR, 'checkins.json')
+
+@app.route('/data/checkins.json', methods=['POST'])
+def update_checkins():
+    data = request.get_json()
+    checkins_file = os.path.join(DATA_DIR, 'checkins.json')
+    with open(checkins_file, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    return jsonify({'status': 'success'}), 200
+
+# Feedbacks routes
+@app.route('/data/feedbacks.json', methods=['GET'])
+def get_feedbacks():
+    feedbacks_file = os.path.join(DATA_DIR, 'feedbacks.json')
+    if not os.path.exists(feedbacks_file):
+        # Create empty feedbacks file if it doesn't exist
+        with open(feedbacks_file, 'w', encoding='utf-8') as f:
+            json.dump({}, f, ensure_ascii=False, indent=2)
+    return send_from_directory(DATA_DIR, 'feedbacks.json')
+
+@app.route('/data/feedbacks.json', methods=['POST'])
+def update_feedbacks():
+    data = request.get_json()
+    feedbacks_file = os.path.join(DATA_DIR, 'feedbacks.json')
+    with open(feedbacks_file, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    return jsonify({'status': 'success'}), 200
+
+# Feedback Templates routes
+@app.route('/data/feedback_templates.json', methods=['GET'])
+def get_feedback_templates():
+    templates_file = os.path.join(DATA_DIR, 'feedback_templates.json')
+    if not os.path.exists(templates_file):
+        # Create empty templates file if it doesn't exist
+        with open(templates_file, 'w', encoding='utf-8') as f:
+            json.dump({}, f, ensure_ascii=False, indent=2)
+    return send_from_directory(DATA_DIR, 'feedback_templates.json')
+
+@app.route('/data/feedback_templates.json', methods=['POST'])
+def update_feedback_templates():
+    data = request.get_json()
+    templates_file = os.path.join(DATA_DIR, 'feedback_templates.json')
+    with open(templates_file, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    return jsonify({'status': 'success'}), 200
+
+@app.route('/data/navigation.json', methods=['GET'])
+def get_navigation():
+    # Check if navigation.json exists, if not create a default one
+    if not os.path.exists(NAVIGATION_FILE):
+        default_navigation = {
+            "items": [
+                {
+                    "id": "courses",
+                    "url": "index.html#courses",
+                    "translations": {
+                        "en": "Courses",
+                        "zh": "课程",
+                        "nl": "Cursussen"
+                    },
+                    "visible": True,
+                    "order": 1
+                },
+                {
+                    "id": "map",
+                    "url": "index.html#map",
+                    "translations": {
+                        "en": "Interactive Ski Map",
+                        "zh": "在线滑雪地图",
+                        "nl": "Interactieve Skikaart"
+                    },
+                    "visible": True,
+                    "order": 2
+                },
+                {
+                    "id": "story",
+                    "url": "index.html#story",
+                    "translations": {
+                        "en": "Our Story",
+                        "zh": "我们的故事",
+                        "nl": "Ons Verhaal"
+                    },
+                    "visible": True,
+                    "order": 3
+                },
+                {
+                    "id": "contact",
+                    "url": "index.html#contact",
+                    "translations": {
+                        "en": "Contact",
+                        "zh": "联系我们",
+                        "nl": "Contact"
+                    },
+                    "visible": True,
+                    "order": 4
+                }
+            ]
+        }
+        with open(NAVIGATION_FILE, 'w', encoding='utf-8') as f:
+            json.dump(default_navigation, f, ensure_ascii=False, indent=2)
+
+    return send_from_directory(DATA_DIR, 'navigation.json')
+
+@app.route('/data/navigation.json', methods=['POST'])
+def update_navigation():
+    data = request.get_json()
+    with open(NAVIGATION_FILE, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    return jsonify({'status': 'success'}), 200
+
+@app.route('/api/member/<member_id>', methods=['GET'])
+def get_member(member_id):
+    try:
+        members_file = os.path.join(DATA_DIR, 'members.json')
+        if not os.path.exists(members_file):
+            return jsonify({'error': 'Members data not found'}), 404
+
+        with open(members_file, 'r', encoding='utf-8') as f:
+            members = json.load(f)
+
+        if member_id in members:
+            return jsonify(members[member_id])
+        else:
+            return jsonify({'error': 'Member not found'}), 404
+    except Exception as e:
+        app.logger.error(f"Error retrieving member data: {str(e)}")
+        return jsonify({'error': f'Server error: {str(e)}'}), 500
+
+@app.route('/api/member/<member_id>', methods=['PUT'])
+def update_member(member_id):
+    try:
+        # Validate member_id format to prevent injection attacks
+        if not re.match(r'^SN\d{4}\d{4}$', member_id):
+            return jsonify({'error': 'Invalid member ID format'}), 400
+
+        members_file = os.path.join(DATA_DIR, 'members.json')
+        if not os.path.exists(members_file):
+            return jsonify({'error': 'Members data not found'}), 404
+
+        with open(members_file, 'r', encoding='utf-8') as f:
+            members = json.load(f)
+
+        # Check if the member exists
+        if member_id not in members:
+            return jsonify({'error': 'Member not found'}), 404
+
+        # Get the updated member data from the request
+        updated_member = request.get_json()
+
+        # Validate the updated member data
+        if not updated_member or not isinstance(updated_member, dict):
+            return jsonify({'error': 'Invalid member data'}), 400
+
+        # Ensure the member ID in the data matches the URL parameter
+        if 'id' not in updated_member or updated_member['id'] != member_id:
+            return jsonify({'error': 'Member ID mismatch'}), 400
+
+        # Validate required fields
+        required_fields = ['name', 'isActive', 'validityPeriod']
+        for field in required_fields:
+            if field not in updated_member:
+                return jsonify({'error': f'Missing required field: {field}'}), 400
+
+        # Validate validityPeriod is an object
+        if not isinstance(updated_member['validityPeriod'], dict):
+            return jsonify({'error': 'validityPeriod must be an object'}), 400
+
+        # Update the member in the members dictionary
+        members[member_id] = updated_member
+
+        # Write the updated members dictionary back to the file
+        with open(members_file, 'w', encoding='utf-8') as f:
+            json.dump(members, f, ensure_ascii=False, indent=2)
+
+        return jsonify({'status': 'success'}), 200
+    except Exception as e:
+        app.logger.error(f"Error updating member data: {str(e)}")
+        return jsonify({'error': f'Server error: {str(e)}'}), 500
+
+@app.route('/api/member/<member_id>', methods=['DELETE'])
+def delete_member(member_id):
+    try:
+        members_file = os.path.join(DATA_DIR, 'members.json')
+        if not os.path.exists(members_file):
+            return jsonify({'error': 'Members data not found'}), 404
+
+        with open(members_file, 'r', encoding='utf-8') as f:
+            members = json.load(f)
+
+        # Check if the member exists
+        if member_id not in members:
+            return jsonify({'error': 'Member not found'}), 404
+
+        # Delete the member from the members dictionary
+        del members[member_id]
+
+        # Write the updated members dictionary back to the file
+        with open(members_file, 'w', encoding='utf-8') as f:
+            json.dump(members, f, ensure_ascii=False, indent=2)
+
+        return jsonify({'status': 'success'}), 200
+    except Exception as e:
+        app.logger.error(f"Error deleting member data: {str(e)}")
+        return jsonify({'error': f'Server error: {str(e)}'}), 500
+
+@app.route('/api/member', methods=['POST'])
+def create_member():
+    try:
+        members_file = os.path.join(DATA_DIR, 'members.json')
+        if not os.path.exists(members_file):
+            # Create a new members file if it doesn't exist
+            members = {}
+        else:
+            # Load existing members
+            with open(members_file, 'r', encoding='utf-8') as f:
+                members = json.load(f)
+
+        # Get the new member data from the request
+        new_member = request.get_json()
+
+        # Ensure the member has an ID
+        if 'id' not in new_member:
+            return jsonify({'error': 'Member ID is required'}), 400
+
+        member_id = new_member['id']
+
+        # Check if a member with this ID already exists
+        if member_id in members:
+            return jsonify({'error': 'A member with this ID already exists'}), 409
+
+        # Generate default password for the new member
+        default_password = generate_default_password(member_id)
+        # Store the hashed password
+        new_member['password'] = default_password
+        # Store the plain text password temporarily for the response
+        plain_password = default_password
+
+        # Add the new member to the members dictionary
+        members[member_id] = new_member
+
+        # Write the updated members dictionary back to the file
+        with open(members_file, 'w', encoding='utf-8') as f:
+            json.dump(members, f, ensure_ascii=False, indent=2)
+
+        return jsonify({
+            'status': 'success',
+            'id': member_id,
+            'password': plain_password  # Return the plain text password in the response
+        }), 201
+    except Exception as e:
+        app.logger.error(f"Error creating member data: {str(e)}")
+        return jsonify({'error': f'Server error: {str(e)}'}), 500
+
+@app.route('/api/verify-member', methods=['POST'])
+def verify_member():
+    """Verify if an email belongs to an active member"""
+    try:
+        # Get the email from the request body
+        data = request.get_json()
+        if not data or 'email' not in data:
+            return jsonify({'error': 'Email is required'}), 400
+
+        email = data['email'].strip().lower()
+
+        # Basic email validation
+        if not email or '@' not in email:
+            return jsonify({'error': 'Invalid email format'}), 400
+
+        members_file = os.path.join(DATA_DIR, 'members.json')
+        if not os.path.exists(members_file):
+            return jsonify({'isMember': False, 'message': 'Members database not found'}), 200
+
+        with open(members_file, 'r', encoding='utf-8') as f:
+            members = json.load(f)
+
+        # Search for member with matching email
+        for member_id, member_data in members.items():
+            if 'email' in member_data and member_data['email'].strip().lower() == email:
+                # Check if member is active
+                is_active = member_data.get('isActive', False)
+
+                if is_active:
+                    return jsonify({
+                        'isMember': True,
+                        'memberId': member_id,
+                        'memberName': member_data.get('name', 'Unknown'),
+                        'message': 'Member verified successfully'
+                    })
+                else:
+                    return jsonify({
+                        'isMember': False,
+                        'message': 'Member account is inactive'
+                    })
+
+        # No member found with this email
+        return jsonify({
+            'isMember': False,
+            'message': 'Email not found in member database'
+        })
+
+    except Exception as e:
+        app.logger.error(f"Error verifying member: {str(e)}")
+        return jsonify({'error': f'Server error: {str(e)}'}), 500
+
+@app.route('/api/member/search-by-email', methods=['POST'])
+def search_member_by_email():
+    """Search for a member by email address"""
+    try:
+        # Get the email from the request body
+        data = request.get_json()
+        if not data or 'email' not in data:
+            return jsonify({'error': 'Email is required'}), 400
+
+        email = data['email'].strip().lower()
+
+        # Basic email validation
+        if not email or '@' not in email:
+            return jsonify({'error': 'Invalid email format'}), 400
+
+        members_file = os.path.join(DATA_DIR, 'members.json')
+        if not os.path.exists(members_file):
+            return jsonify({'error': 'Members data not found'}), 404
+
+        with open(members_file, 'r', encoding='utf-8') as f:
+            members = json.load(f)
+
+        # Search for member with matching email
+        for member_id, member_data in members.items():
+            if 'email' in member_data and member_data['email'].strip().lower() == email:
+                return jsonify({
+                    'found': True,
+                    'memberId': member_id,
+                    'memberName': member_data.get('name', 'Unknown')
+                })
+
+        # No member found with this email
+        return jsonify({'found': False}), 404
+
+    except Exception as e:
+        app.logger.error(f"Error searching member by email: {str(e)}")
+        return jsonify({'error': f'Server error: {str(e)}'}), 500
+
+@app.route('/api/member/<member_id>/check-expiration', methods=['POST'])
+def check_member_expiration(member_id):
+    """Check if a member's validity period has expired and update status if needed"""
+    try:
+        # Validate member_id format to prevent injection attacks
+        if not re.match(r'^SN\d{4}\d{4}$', member_id):
+            return jsonify({'error': 'Invalid member ID format'}), 400
+
+        members_file = os.path.join(DATA_DIR, 'members.json')
+        if not os.path.exists(members_file):
+            return jsonify({'error': 'Members data not found'}), 404
+
+        with open(members_file, 'r', encoding='utf-8') as f:
+            members = json.load(f)
+
+        # Check if the member exists
+        if member_id not in members:
+            return jsonify({'error': 'Member not found'}), 404
+
+        member = members[member_id]
+
+        # Only proceed if the member is currently active
+        if not member.get('isActive', False):
+            return jsonify({
+                'status': 'success',
+                'message': 'Member is already marked as expired',
+                'updated': False
+            }), 200
+
+        # Check if validity period exists
+        if not member.get('validityPeriod'):
+            return jsonify({'error': 'Missing validity period data'}), 400
+
+        # Get the validity period (could be string or object with language keys)
+        validity_period = None
+        if isinstance(member['validityPeriod'], str):
+            # New format: single string
+            validity_period = member['validityPeriod']
+        elif isinstance(member['validityPeriod'], dict):
+            # Old format: object with language keys
+            for lang in ['en', 'zh', 'nl']:
+                if lang in member['validityPeriod'] and member['validityPeriod'][lang]:
+                    validity_period = member['validityPeriod'][lang]
+                    break
+        else:
+            return jsonify({'error': 'Invalid validity period format'}), 400
+
+        if not validity_period:
+            return jsonify({
+                'status': 'success',
+                'message': 'No validity period found to check',
+                'updated': False
+            }), 200
+
+        # Check if the validity period is in the dd/mm/yyyy - dd/mm/yyyy format
+        is_expired = False
+        match = re.match(r'^(\d{2}/\d{2}/\d{4}) - (\d{2}/\d{2}/\d{4})$', validity_period)
+        if match:
+            end_date_str = match.group(2)
+            try:
+                # Parse the end date
+                day, month, year = map(int, end_date_str.split('/'))
+                end_date = datetime.datetime(year, month, day, 23, 59, 59)
+
+                # Compare with current date
+                now = datetime.datetime.now()
+                is_expired = now > end_date
+            except ValueError:
+                app.logger.error(f"Error parsing date: {end_date_str}")
+                return jsonify({'error': 'Invalid date format'}), 400
+        else:
+            # If not in standard format, try to extract year from the end date
+            parts = validity_period.split(' - ')
+            if len(parts) == 2:
+                year_match = re.search(r'\d{4}', parts[1])
+                if year_match:
+                    year = int(year_match.group(0))
+                    is_expired = datetime.datetime.now().year > year
+
+        # If expired, update the member status
+        if is_expired:
+            member['isActive'] = False
+
+            # Write the updated members dictionary back to the file
+            with open(members_file, 'w', encoding='utf-8') as f:
+                json.dump(members, f, ensure_ascii=False, indent=2)
+
+            return jsonify({
+                'status': 'success',
+                'message': 'Member status updated to expired',
+                'updated': True
+            }), 200
+        else:
+            return jsonify({
+                'status': 'success',
+                'message': 'Member validity period has not expired',
+                'updated': False
+            }), 200
+
+    except Exception as e:
+        app.logger.error(f"Error checking member expiration: {str(e)}")
+        return jsonify({'error': f'Server error: {str(e)}'}), 500
+
+# Activity API endpoints
+@app.route('/api/activity/<activity_id>', methods=['GET'])
+def get_activity(activity_id):
+    """Get a specific activity by ID"""
+    try:
+        # Validate activity_id format to prevent injection attacks
+        if not re.match(r'^ACT\d{4}\d{4}$', activity_id):
+            return jsonify({'error': 'Invalid activity ID format'}), 400
+
+        activities_file = os.path.join(DATA_DIR, 'activities.json')
+        if not os.path.exists(activities_file):
+            return jsonify({'error': 'Activities data not found'}), 404
+
+        with open(activities_file, 'r', encoding='utf-8') as f:
+            activities = json.load(f)
+
+        if activity_id in activities:
+            return jsonify(activities[activity_id])
+        else:
+            return jsonify({'error': 'Activity not found'}), 404
+    except Exception as e:
+        app.logger.error(f"Error retrieving activity data: {str(e)}")
+        return jsonify({'error': f'Server error: {str(e)}'}), 500
+
+@app.route('/api/activity', methods=['POST'])
+def create_activity():
+    """Create a new activity"""
+    try:
+        activities_file = os.path.join(DATA_DIR, 'activities.json')
+        if not os.path.exists(activities_file):
+            activities = {}
+        else:
+            with open(activities_file, 'r', encoding='utf-8') as f:
+                activities = json.load(f)
+
+        new_activity = request.get_json()
+
+        # Ensure the activity has an ID
+        if 'id' not in new_activity:
+            return jsonify({'error': 'Activity ID is required'}), 400
+
+        activity_id = new_activity['id']
+
+        # Check if an activity with this ID already exists
+        if activity_id in activities:
+            return jsonify({'error': 'An activity with this ID already exists'}), 409
+
+        # Validate activity_id format
+        if not re.match(r'^ACT\d{4}\d{4}$', activity_id):
+            return jsonify({'error': 'Invalid activity ID format'}), 400
+
+        # Add timestamps
+        new_activity['createdAt'] = datetime.datetime.now().isoformat() + 'Z'
+        new_activity['updatedAt'] = datetime.datetime.now().isoformat() + 'Z'
+
+        # Add the new activity
+        activities[activity_id] = new_activity
+
+        # Save to file
+        with open(activities_file, 'w', encoding='utf-8') as f:
+            json.dump(activities, f, ensure_ascii=False, indent=2)
+
+        return jsonify({'status': 'success', 'activity': new_activity}), 201
+
+    except Exception as e:
+        app.logger.error(f"Error creating activity: {str(e)}")
+        return jsonify({'error': f'Server error: {str(e)}'}), 500
+
+# Checkin API endpoints
+@app.route('/api/checkin', methods=['POST'])
+def create_checkin():
+    """Create a new checkin record"""
+    try:
+        checkins_file = os.path.join(DATA_DIR, 'checkins.json')
+        if not os.path.exists(checkins_file):
+            checkins = {}
+        else:
+            with open(checkins_file, 'r', encoding='utf-8') as f:
+                checkins = json.load(f)
+
+        new_checkin = request.get_json()
+
+        # Validate required fields
+        required_fields = ['activityId', 'memberId', 'memberName', 'memberType']
+        for field in required_fields:
+            if field not in new_checkin:
+                return jsonify({'error': f'{field} is required'}), 400
+
+        # Validate member ID format
+        if not re.match(r'^SN\d{4}\d{4}$', new_checkin['memberId']):
+            return jsonify({'error': 'Invalid member ID format'}), 400
+
+        # Validate activity ID format
+        if not re.match(r'^ACT\d{4}\d{4}$', new_checkin['activityId']):
+            return jsonify({'error': 'Invalid activity ID format'}), 400
+
+        # Check if member exists
+        members_file = os.path.join(DATA_DIR, 'members.json')
+        if os.path.exists(members_file):
+            with open(members_file, 'r', encoding='utf-8') as f:
+                members = json.load(f)
+
+            if new_checkin['memberId'] not in members:
+                return jsonify({'error': 'Member not found'}), 404
+
+        # Check if activity exists
+        activities_file = os.path.join(DATA_DIR, 'activities.json')
+        if os.path.exists(activities_file):
+            with open(activities_file, 'r', encoding='utf-8') as f:
+                activities = json.load(f)
+
+            if new_checkin['activityId'] not in activities:
+                return jsonify({'error': 'Activity not found'}), 404
+
+        # Generate checkin ID if not provided
+        if 'id' not in new_checkin:
+            current_year = datetime.datetime.now().year
+            prefix = f"CHK{current_year}"
+
+            max_sequence = 0
+            for checkin_id in checkins.keys():
+                if checkin_id.startswith(prefix):
+                    try:
+                        sequence = int(checkin_id[len(prefix):])
+                        max_sequence = max(max_sequence, sequence)
+                    except ValueError:
+                        continue
+
+            new_sequence = max_sequence + 1
+            new_checkin['id'] = f"{prefix}{new_sequence:04d}"
+
+        checkin_id = new_checkin['id']
+
+        # Check for duplicate checkin
+        for existing_checkin in checkins.values():
+            if (existing_checkin['activityId'] == new_checkin['activityId'] and
+                existing_checkin['memberId'] == new_checkin['memberId']):
+                return jsonify({'error': 'Member already checked in for this activity'}), 409
+
+        # Add timestamps
+        new_checkin['checkinTime'] = datetime.datetime.now().isoformat() + 'Z'
+        new_checkin['createdAt'] = datetime.datetime.now().isoformat() + 'Z'
+
+        # Add the new checkin
+        checkins[checkin_id] = new_checkin
+
+        # Save to file
+        with open(checkins_file, 'w', encoding='utf-8') as f:
+            json.dump(checkins, f, ensure_ascii=False, indent=2)
+
+        return jsonify({'status': 'success', 'checkin': new_checkin}), 201
+
+    except Exception as e:
+        app.logger.error(f"Error creating checkin: {str(e)}")
+        return jsonify({'error': f'Server error: {str(e)}'}), 500
+
+# Checkin Code API endpoints
+def safe_file_operation(file_path, operation, mode='r+', encoding='utf-8'):
+    """Safely perform file operations with file locking to prevent race conditions"""
+    max_retries = 5
+    retry_delay = 0.1
+
+    # Ensure file exists for r+ mode
+    if mode == 'r+' and not os.path.exists(file_path):
+        with open(file_path, 'w', encoding=encoding) as f:
+            json.dump({}, f)
+
+    for attempt in range(max_retries):
+        try:
+            with open(file_path, mode, encoding=encoding) as f:
+                # Acquire exclusive lock
+                fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+                try:
+                    return operation(f)
+                finally:
+                    # Release lock
+                    fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+        except (IOError, OSError) as e:
+            if attempt < max_retries - 1:
+                time.sleep(retry_delay * (2 ** attempt))  # Exponential backoff
+                continue
+            else:
+                raise e
+
+def load_json_file(file_path, default_value=None):
+    """Safely load JSON file with default value if file doesn't exist"""
+    if not os.path.exists(file_path):
+        if default_value is not None:
+            return default_value
+        return {}
+
+    def read_operation(f):
+        f.seek(0)
+        content = f.read()
+        if not content.strip():
+            return default_value if default_value is not None else {}
+        return json.loads(content)
+
+    return safe_file_operation(file_path, read_operation, mode='r')
+
+def save_json_file(file_path, data):
+    """Safely save JSON file with file locking"""
+    def write_operation(f):
+        f.seek(0)
+        f.truncate()
+        json.dump(data, f, ensure_ascii=False, indent=2)
+        f.flush()
+        os.fsync(f.fileno())  # Force write to disk
+        return True
+
+    return safe_file_operation(file_path, write_operation, mode='w')
+
+@app.route('/api/activity/<activity_id>/generate-checkin-code', methods=['POST'])
+def generate_checkin_code(activity_id):
+    """Generate a unique checkin code for an activity"""
+    try:
+        # Validate activity_id format
+        if not re.match(r'^ACT\d{4}\d{4}$', activity_id):
+            return jsonify({'error': 'Invalid activity ID format'}), 400
+
+        # Check if activity exists
+        activities_file = os.path.join(DATA_DIR, 'activities.json')
+        activities = load_json_file(activities_file, {})
+
+        if activity_id not in activities:
+            return jsonify({'error': 'Activity not found'}), 404
+
+        # Load existing checkin codes
+        checkin_codes_file = os.path.join(DATA_DIR, 'checkin_codes.json')
+        checkin_codes = load_json_file(checkin_codes_file, {})
+
+        # Check if there's already an active code for this activity
+        for code_id, code_data in checkin_codes.items():
+            if (code_data['activityId'] == activity_id and
+                code_data['status'] == 'active' and
+                datetime.datetime.fromisoformat(code_data['expiresAt'].replace('Z', '+00:00')) > datetime.datetime.now(datetime.timezone.utc)):
+                return jsonify({
+                    'status': 'success',
+                    'checkinCode': code_data,
+                    'message': 'Active checkin code already exists for this activity'
+                }), 200
+
+        # Generate new checkin code
+        code_id = str(uuid.uuid4())
+        current_time = datetime.datetime.now(datetime.timezone.utc)
+        expires_at = current_time + datetime.timedelta(hours=24)  # Code expires in 24 hours
+
+        new_code = {
+            'id': code_id,
+            'activityId': activity_id,
+            'activityName': activities[activity_id].get('name', {}),
+            'status': 'active',
+            'createdAt': current_time.isoformat(),
+            'expiresAt': expires_at.isoformat(),
+            'checkinCount': 0,
+            'createdBy': request.headers.get('X-User-Email', 'system')
+        }
+
+        # Save the new code
+        checkin_codes[code_id] = new_code
+        save_json_file(checkin_codes_file, checkin_codes)
+
+        return jsonify({
+            'status': 'success',
+            'checkinCode': new_code
+        }), 201
+
+    except Exception as e:
+        app.logger.error(f"Error generating checkin code: {str(e)}")
+        return jsonify({'error': f'Server error: {str(e)}'}), 500
+
+@app.route('/api/checkin-code/<code_id>', methods=['GET'])
+def get_checkin_code_info(code_id):
+    """Get information about a checkin code"""
+    try:
+        # Load checkin codes
+        checkin_codes_file = os.path.join(DATA_DIR, 'checkin_codes.json')
+        checkin_codes = load_json_file(checkin_codes_file, {})
+
+        if code_id not in checkin_codes:
+            return jsonify({'error': 'Checkin code not found'}), 404
+
+        code_data = checkin_codes[code_id]
+
+        # Check if code is expired
+        expires_at = datetime.datetime.fromisoformat(code_data['expiresAt'].replace('Z', '+00:00'))
+        if expires_at <= datetime.datetime.now(datetime.timezone.utc):
+            return jsonify({'error': 'Checkin code has expired'}), 410
+
+        # Check if code is active
+        if code_data['status'] != 'active':
+            return jsonify({'error': 'Checkin code is not active'}), 410
+
+        # Load activity information
+        activities_file = os.path.join(DATA_DIR, 'activities.json')
+        activities = load_json_file(activities_file, {})
+
+        activity_id = code_data['activityId']
+        if activity_id not in activities:
+            return jsonify({'error': 'Associated activity not found'}), 404
+
+        activity = activities[activity_id]
+
+        return jsonify({
+            'status': 'success',
+            'checkinCode': code_data,
+            'activity': {
+                'id': activity_id,
+                'name': activity.get('name', {}),
+                'date': activity.get('date'),
+                'location': activity.get('location', {}),
+                'description': activity.get('description', {}),
+                'type': activity.get('type')
+            }
+        }), 200
+
+    except Exception as e:
+        app.logger.error(f"Error getting checkin code info: {str(e)}")
+        return jsonify({'error': f'Server error: {str(e)}'}), 500
+
+@app.route('/api/checkin-by-email', methods=['POST'])
+def checkin_by_email():
+    """Check in a member using email and checkin code"""
+    try:
+        data = request.get_json()
+
+        # Validate required fields
+        required_fields = ['email', 'checkinCodeId']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({'error': f'{field} is required'}), 400
+
+        email = data['email'].strip().lower()
+        checkin_code_id = data['checkinCodeId']
+
+        # Basic email validation
+        if not email or '@' not in email:
+            return jsonify({'error': 'Invalid email format'}), 400
+
+        # Load and validate checkin code
+        checkin_codes_file = os.path.join(DATA_DIR, 'checkin_codes.json')
+        checkin_codes = load_json_file(checkin_codes_file, {})
+
+        if checkin_code_id not in checkin_codes:
+            return jsonify({'error': 'Invalid checkin code'}), 404
+
+        code_data = checkin_codes[checkin_code_id]
+
+        # Check if code is expired
+        expires_at = datetime.datetime.fromisoformat(code_data['expiresAt'].replace('Z', '+00:00'))
+        if expires_at <= datetime.datetime.now(datetime.timezone.utc):
+            return jsonify({'error': 'Checkin code has expired'}), 410
+
+        # Check if code is active
+        if code_data['status'] != 'active':
+            return jsonify({'error': 'Checkin code is not active'}), 410
+
+        # Find member by email
+        members_file = os.path.join(DATA_DIR, 'members.json')
+        members = load_json_file(members_file, {})
+
+        member_id = None
+        member_data = None
+        for mid, mdata in members.items():
+            if mdata.get('email', '').lower() == email:
+                member_id = mid
+                member_data = mdata
+                break
+
+        if not member_id:
+            return jsonify({'error': 'No member found with this email address'}), 404
+
+        # Check if member is active
+        if not member_data.get('isActive', False):
+            return jsonify({'error': 'Member account is not active'}), 403
+
+        # Perform atomic checkin operation with file locking
+        checkins_file = os.path.join(DATA_DIR, 'checkins.json')
+        activity_id = code_data['activityId']
+
+        def checkin_operation(f):
+            # Read current checkins
+            f.seek(0)
+            content = f.read()
+            if content.strip():
+                checkins = json.loads(content)
+            else:
+                checkins = {}
+
+            # Check for duplicate checkin within the lock
+            for existing_checkin in checkins.values():
+                if (existing_checkin['activityId'] == activity_id and
+                    existing_checkin['memberId'] == member_id):
+                    return jsonify({'error': 'You have already checked in for this activity'}), 409
+
+            # Generate checkin ID
+            current_year = datetime.datetime.now().year
+            prefix = f"CHK{current_year}"
+
+            max_sequence = 0
+            for checkin_id in checkins.keys():
+                if checkin_id.startswith(prefix):
+                    try:
+                        sequence = int(checkin_id[len(prefix):])
+                        max_sequence = max(max_sequence, sequence)
+                    except ValueError:
+                        continue
+
+            new_sequence = max_sequence + 1
+            new_checkin_id = f"{prefix}{new_sequence:04d}"
+
+            # Create new checkin record
+            current_time = datetime.datetime.now(datetime.timezone.utc)
+            new_checkin = {
+                'id': new_checkin_id,
+                'activityId': activity_id,
+                'memberId': member_id,
+                'memberName': member_data.get('name', 'Unknown'),
+                'memberType': 'member',
+                'checkinTime': current_time.isoformat(),
+                'checkinMethod': 'email_code',
+                'checkinCodeId': checkin_code_id,
+                'notes': f'Checked in via email using checkin code',
+                'createdAt': current_time.isoformat()
+            }
+
+            # Add to checkins
+            checkins[new_checkin_id] = new_checkin
+
+            # Write back to file
+            f.seek(0)
+            f.truncate()
+            json.dump(checkins, f, ensure_ascii=False, indent=2)
+            f.flush()
+            os.fsync(f.fileno())
+
+            return new_checkin
+
+        # Execute the atomic operation
+        result = safe_file_operation(checkins_file, checkin_operation, mode='r+')
+
+        # If result is a Flask response (error case), return it
+        if hasattr(result, 'status_code'):
+            return result
+
+        new_checkin = result
+
+        # Update checkin code statistics (separate operation)
+        try:
+            code_data['checkinCount'] = code_data.get('checkinCount', 0) + 1
+            checkin_codes[checkin_code_id] = code_data
+            save_json_file(checkin_codes_file, checkin_codes)
+        except Exception as e:
+            app.logger.warning(f"Failed to update checkin code statistics: {str(e)}")
+
+        return jsonify({
+            'status': 'success',
+            'message': 'Successfully checked in!',
+            'checkin': new_checkin,
+            'member': {
+                'id': member_id,
+                'name': member_data.get('name', 'Unknown'),
+                'email': email
+            }
+        }), 201
+
+    except Exception as e:
+        app.logger.error(f"Error checking in by email: {str(e)}")
+        return jsonify({'error': f'Server error: {str(e)}'}), 500
+
+@app.route('/api/activity/<activity_id>/checkin-codes', methods=['GET'])
+def get_activity_checkin_codes(activity_id):
+    """Get all checkin codes for an activity"""
+    try:
+        # Validate activity_id format
+        if not re.match(r'^ACT\d{4}\d{4}$', activity_id):
+            return jsonify({'error': 'Invalid activity ID format'}), 400
+
+        # Load checkin codes
+        checkin_codes_file = os.path.join(DATA_DIR, 'checkin_codes.json')
+        checkin_codes = load_json_file(checkin_codes_file, {})
+
+        # Filter codes for this activity
+        activity_codes = []
+        for code_id, code_data in checkin_codes.items():
+            if code_data['activityId'] == activity_id:
+                activity_codes.append(code_data)
+
+        # Sort by creation date (newest first)
+        activity_codes.sort(key=lambda x: x['createdAt'], reverse=True)
+
+        return jsonify({
+            'status': 'success',
+            'checkinCodes': activity_codes
+        }), 200
+
+    except Exception as e:
+        app.logger.error(f"Error getting activity checkin codes: {str(e)}")
+        return jsonify({'error': f'Server error: {str(e)}'}), 500
+
+@app.route('/api/checkin-code/<code_id>/deactivate', methods=['POST'])
+def deactivate_checkin_code(code_id):
+    """Deactivate a checkin code"""
+    try:
+        # Load checkin codes
+        checkin_codes_file = os.path.join(DATA_DIR, 'checkin_codes.json')
+        checkin_codes = load_json_file(checkin_codes_file, {})
+
+        if code_id not in checkin_codes:
+            return jsonify({'error': 'Checkin code not found'}), 404
+
+        # Update status
+        checkin_codes[code_id]['status'] = 'deactivated'
+        checkin_codes[code_id]['deactivatedAt'] = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        checkin_codes[code_id]['deactivatedBy'] = request.headers.get('X-User-Email', 'system')
+
+        # Save changes
+        save_json_file(checkin_codes_file, checkin_codes)
+
+        return jsonify({
+            'status': 'success',
+            'message': 'Checkin code deactivated successfully'
+        }), 200
+
+    except Exception as e:
+        app.logger.error(f"Error deactivating checkin code: {str(e)}")
+        return jsonify({'error': f'Server error: {str(e)}'}), 500
+
+@app.route('/data/checkin_codes.json', methods=['GET'])
+def get_checkin_codes():
+    """Get all checkin codes data"""
+    checkin_codes_file = os.path.join(DATA_DIR, 'checkin_codes.json')
+    if not os.path.exists(checkin_codes_file):
+        # Create empty checkin codes file if it doesn't exist
+        with open(checkin_codes_file, 'w', encoding='utf-8') as f:
+            json.dump({}, f, ensure_ascii=False, indent=2)
+    return send_from_directory(DATA_DIR, 'checkin_codes.json')
+
+# Feedback API endpoints
+@app.route('/api/feedback', methods=['POST'])
+def create_feedback():
+    """Create a new feedback record"""
+    try:
+        feedbacks_file = os.path.join(DATA_DIR, 'feedbacks.json')
+        if not os.path.exists(feedbacks_file):
+            feedbacks = {}
+        else:
+            with open(feedbacks_file, 'r', encoding='utf-8') as f:
+                feedbacks = json.load(f)
+
+        new_feedback = request.get_json()
+
+        # Validate required fields - now more flexible for skill assessment
+        required_fields = ['checkinId', 'activityId', 'memberId', 'memberName']
+        for field in required_fields:
+            if field not in new_feedback:
+                return jsonify({'error': f'{field} is required'}), 400
+
+        # Validate that there's some feedback content
+        has_overall_feedback = new_feedback.get('overallFeedback', '').strip()
+        has_legacy_feedback = new_feedback.get('feedback', '').strip()
+        has_skill_assessment = new_feedback.get('skillAssessment', {})
+
+        if not has_overall_feedback and not has_legacy_feedback and not has_skill_assessment:
+            return jsonify({'error': 'At least one type of feedback is required'}), 400
+
+        # Validate checkin ID format
+        if not re.match(r'^CHK\d{4}\d{4}$', new_feedback['checkinId']):
+            return jsonify({'error': 'Invalid checkin ID format'}), 400
+
+        # Validate member ID format
+        if not re.match(r'^SN\d{4}\d{4}$', new_feedback['memberId']):
+            return jsonify({'error': 'Invalid member ID format'}), 400
+
+        # Validate activity ID format
+        if not re.match(r'^ACT\d{4}\d{4}$', new_feedback['activityId']):
+            return jsonify({'error': 'Invalid activity ID format'}), 400
+
+        # Check if checkin exists
+        checkins_file = os.path.join(DATA_DIR, 'checkins.json')
+        if os.path.exists(checkins_file):
+            with open(checkins_file, 'r', encoding='utf-8') as f:
+                checkins = json.load(f)
+
+            if new_feedback['checkinId'] not in checkins:
+                return jsonify({'error': 'Checkin not found'}), 404
+
+        # Generate feedback ID if not provided
+        if 'id' not in new_feedback:
+            current_year = datetime.datetime.now().year
+            prefix = f"FB{current_year}"
+
+            max_sequence = 0
+            for feedback in feedbacks.values():
+                if 'id' in feedback and feedback['id'].startswith(prefix):
+                    try:
+                        sequence = int(feedback['id'][len(prefix):])
+                        max_sequence = max(max_sequence, sequence)
+                    except ValueError:
+                        continue
+
+            new_sequence = max_sequence + 1
+            new_feedback['id'] = f"{prefix}{new_sequence:04d}"
+
+        # Add timestamps
+        new_feedback['createdAt'] = datetime.datetime.now().isoformat() + 'Z'
+        new_feedback['updatedAt'] = datetime.datetime.now().isoformat() + 'Z'
+
+        # Use provided createdBy or default to 'admin'
+        if 'createdBy' not in new_feedback:
+            new_feedback['createdBy'] = 'admin'
+
+        # Use checkinId as the key for easy lookup
+        checkin_id = new_feedback['checkinId']
+        feedbacks[checkin_id] = new_feedback
+
+        # Save to file
+        with open(feedbacks_file, 'w', encoding='utf-8') as f:
+            json.dump(feedbacks, f, ensure_ascii=False, indent=2)
+
+        return jsonify({'status': 'success', 'feedback': new_feedback}), 201
+
+    except Exception as e:
+        app.logger.error(f"Error creating feedback: {str(e)}")
+        return jsonify({'error': f'Server error: {str(e)}'}), 500
+
+@app.route('/api/feedback/<checkin_id>', methods=['GET'])
+def get_feedback(checkin_id):
+    """Get feedback for a specific checkin"""
+    try:
+        # Validate checkin_id format
+        if not re.match(r'^CHK\d{4}\d{4}$', checkin_id):
+            return jsonify({'error': 'Invalid checkin ID format'}), 400
+
+        feedbacks_file = os.path.join(DATA_DIR, 'feedbacks.json')
+        if not os.path.exists(feedbacks_file):
+            return jsonify({'error': 'Feedback not found'}), 404
+
+        with open(feedbacks_file, 'r', encoding='utf-8') as f:
+            feedbacks = json.load(f)
+
+        if checkin_id in feedbacks:
+            return jsonify(feedbacks[checkin_id])
+        else:
+            return jsonify({'error': 'Feedback not found'}), 404
+    except Exception as e:
+        app.logger.error(f"Error retrieving feedback: {str(e)}")
+        return jsonify({'error': f'Server error: {str(e)}'}), 500
+
+@app.route('/api/feedback/<checkin_id>', methods=['PUT'])
+def update_feedback(checkin_id):
+    """Update feedback for a specific checkin"""
+    try:
+        # Validate checkin_id format
+        if not re.match(r'^CHK\d{4}\d{4}$', checkin_id):
+            return jsonify({'error': 'Invalid checkin ID format'}), 400
+
+        feedbacks_file = os.path.join(DATA_DIR, 'feedbacks.json')
+        if not os.path.exists(feedbacks_file):
+            return jsonify({'error': 'Feedbacks data not found'}), 404
+
+        with open(feedbacks_file, 'r', encoding='utf-8') as f:
+            feedbacks = json.load(f)
+
+        if checkin_id not in feedbacks:
+            return jsonify({'error': 'Feedback not found'}), 404
+
+        updated_feedback = request.get_json()
+
+        # Validate that there's some feedback content
+        has_overall_feedback = updated_feedback.get('overallFeedback', '').strip()
+        has_legacy_feedback = updated_feedback.get('feedback', '').strip()
+        has_skill_assessment = updated_feedback.get('skillAssessment', {})
+
+        if not has_overall_feedback and not has_legacy_feedback and not has_skill_assessment:
+            return jsonify({'error': 'At least one type of feedback is required'}), 400
+
+        # Update the feedback
+        existing_feedback = feedbacks[checkin_id]
+
+        # Update overall feedback
+        if 'overallFeedback' in updated_feedback:
+            existing_feedback['overallFeedback'] = updated_feedback['overallFeedback']
+
+        # Update skill assessment
+        if 'skillAssessment' in updated_feedback:
+            existing_feedback['skillAssessment'] = updated_feedback['skillAssessment']
+
+        # Update legacy feedback field for backward compatibility
+        if 'feedback' in updated_feedback:
+            existing_feedback['feedback'] = updated_feedback['feedback']
+        elif 'overallFeedback' in updated_feedback:
+            existing_feedback['feedback'] = updated_feedback['overallFeedback']
+
+        existing_feedback['updatedAt'] = datetime.datetime.now().isoformat() + 'Z'
+
+        # Update the updatedBy field if provided
+        if 'updatedBy' in updated_feedback:
+            existing_feedback['updatedBy'] = updated_feedback['updatedBy']
+        if 'updatedByEmail' in updated_feedback:
+            existing_feedback['updatedByEmail'] = updated_feedback['updatedByEmail']
+
+        # Save to file
+        with open(feedbacks_file, 'w', encoding='utf-8') as f:
+            json.dump(feedbacks, f, ensure_ascii=False, indent=2)
+
+        return jsonify({'status': 'success', 'feedback': existing_feedback}), 200
+
+    except Exception as e:
+        app.logger.error(f"Error updating feedback: {str(e)}")
+        return jsonify({'error': f'Server error: {str(e)}'}), 500
+
+@app.route('/api/feedback/<checkin_id>', methods=['DELETE'])
+def delete_feedback(checkin_id):
+    """Delete feedback for a specific checkin"""
+    try:
+        # Validate checkin_id format
+        if not re.match(r'^CHK\d{4}\d{4}$', checkin_id):
+            return jsonify({'error': 'Invalid checkin ID format'}), 400
+
+        feedbacks_file = os.path.join(DATA_DIR, 'feedbacks.json')
+        if not os.path.exists(feedbacks_file):
+            return jsonify({'error': 'Feedbacks data not found'}), 404
+
+        with open(feedbacks_file, 'r', encoding='utf-8') as f:
+            feedbacks = json.load(f)
+
+        if checkin_id not in feedbacks:
+            return jsonify({'error': 'Feedback not found'}), 404
+
+        # Delete the feedback
+        del feedbacks[checkin_id]
+
+        # Save to file
+        with open(feedbacks_file, 'w', encoding='utf-8') as f:
+            json.dump(feedbacks, f, ensure_ascii=False, indent=2)
+
+        return jsonify({'status': 'success'}), 200
+
+    except Exception as e:
+        app.logger.error(f"Error deleting feedback: {str(e)}")
+        return jsonify({'error': f'Server error: {str(e)}'}), 500
+
+@app.route('/api/member/<member_id>/feedbacks', methods=['GET'])
+def get_member_feedbacks(member_id):
+    """Get all feedbacks for a specific member"""
+    try:
+        # Validate member_id format
+        if not re.match(r'^SN\d{4}\d{4}$', member_id):
+            return jsonify({'error': 'Invalid member ID format'}), 400
+
+        feedbacks_file = os.path.join(DATA_DIR, 'feedbacks.json')
+        if not os.path.exists(feedbacks_file):
+            return jsonify({'feedbacks': []}), 200
+
+        with open(feedbacks_file, 'r', encoding='utf-8') as f:
+            feedbacks = json.load(f)
+
+        # Filter feedbacks for this member
+        member_feedbacks = []
+        for feedback in feedbacks.values():
+            if feedback.get('memberId') == member_id:
+                member_feedbacks.append(feedback)
+
+        # Sort by creation date (newest first)
+        member_feedbacks.sort(key=lambda x: x.get('createdAt', ''), reverse=True)
+
+        return jsonify({'feedbacks': member_feedbacks}), 200
+
+    except Exception as e:
+        app.logger.error(f"Error retrieving member feedbacks: {str(e)}")
+        return jsonify({'error': f'Server error: {str(e)}'}), 500
+
+@app.route('/api/members/generate-passwords', methods=['POST'])
+def generate_all_passwords():
+    """Generate or update passwords for all members"""
+    try:
+        members_file = os.path.join(DATA_DIR, 'members.json')
+        if not os.path.exists(members_file):
+            return jsonify({'error': 'Members data not found'}), 404
+
+        # Load existing members
+        with open(members_file, 'r', encoding='utf-8') as f:
+            members = json.load(f)
+
+        # Track members that had passwords generated
+        updated_members = []
+
+        # Generate passwords for all members
+        for member_id, member in members.items():
+            # Generate a default password based on member ID
+            default_password = generate_default_password(member_id)
+            # Store the hashed password
+            member['password'] = default_password
+            # Add to the list of updated members with plain text password
+            updated_members.append({
+                'id': member_id,
+                'name': member.get('name', ''),
+                'password': default_password  # Plain text password for display
+            })
+
+        # Write the updated members dictionary back to the file
+        with open(members_file, 'w', encoding='utf-8') as f:
+            json.dump(members, f, ensure_ascii=False, indent=2)
+
+        return jsonify({
+            'status': 'success',
+            'message': f'Generated passwords for {len(updated_members)} members',
+            'members': updated_members
+        }), 200
+    except Exception as e:
+        app.logger.error(f"Error generating passwords: {str(e)}")
+        return jsonify({'error': f'Server error: {str(e)}'}), 500
+
+# File upload helper functions
+def allowed_file(filename, file_type):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS.get(file_type, set())
+
+@app.route('/api/submit-student-rating', methods=['POST'])
+def submit_student_rating():
+    try:
+        data = request.get_json()
+
+        # Validate required fields
+        required_fields = ['feedbackId', 'studentEmail', 'rating']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({'success': False, 'error': f'{field} is required'}), 400
+
+        # Validate rating range
+        rating = data.get('rating')
+        if not isinstance(rating, (int, float)) or rating < 0.5 or rating > 5:
+            return jsonify({'success': False, 'error': 'Rating must be between 0.5 and 5'}), 400
+
+        # Load current feedbacks
+        feedbacks_file = os.path.join(DATA_DIR, 'feedbacks.json')
+        if os.path.exists(feedbacks_file):
+            with open(feedbacks_file, 'r', encoding='utf-8') as f:
+                feedbacks = json.load(f)
+        else:
+            return jsonify({'success': False, 'error': 'Feedbacks file not found'}), 404
+
+        # Find the feedback to update
+        feedback_id = data.get('feedbackId')
+        feedback_found = False
+
+        for feedback in feedbacks.values():
+            if feedback.get('id') == feedback_id:
+                # Add student rating to the feedback
+                feedback['studentRating'] = {
+                    'rating': rating,
+                    'comment': data.get('comment', ''),
+                    'submittedAt': data.get('submittedAt'),
+                    'studentEmail': data.get('studentEmail'),
+                    'studentName': data.get('studentName'),
+                    'memberId': data.get('memberId')
+                }
+                feedback_found = True
+                break
+
+        if not feedback_found:
+            return jsonify({'success': False, 'error': 'Feedback not found'}), 404
+
+        # Save updated feedbacks
+        with open(feedbacks_file, 'w', encoding='utf-8') as f:
+            json.dump(feedbacks, f, indent=2, ensure_ascii=False)
+
+        # Also save to a separate student ratings file for easy access
+        ratings_file = os.path.join(DATA_DIR, 'student_ratings.json')
+        if os.path.exists(ratings_file):
+            with open(ratings_file, 'r', encoding='utf-8') as f:
+                ratings = json.load(f)
+        else:
+            ratings = {}
+
+        # Add the rating with a unique ID
+        rating_id = f"rating_{int(time.time() * 1000)}"
+        ratings[rating_id] = {
+            'id': rating_id,
+            'feedbackId': feedback_id,
+            'studentEmail': data.get('studentEmail'),
+            'studentName': data.get('studentName'),
+            'memberId': data.get('memberId'),
+            'activityId': data.get('activityId'),
+            'instructorName': data.get('instructorName'),
+            'rating': rating,
+            'comment': data.get('comment', ''),
+            'submittedAt': data.get('submittedAt')
+        }
+
+        with open(ratings_file, 'w', encoding='utf-8') as f:
+            json.dump(ratings, f, indent=2, ensure_ascii=False)
+
+        return jsonify({'success': True, 'message': 'Rating submitted successfully', 'ratingId': rating_id})
+
+    except Exception as e:
+        print(f"Error submitting student rating: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/member-feedback-history/<member_id>', methods=['GET'])
+def get_member_feedback_history(member_id):
+    """Get historical feedback for a specific member"""
+    try:
+        # Load feedbacks
+        feedbacks_file = os.path.join(DATA_DIR, 'feedbacks.json')
+        if not os.path.exists(feedbacks_file):
+            return jsonify({'feedbacks': []}), 200
+
+        with open(feedbacks_file, 'r', encoding='utf-8') as f:
+            feedbacks = json.load(f)
+
+        # Load activities to get template information
+        activities_file = os.path.join(DATA_DIR, 'activities.json')
+        activities = {}
+        if os.path.exists(activities_file):
+            with open(activities_file, 'r', encoding='utf-8') as f:
+                activities = json.load(f)
+
+        # Filter feedbacks for the specific member
+        member_feedbacks = []
+        for feedback in feedbacks.values():
+            if feedback.get('memberId') == member_id:
+                # Add activity template information
+                activity_id = feedback.get('activityId')
+                if activity_id and activity_id in activities:
+                    feedback['templateId'] = activities[activity_id].get('feedbackTemplateId')
+                member_feedbacks.append(feedback)
+
+        # Sort by creation date (oldest first for historical progression)
+        member_feedbacks.sort(key=lambda x: x.get('createdAt', ''))
+
+        return jsonify({'feedbacks': member_feedbacks}), 200
+
+    except Exception as e:
+        app.logger.error(f"Error getting member feedback history: {str(e)}")
+        return jsonify({'error': f'Server error: {str(e)}'}), 500
+
+@app.route('/api/member-skills-progress/<member_id>', methods=['GET'])
+def get_member_skills_progress(member_id):
+    """Get aggregated skills progress for a specific member by template"""
+    try:
+        # Load feedbacks
+        feedbacks_file = os.path.join(DATA_DIR, 'feedbacks.json')
+        if not os.path.exists(feedbacks_file):
+            return jsonify({'skillsProgress': {}}), 200
+
+        with open(feedbacks_file, 'r', encoding='utf-8') as f:
+            feedbacks = json.load(f)
+
+        # Load activities to get template information
+        activities_file = os.path.join(DATA_DIR, 'activities.json')
+        activities = {}
+        if os.path.exists(activities_file):
+            with open(activities_file, 'r', encoding='utf-8') as f:
+                activities = json.load(f)
+
+        # Aggregate skills by template
+        skills_progress = {}
+
+        for feedback in feedbacks.values():
+            if feedback.get('memberId') == member_id:
+                activity_id = feedback.get('activityId')
+                template_id = None
+
+                if activity_id and activity_id in activities:
+                    template_id = activities[activity_id].get('feedbackTemplateId')
+
+                if template_id:
+                    if template_id not in skills_progress:
+                        skills_progress[template_id] = {
+                            'completedSkills': set(),
+                            'lastUpdated': feedback.get('createdAt', ''),
+                            'feedbackCount': 0
+                        }
+
+                    # Add completed skills from this feedback
+                    skill_assessment = feedback.get('skillAssessment', {})
+                    completed_skills = skill_assessment.get('completedSkills', [])
+
+                    for skill in completed_skills:
+                        skills_progress[template_id]['completedSkills'].add(skill)
+
+                    # Update last updated time if this feedback is newer
+                    if feedback.get('createdAt', '') > skills_progress[template_id]['lastUpdated']:
+                        skills_progress[template_id]['lastUpdated'] = feedback.get('createdAt', '')
+
+                    skills_progress[template_id]['feedbackCount'] += 1
+
+        # Convert sets to lists for JSON serialization
+        for template_id in skills_progress:
+            skills_progress[template_id]['completedSkills'] = list(skills_progress[template_id]['completedSkills'])
+
+        return jsonify({'skillsProgress': skills_progress}), 200
+
+    except Exception as e:
+        app.logger.error(f"Error getting member skills progress: {str(e)}")
+        return jsonify({'error': f'Server error: {str(e)}'}), 500
+
+def generate_unique_filename(filename):
+    # Get file extension
+    ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
+    # Generate unique filename with timestamp and UUID
+    timestamp = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
+    unique_id = str(uuid.uuid4())[:8]
+    return f"{timestamp}_{unique_id}.{ext}"
+
+# File upload endpoints
+@app.route('/api/upload/<file_type>', methods=['POST'])
+def upload_file(file_type):
+    try:
+        if file_type not in ['images', 'pdfs']:
+            return jsonify({'error': 'Invalid file type'}), 400
+
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file part'}), 400
+
+        file = request.files['file']
+
+        if file.filename == '':
+            return jsonify({'error': 'No selected file'}), 400
+
+        if not allowed_file(file.filename, file_type):
+            return jsonify({'error': f'File type not allowed. Allowed types for {file_type}: {ALLOWED_EXTENSIONS[file_type]}'}), 400
+
+        # Process the file
+        filename = secure_filename(file.filename)
+        unique_filename = generate_unique_filename(filename)
+        upload_folder = os.path.join(UPLOADS_DIR, file_type)
+        file_path = os.path.join(upload_folder, unique_filename)
+
+        # Ensure the upload folder exists
+        if not os.path.exists(upload_folder):
+            os.makedirs(upload_folder)
+
+        # Save the file
+        file.save(file_path)
+
+        # Return the relative path to the file
+        relative_path = f"/uploads/{file_type}/{unique_filename}"
+        return jsonify({
+            'success': True,
+            'filename': unique_filename,
+            'originalName': filename,
+            'path': relative_path,
+            'url': relative_path
+        })
+    except Exception as e:
+        # Log the error
+        app.logger.error(f"Error uploading file: {str(e)}")
+        # Return a JSON error response
+        return jsonify({'error': f'Server error: {str(e)}'}), 500
+
+# File listing endpoint
+@app.route('/api/files/<file_type>', methods=['GET'])
+def list_files(file_type):
+    try:
+        if file_type not in ['images', 'pdfs']:
+            return jsonify({'error': 'Invalid file type'}), 400
+
+        upload_folder = os.path.join(UPLOADS_DIR, file_type)
+        files = []
+
+        # Create the directory if it doesn't exist
+        if not os.path.exists(upload_folder):
+            os.makedirs(upload_folder)
+            return jsonify({'files': []})
+
+        # List files in the directory
+        for filename in os.listdir(upload_folder):
+            file_path = os.path.join(upload_folder, filename)
+            if os.path.isfile(file_path) and allowed_file(filename, file_type):
+                file_url = f"/uploads/{file_type}/{filename}"
+                files.append({
+                    'name': filename,
+                    'path': file_url,
+                    'url': file_url,
+                    'size': os.path.getsize(file_path),
+                    'lastModified': os.path.getmtime(file_path)
+                })
+
+        # Sort files by last modified time (newest first)
+        files.sort(key=lambda x: x['lastModified'], reverse=True)
+
+        return jsonify({
+            'files': files
+        })
+    except Exception as e:
+        # Log the error
+        app.logger.error(f"Error listing files: {str(e)}")
+        # Return a JSON error response
+        return jsonify({'error': f'Server error: {str(e)}', 'files': []}), 500
+
+# Delete file endpoint
+@app.route('/api/files/<file_type>/<filename>', methods=['DELETE'])
+def delete_file(file_type, filename):
+    try:
+        if file_type not in ['images', 'pdfs']:
+            return jsonify({'error': 'Invalid file type'}), 400
+
+        file_path = os.path.join(UPLOADS_DIR, file_type, filename)
+
+        if not os.path.exists(file_path):
+            return jsonify({'error': 'File not found'}), 404
+
+        # Delete the file
+        os.remove(file_path)
+
+        return jsonify({
+            'success': True,
+            'message': 'File deleted successfully'
+        })
+    except Exception as e:
+        app.logger.error(f"Error deleting file: {str(e)}")
+        return jsonify({'error': f'Server error: {str(e)}'}), 500
+
+# Serve uploaded files
+@app.route('/uploads/')
+@app.route('/uploads/<path:subpath>')
+def serve_uploads(subpath=''):
+    if not subpath:
+        return jsonify({'error': 'Directory listing not allowed'}), 403
+
+    parts = subpath.split('/')
+    if len(parts) != 2:
+        return jsonify({'error': 'Invalid path format'}), 400
+
+    file_type, filename = parts
+    return serve_uploaded_file(file_type, filename)
+
+@app.route('/uploads/<file_type>/<filename>')
+def serve_uploaded_file(file_type, filename):
+    try:
+        if file_type not in ['images', 'pdfs']:
+            return jsonify({'error': 'Invalid file type'}), 400
+
+        file_path = os.path.join(UPLOADS_DIR, file_type, filename)
+        if not os.path.exists(file_path):
+            return jsonify({'error': 'File not found'}), 404
+
+        return send_from_directory(os.path.join(UPLOADS_DIR, file_type), filename)
+    except Exception as e:
+        app.logger.error(f"Error serving file: {str(e)}")
+        return jsonify({'error': f'Server error: {str(e)}'}), 500
+
+# Static files routes
+@app.route('/assets/<path:filename>')
+def serve_assets(filename):
+    return send_from_directory(ASSETS_DIR, filename)
+
+@app.route('/<path:filename>')
+def serve_static_files(filename):
+    # Check if the file exists in the root directory
+    if os.path.isfile(os.path.join(ROOT_DIR, filename)):
+        return send_from_directory(ROOT_DIR, filename)
+    else:
+        return 'File not found', 404
+
+# Add some basic logging
+@app.before_request
+def log_request_info():
+    app.logger.debug('Request Headers: %s', request.headers)
+    app.logger.debug('Request Path: %s', request.path)
+
+# ============================================================================
+# EMAIL API ENDPOINTS
+# ============================================================================
+
+class BrevoEmailService:
+    """Brevo Email Service for SnowNavi"""
+
+    def __init__(self):
+        self.api_key = os.environ.get('BREVO_API_KEY')
+        self.api_endpoint = os.environ.get('BREVO_API_ENDPOINT', 'https://api.brevo.com/v3/smtp/email')
+        self.default_sender = {
+            'email': os.environ.get('BREVO_SENDER_EMAIL', '8f498a001@smtp-brevo.com'),
+            'name': os.environ.get('BREVO_SENDER_NAME', 'SnowNavi System')
+        }
+
+        if not self.api_key:
+            app.logger.error('BREVO_API_KEY environment variable is required')
+            raise ValueError('BREVO_API_KEY environment variable is required')
+
+        app.logger.info(f'✅ Brevo Email Service initialized')
+        app.logger.info(f'📧 Default sender: {self.default_sender["name"]} <{self.default_sender["email"]}>')
+
+    def send_email(self, email_data):
+        """Send email using Brevo API"""
+        try:
+            # Validate required fields
+            if not email_data.get('to') or not email_data.get('subject') or not (email_data.get('content') or email_data.get('htmlContent')):
+                raise ValueError('Missing required fields: to, subject, and content are required')
+
+            # Prepare sender information
+            sender = email_data.get('sender', self.default_sender)
+
+            # Prepare email payload
+            payload = {
+                'sender': {
+                    'name': sender.get('name', self.default_sender['name']),
+                    'email': sender.get('email', self.default_sender['email'])
+                },
+                'to': [{
+                    'email': email_data['to'],
+                    'name': email_data.get('toName', email_data['to'].split('@')[0])
+                }],
+                'subject': email_data['subject']
+            }
+
+            # Add content (prefer HTML if provided, otherwise convert text to HTML)
+            if email_data.get('htmlContent'):
+                payload['htmlContent'] = email_data['htmlContent']
+            else:
+                payload['htmlContent'] = self._text_to_html(email_data['content'], email_data['subject'])
+
+            # Add plain text content if available
+            if email_data.get('content') and not email_data.get('htmlContent'):
+                payload['textContent'] = email_data['content']
+
+            app.logger.info(f'📤 Sending email to: {email_data["to"]}')
+            app.logger.info(f'📋 Subject: {email_data["subject"]}')
+
+            # Send email via API
+            headers = {
+                'Accept': 'application/json',
+                'api-key': self.api_key,
+                'Content-Type': 'application/json'
+            }
+
+            response = requests.post(self.api_endpoint, headers=headers, json=payload)
+
+            if not response.ok:
+                error_message = f'HTTP {response.status_code}: {response.reason}'
+                try:
+                    error_data = response.json()
+                    error_message = f'Brevo API Error ({response.status_code}): {error_data.get("message", error_data.get("code", response.reason))}'
+                    app.logger.error(f'❌ Brevo API Error Details: {error_data}')
+                except:
+                    app.logger.error('❌ Failed to parse error response')
+                raise Exception(error_message)
+
+            result = response.json()
+            app.logger.info(f'✅ Email sent successfully: {result.get("messageId")}')
+            return result
+
+        except Exception as error:
+            app.logger.error(f'❌ Email sending failed: {error}')
+            raise error
+
+    def _text_to_html(self, text, subject):
+        """Convert plain text to HTML with basic formatting"""
+        html_content = text.replace('\n', '<br>').replace('**', '<strong>').replace('*', '<em>')
+
+        return f"""
+            <html>
+                <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+                    <div style="border-bottom: 3px solid #E53512; margin-bottom: 20px;">
+                        <h2 style="color: #E53512; margin: 0; padding-bottom: 10px;">
+                            {subject}
+                        </h2>
+                    </div>
+                    <div style="margin: 20px 0; font-size: 16px;">
+                        {html_content}
+                    </div>
+                    <hr style="margin: 30px 0; border: none; border-top: 1px solid #ddd;">
+                    <div style="text-align: center; font-size: 12px; color: #666;">
+                        <p>Sent via SnowNavi Email System</p>
+                        <p style="margin: 5px 0;">Powered by Brevo</p>
+                    </div>
+                </body>
+            </html>
+        """
+
+# Initialize email service
+try:
+    email_service = BrevoEmailService()
+except Exception as e:
+    app.logger.error(f'Failed to initialize email service: {e}')
+    email_service = None
+
+@app.route('/api/email/config', methods=['GET'])
+def get_email_config():
+    """Get email configuration (without sensitive data)"""
+    try:
+        if not email_service:
+            return jsonify({'success': False, 'error': 'Email service not available'}), 500
+
+        config = {
+            'apiEndpoint': email_service.api_endpoint,
+            'senderEmail': email_service.default_sender['email'],
+            'senderName': email_service.default_sender['name'],
+            'hasApiKey': bool(email_service.api_key),
+            'apiKeyPreview': email_service.api_key[:20] + '...' if email_service.api_key else 'Not set'
+        }
+
+        return jsonify({'success': True, 'config': config})
+    except Exception as e:
+        app.logger.error(f'Error getting email config: {e}')
+        return jsonify({'success': False, 'error': 'Failed to get configuration'}), 500
+
+@app.route('/api/email/test', methods=['POST'])
+def send_test_email():
+    """Send test email"""
+    try:
+        if not email_service:
+            return jsonify({'success': False, 'error': 'Email service not available'}), 500
+
+        data = request.get_json()
+        email = data.get('email')
+
+        if not email:
+            return jsonify({'success': False, 'error': 'Email address is required'}), 400
+
+        subject = 'SnowNavi 邮件系统测试 / Email System Test'
+        content = f"""您好！/ Hello!
+
+这是来自 SnowNavi 系统的测试邮件。
+This is a test email from SnowNavi system.
+
+如果您收到这封邮件，说明邮件发送功能正常工作。
+If you receive this email, it means the email sending function is working properly.
+
+测试时间 / Test Time: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+祝好！/ Best regards,
+SnowNavi Team"""
+
+        result = email_service.send_email({
+            'to': email,
+            'subject': subject,
+            'content': content
+        })
+
+        return jsonify({
+            'success': True,
+            'messageId': result.get('messageId'),
+            'message': 'Test email sent successfully'
+        })
+    except Exception as e:
+        app.logger.error(f'Error sending test email: {e}')
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/email/send', methods=['POST'])
+def send_custom_email():
+    """Send custom email"""
+    try:
+        if not email_service:
+            return jsonify({'success': False, 'error': 'Email service not available'}), 500
+
+        data = request.get_json()
+        to = data.get('to')
+        subject = data.get('subject')
+        content = data.get('content')
+        html_content = data.get('htmlContent')
+        to_name = data.get('toName')
+
+        if not to or not subject or not (content or html_content):
+            return jsonify({
+                'success': False,
+                'error': 'Missing required fields: to, subject, and content/htmlContent'
+            }), 400
+
+        result = email_service.send_email({
+            'to': to,
+            'subject': subject,
+            'content': content,
+            'htmlContent': html_content,
+            'toName': to_name
+        })
+
+        return jsonify({
+            'success': True,
+            'messageId': result.get('messageId'),
+            'message': 'Email sent successfully'
+        })
+    except Exception as e:
+        app.logger.error(f'Error sending email: {e}')
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/email/feedback', methods=['POST'])
+def send_feedback_email():
+    """Send feedback email to student"""
+    try:
+        if not email_service:
+            return jsonify({'success': False, 'error': 'Email service not available'}), 500
+
+        data = request.get_json()
+        student_email = data.get('studentEmail')
+        student_name = data.get('studentName')
+        course_name = data.get('courseName')
+        instructor_name = data.get('instructorName')
+        feedback_content = data.get('feedbackContent')
+        feedback_url = data.get('feedbackUrl')
+
+        if not all([student_email, student_name, course_name, instructor_name, feedback_content]):
+            return jsonify({
+                'success': False,
+                'error': 'Missing required fields: studentEmail, studentName, courseName, instructorName, feedbackContent'
+            }), 400
+
+        subject = f'🎿 SnowNavi 课程反馈 - {course_name}'
+
+        html_content = f"""
+            <html>
+                <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+                    <div style="background: linear-gradient(135deg, #E53512 0%, #9ED4E7 100%); color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center;">
+                        <h1 style="margin: 0; font-size: 24px;">🎿 SnowNavi</h1>
+                        <p style="margin: 10px 0 0 0; font-size: 16px;">滑雪课程反馈报告</p>
+                    </div>
+
+                    <div style="background: #f9f9f9; padding: 20px; border-radius: 0 0 8px 8px;">
+                        <h2 style="color: #E53512; margin-top: 0;">亲爱的 {student_name}，</h2>
+
+                        <p>感谢您参加我们的滑雪课程！以下是您的课程反馈：</p>
+
+                        <div style="background: white; padding: 15px; border-radius: 6px; margin: 20px 0; border-left: 4px solid #E53512;">
+                            <h3 style="margin-top: 0; color: #E53512;">课程信息</h3>
+                            <p><strong>课程名称：</strong>{course_name}</p>
+                            <p><strong>教练：</strong>{instructor_name}</p>
+                            <p><strong>反馈时间：</strong>{datetime.datetime.now().strftime('%Y年%m月%d日')}</p>
+                        </div>
+
+                        <div style="background: white; padding: 15px; border-radius: 6px; margin: 20px 0;">
+                            <h3 style="margin-top: 0; color: #E53512;">教练反馈</h3>
+                            <div style="white-space: pre-line; font-size: 16px;">
+                                {feedback_content}
+                            </div>
+                        </div>
+
+                        {f'''
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="{feedback_url}"
+                               style="background: #E53512; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+                                📊 查看详细反馈报告
+                            </a>
+                        </div>
+                        ''' if feedback_url else ''}
+
+                        <div style="background: #e8f4f8; padding: 15px; border-radius: 6px; margin: 20px 0;">
+                            <h4 style="margin-top: 0; color: #0c5460;">💡 学习建议</h4>
+                            <p>继续保持练习，每一次滑雪都是进步的机会！如有任何问题，请随时联系我们的教练团队。</p>
+                        </div>
+
+                        <hr style="margin: 30px 0; border: none; border-top: 1px solid #ddd;">
+
+                        <div style="text-align: center; color: #666; font-size: 14px;">
+                            <p>祝您滑雪愉快！🎿</p>
+                            <p><strong>SnowNavi 团队</strong></p>
+                            <p style="font-size: 12px; margin-top: 20px;">
+                                此邮件由 SnowNavi 系统自动发送，请勿直接回复。
+                            </p>
+                        </div>
+                    </div>
+                </body>
+            </html>
+        """
+
+        result = email_service.send_email({
+            'to': student_email,
+            'toName': student_name,
+            'subject': subject,
+            'htmlContent': html_content
+        })
+
+        return jsonify({
+            'success': True,
+            'messageId': result.get('messageId'),
+            'message': 'Feedback email sent successfully'
+        })
+    except Exception as e:
+        app.logger.error(f'Error sending feedback email: {e}')
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/email/welcome', methods=['POST'])
+def send_welcome_email():
+    """Send welcome email to new student"""
+    try:
+        if not email_service:
+            return jsonify({'success': False, 'error': 'Email service not available'}), 500
+
+        data = request.get_json()
+        email = data.get('email')
+        name = data.get('name')
+        course_name = data.get('courseName')
+
+        if not email or not name:
+            return jsonify({
+                'success': False,
+                'error': 'Missing required fields: email, name'
+            }), 400
+
+        subject = '🎿 欢迎加入 SnowNavi！'
+
+        html_content = f"""
+            <html>
+                <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+                    <div style="background: linear-gradient(135deg, #E53512 0%, #9ED4E7 100%); color: white; padding: 30px; border-radius: 8px; text-align: center;">
+                        <h1 style="margin: 0; font-size: 28px;">🎿 欢迎来到 SnowNavi！</h1>
+                        <p style="margin: 15px 0 0 0; font-size: 18px;">让每一次滑雪都成为进步的阶梯</p>
+                    </div>
+
+                    <div style="padding: 30px 20px;">
+                        <h2 style="color: #E53512;">亲爱的 {name}，</h2>
+
+                        <p style="font-size: 16px;">欢迎加入 SnowNavi 滑雪学习系统！我们很高兴能够陪伴您的滑雪学习之旅。</p>
+
+                        <div style="background: #f9f4f3; padding: 20px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #E53512;">
+                            <h3 style="margin-top: 0; color: #E53512;">🎯 您将获得：</h3>
+                            <ul style="margin: 0; padding-left: 20px;">
+                                <li>📊 详细的学习进度追踪</li>
+                                <li>🎓 个性化的教练反馈</li>
+                                <li>📱 随时查看学习报告</li>
+                                <li>🏆 技能成就系统</li>
+                                <li>📈 长期学习规划</li>
+                            </ul>
+                        </div>
+
+                        {f'''
+                        <div style="background: #e8f4f8; padding: 20px; border-radius: 8px; margin: 25px 0;">
+                            <h3 style="margin-top: 0; color: #0c5460;">📚 您的课程</h3>
+                            <p style="font-size: 16px; margin: 0;"><strong>{course_name}</strong></p>
+                        </div>
+                        ''' if course_name else ''}
+
+                        <div style="text-align: center; margin: 30px 0;">
+                            <p style="font-size: 18px; color: #E53512; font-weight: bold;">准备好开始您的滑雪之旅了吗？🎿</p>
+                        </div>
+
+                        <hr style="margin: 30px 0; border: none; border-top: 1px solid #ddd;">
+
+                        <div style="text-align: center; color: #666; font-size: 14px;">
+                            <p>祝您学习愉快！</p>
+                            <p><strong>SnowNavi 团队</strong></p>
+                        </div>
+                    </div>
+                </body>
+            </html>
+        """
+
+        result = email_service.send_email({
+            'to': email,
+            'toName': name,
+            'subject': subject,
+            'htmlContent': html_content
+        })
+
+        return jsonify({
+            'success': True,
+            'messageId': result.get('messageId'),
+            'message': 'Welcome email sent successfully'
+        })
+    except Exception as e:
+        app.logger.error(f'Error sending welcome email: {e}')
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/email-health', methods=['GET'])
+def email_health_check():
+    """Email service health check"""
+    try:
+        if not email_service:
+            return jsonify({
+                'status': 'error',
+                'message': 'Email service not available',
+                'timestamp': datetime.datetime.now().isoformat()
+            }), 500
+
+        return jsonify({
+            'status': 'ok',
+            'service': 'SnowNavi Email API',
+            'timestamp': datetime.datetime.now().isoformat(),
+            'config': {
+                'senderEmail': email_service.default_sender['email'],
+                'hasApiKey': bool(email_service.api_key)
+            }
+        })
+    except Exception as e:
+        app.logger.error(f'Email health check failed: {e}')
+        return jsonify({
+            'status': 'error',
+            'message': str(e),
+            'timestamp': datetime.datetime.now().isoformat()
+        }), 500
+
+# ============================================================================
+# EMAIL TEMPLATES API
+# ============================================================================
+
+@app.route('/api/email-templates', methods=['GET'])
+def get_email_templates():
+    """Get all email templates"""
+    try:
+        email_templates_file = os.path.join(DATA_DIR, 'email_templates.json')
+        if not os.path.exists(email_templates_file):
+            # Create default email templates if file doesn't exist
+            default_templates = {
+                "feedback_notification": {
+                    "id": "feedback_notification",
+                    "name": "Feedback Notification / 反馈通知",
+                    "description": "Automatic bilingual email sent to students when feedback is completed / 反馈完成时自动发送给学生的双语邮件",
+                    "type": "feedback",
+                    "subject": "🎿 SnowNavi Course Feedback / 课程反馈 - {{courseName}}",
+                    "htmlContent": """<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+    <div style="background: linear-gradient(135deg, #E53512 0%, #9ED4E7 100%); color: white; padding: 20px; text-align: center;">
+        <h1 style="margin: 0;">🎿 SnowNavi</h1>
+        <p style="margin: 10px 0 0 0;">Course Feedback Report / 滑雪课程反馈报告</p>
+    </div>
+    <div style="padding: 20px; background: white;">
+        <p>Dear {{studentName}} / 亲爱的 {{studentName}}，</p>
+        <p>Hello! Your skiing course feedback has been completed. Please check the details below.</p>
+        <p>您好！您的滑雪课程反馈已经完成，请查看以下详细信息：</p>
+
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #E53512; margin-top: 0;">Course Information / 课程信息</h3>
+            <p><strong>Course Name / 课程名称：</strong>{{courseName}}</p>
+            <p><strong>Instructor / 教练：</strong>{{instructorName}}</p>
+            <p><strong>Date / 日期：</strong>{{courseDate}}</p>
+        </div>
+
+        <div style="background: #e8f5e8; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #28a745; margin-top: 0;">Learning Progress / 学习进度</h3>
+            {{feedbackContent}}
+        </div>
+
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="{{feedbackUrl}}" style="background: #E53512; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+                View Detailed Feedback / 查看详细反馈
+            </a>
+        </div>
+
+        <hr style="margin: 30px 0; border: none; border-top: 1px solid #ddd;">
+
+        <div style="text-align: center; color: #666; font-size: 14px;">
+            <p>Happy skiing! / 祝您滑雪愉快！🎿</p>
+            <p><strong>SnowNavi Team / SnowNavi 团队</strong></p>
+            <p style="font-size: 12px; margin-top: 20px;">
+                This email is automatically sent by SnowNavi system, please do not reply directly.<br>
+                此邮件由 SnowNavi 系统自动发送，请勿直接回复。
+            </p>
+        </div>
+    </div>
+</div>""",
+                    "triggers": {
+                        "onFeedbackComplete": True,
+                        "onFeedbackUpdate": False,
+                        "manualOnly": False
+                    },
+                    "active": True,
+                    "createdAt": datetime.datetime.now().isoformat(),
+                    "updatedAt": datetime.datetime.now().isoformat()
+                }
+            }
+
+            with open(email_templates_file, 'w', encoding='utf-8') as f:
+                json.dump(default_templates, f, ensure_ascii=False, indent=2)
+
+            return jsonify(default_templates)
+
+        with open(email_templates_file, 'r', encoding='utf-8') as f:
+            email_templates = json.load(f)
+
+        return jsonify(email_templates)
+    except Exception as e:
+        app.logger.error(f'Error getting email templates: {e}')
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/email-templates', methods=['POST'])
+def save_email_templates():
+    """Save email templates"""
+    try:
+        email_templates = request.get_json()
+        email_templates_file = os.path.join(DATA_DIR, 'email_templates.json')
+
+        with open(email_templates_file, 'w', encoding='utf-8') as f:
+            json.dump(email_templates, f, ensure_ascii=False, indent=2)
+
+        return jsonify({'success': True, 'message': 'Email templates saved successfully'})
+    except Exception as e:
+        app.logger.error(f'Error saving email templates: {e}')
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/email-templates/<template_id>', methods=['GET'])
+def get_email_template(template_id):
+    """Get a specific email template"""
+    try:
+        email_templates_file = os.path.join(DATA_DIR, 'email_templates.json')
+        if not os.path.exists(email_templates_file):
+            return jsonify({'error': 'Email templates file not found'}), 404
+
+        with open(email_templates_file, 'r', encoding='utf-8') as f:
+            email_templates = json.load(f)
+
+        if template_id not in email_templates:
+            return jsonify({'error': 'Email template not found'}), 404
+
+        return jsonify(email_templates[template_id])
+    except Exception as e:
+        app.logger.error(f'Error getting email template: {e}')
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/generate-learning-timeline', methods=['POST'])
+def generate_learning_timeline_api():
+    """Generate learning timeline content for email"""
+    try:
+        data = request.get_json()
+        member_id = data.get('memberId')
+        current_feedback_date = data.get('currentFeedbackDate')
+
+        if not member_id or not current_feedback_date:
+            return jsonify({'error': 'Missing required parameters'}), 400
+
+        timeline_content = generate_learning_timeline_content(member_id, current_feedback_date)
+
+        return jsonify({
+            'success': True,
+            'timelineContent': timeline_content
+        })
+
+    except Exception as e:
+        app.logger.error(f'Error generating learning timeline API: {e}')
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/send-auto-email', methods=['POST'])
+def send_auto_email():
+    """Send automatic email based on triggers"""
+    try:
+        if not email_service:
+            return jsonify({'success': False, 'error': 'Email service not available'}), 500
+
+        data = request.get_json()
+        trigger_type = data.get('triggerType')  # e.g., 'onFeedbackComplete'
+        email_data = data.get('emailData', {})
+
+        # Load email templates
+        email_templates_file = os.path.join(DATA_DIR, 'email_templates.json')
+        if not os.path.exists(email_templates_file):
+            return jsonify({'success': False, 'error': 'Email templates not found'}), 404
+
+        with open(email_templates_file, 'r', encoding='utf-8') as f:
+            email_templates = json.load(f)
+
+        # Find templates that should be triggered
+        triggered_templates = []
+        for template_id, template in email_templates.items():
+            if (template.get('active', False) and
+                template.get('triggers', {}).get(trigger_type, False)):
+                triggered_templates.append(template)
+
+        if not triggered_templates:
+            return jsonify({'success': True, 'message': 'No templates configured for this trigger', 'sent': 0})
+
+        sent_count = 0
+        errors = []
+
+        for template in triggered_templates:
+            try:
+                # Replace template variables
+                subject = replace_template_variables(template['subject'], email_data)
+                html_content = replace_template_variables(template['htmlContent'], email_data)
+
+                # Send email
+                result = email_service.send_email({
+                    'to': email_data.get('studentEmail'),
+                    'toName': email_data.get('studentName'),
+                    'subject': subject,
+                    'htmlContent': html_content
+                })
+
+                sent_count += 1
+                app.logger.info(f'Auto email sent using template {template["id"]} to {email_data.get("studentEmail")}')
+
+            except Exception as template_error:
+                error_msg = f'Failed to send email with template {template["id"]}: {str(template_error)}'
+                errors.append(error_msg)
+                app.logger.error(error_msg)
+
+        return jsonify({
+            'success': True,
+            'message': f'Sent {sent_count} emails',
+            'sent': sent_count,
+            'errors': errors
+        })
+
+    except Exception as e:
+        app.logger.error(f'Error sending auto email: {e}')
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+def generate_learning_timeline_content(member_id, current_feedback_date):
+    """Generate learning timeline content for email"""
+    try:
+        # Load required data
+        feedbacks_file = os.path.join(DATA_DIR, 'feedbacks.json')
+        activities_file = os.path.join(DATA_DIR, 'activities.json')
+        templates_file = os.path.join(DATA_DIR, 'feedback_templates.json')
+
+        feedbacks = {}
+        activities = {}
+        templates = {}
+
+        if os.path.exists(feedbacks_file):
+            with open(feedbacks_file, 'r', encoding='utf-8') as f:
+                feedbacks = json.load(f)
+
+        if os.path.exists(activities_file):
+            with open(activities_file, 'r', encoding='utf-8') as f:
+                activities = json.load(f)
+
+        if os.path.exists(templates_file):
+            with open(templates_file, 'r', encoding='utf-8') as f:
+                templates = json.load(f)
+
+        # Get member feedbacks up to current date
+        current_time = datetime.datetime.fromisoformat(current_feedback_date.replace('Z', '+00:00')).timestamp() * 1000
+        member_feedbacks = []
+
+        for feedback in feedbacks.values():
+            if feedback.get('memberId') == member_id:
+                feedback_time = datetime.datetime.fromisoformat(feedback['createdAt'].replace('Z', '+00:00')).timestamp() * 1000
+                if feedback_time <= current_time:
+                    member_feedbacks.append(feedback)
+
+        # Sort by creation date
+        member_feedbacks.sort(key=lambda x: x['createdAt'])
+
+        if len(member_feedbacks) <= 1:
+            return "这是您的第一次课程反馈！/ This is your first course feedback!"
+
+        # Generate timeline HTML
+        timeline_html = """
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #9ED4E7;">
+            <h3 style="color: #E53512; margin-top: 0; margin-bottom: 15px;">🎯 您的学习历程 / Your Learning Journey</h3>
+        """
+
+        # Track cumulative skills
+        all_previous_skills = set()
+
+        for i, feedback in enumerate(member_feedbacks):
+            activity = activities.get(feedback.get('activityId'), {})
+            activity_name_zh = activity.get('name', {}).get('zh', '未知活动')
+            activity_name_en = activity.get('name', {}).get('en', 'Unknown Activity')
+
+            # Format date
+            try:
+                date_obj = datetime.datetime.fromisoformat(activity.get('date', feedback['createdAt']).replace('Z', '+00:00'))
+                formatted_date = date_obj.strftime('%b %d, %Y')
+            except:
+                formatted_date = 'Unknown Date'
+
+            # Get skills for this session
+            current_skills = set(feedback.get('skillAssessment', {}).get('completedSkills', []))
+            new_skills = current_skills - all_previous_skills
+            all_previous_skills.update(current_skills)
+
+            # Get skill names
+            skill_names = get_skill_names_for_email(list(new_skills), templates, activity.get('feedbackTemplateId'))
+
+            # Check if this is the current session
+            is_current = abs(datetime.datetime.fromisoformat(feedback['createdAt'].replace('Z', '+00:00')).timestamp() * 1000 - current_time) < 1000
+
+            timeline_html += f"""
+            <div style="margin-bottom: 15px; padding: 12px; background: white; border-radius: 6px; border-left: 3px solid {'#E53512' if is_current else '#9ED4E7'};">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <strong style="color: {'#E53512' if is_current else '#2F2F2F'};">
+                        第{i+1}次课程 / Session {i+1}: {activity_name_zh} / {activity_name_en}
+                        {' (当前课程 / Current)' if is_current else ''}
+                    </strong>
+                    <span style="font-size: 0.9em; color: #717171;">{formatted_date}</span>
+                </div>
+                <div style="margin-bottom: 8px;">
+                    <span style="background: #e3f2fd; color: #1976d2; padding: 2px 8px; border-radius: 12px; font-size: 0.85em; margin-right: 8px;">
+                        🆕 {len(new_skills)} 新技能 / new skills
+                    </span>
+                    <span style="background: #f3e5f5; color: #7b1fa2; padding: 2px 8px; border-radius: 12px; font-size: 0.85em;">
+                        📊 {len(all_previous_skills)} 累计技能 / total skills
+                    </span>
+                </div>
+            """
+
+            if skill_names:
+                timeline_html += """
+                <div style="margin-top: 8px;">
+                    <strong style="color: #E53512; font-size: 0.9em;">新掌握技能 / New skills mastered:</strong>
+                    <ul style="margin: 5px 0 0 20px; padding: 0;">
+                """
+                for skill_name in skill_names:
+                    timeline_html += f"<li style='margin-bottom: 3px; font-size: 0.85em;'>{skill_name}</li>"
+                timeline_html += "</ul></div>"
+
+            timeline_html += "</div>"
+
+        timeline_html += "</div>"
+        return timeline_html
+
+    except Exception as e:
+        app.logger.error(f'Error generating learning timeline: {e}')
+        return "学习历程加载中... / Learning progress loading..."
+
+def get_skill_names_for_email(skill_ids, templates, template_id):
+    """Get skill names for email from templates"""
+    skill_names = []
+
+    # Default skill names as fallback
+    default_skills = {
+        'equipment-intro': '滑雪装备介绍 (Equipment Introduction)',
+        'single-foot-familiarity': '单脚熟悉雪板 (Single Foot Board Familiarity)',
+        'single-foot-sliding': '单脚滑板式滑动 (Single Foot Skateboard Sliding)',
+        'single-foot-climbing': '单脚爬坡 (Single Foot Climbing)',
+        'single-foot-straight': '单脚直滑降 (Single Foot Straight Descent)',
+        'single-foot-heel-brake': '单脚脚后跟减速 (Single Foot Heel Braking)',
+        'single-foot-j-turn': '单脚J弯 (Single Foot J-Turn)',
+        'static-gas-pedal': '静态踩油门练习 (Static Gas Pedal Practice)',
+        'single-heel-side-push': '单脚后刃推坡 (Single Foot Heel Side Push)',
+        'single-toe-side-push': '单脚前刃推坡 (Single Foot Toe Side Push)',
+        'both-heel-side-push': '双脚后刃推坡 (Both Feet Heel Side Push)',
+        'both-toe-side-push': '双脚前刃推坡 (Both Feet Toe Side Push)',
+        'both-heel-falling-leaf': '双脚后刃落叶飘 (Both Feet Heel Side Falling Leaf)',
+        'both-toe-falling-leaf': '双脚前刃落叶飘 (Both Feet Toe Side Falling Leaf)',
+        'both-heel-power-falling-leaf': '双脚后刃强力落叶飘 (Both Feet Heel Side Power Falling Leaf)',
+        'both-toe-power-falling-leaf': '双脚前刃强力落叶飘 (Both Feet Toe Side Power Falling Leaf)',
+        'static-rotation': '静态旋转练习 (Static Rotation Practice)',
+        'step-turns': '阶梯转弯 (Step Turns)',
+        'j-turns': 'J弯 (J-Turns)',
+        'walking-edge-change': '走步模拟换刃 (Walking Edge Change Simulation)',
+        'beginner-turns': '新手转弯 (Beginner Turns)',
+        'edge-change-traverse': '换刃后增加横穿雪道 (Edge Change with Slope Traverse)',
+        'traverse-body-movement': '横穿雪道加入身体起伏 (Traverse with Body Movement)',
+        'continuous-edge-change': '连续换刃 (Continuous Edge Changes)',
+        'scrub-360': '搓雪360 (Scrub 360)'
+    }
+
+    # Try to get names from template
+    if template_id and template_id in templates:
+        template_data = templates[template_id]
+        if 'sections' in template_data:
+            for section in template_data['sections'].values():
+                if 'skills' in section:
+                    for skill_id, skill_data in section['skills'].items():
+                        if skill_id in skill_ids:
+                            skill_name_zh = skill_data.get('name', {}).get('zh', skill_id)
+                            skill_name_en = skill_data.get('name', {}).get('en', skill_id)
+                            if '(' in skill_name_zh:
+                                skill_names.append(skill_name_zh)
+                            else:
+                                skill_names.append(f"{skill_name_zh} ({skill_name_en})")
+
+    # Fallback to default names for any missing skills
+    for skill_id in skill_ids:
+        if not any(skill_id in name for name in skill_names):
+            skill_names.append(default_skills.get(skill_id, skill_id))
+
+    return skill_names
+
+def replace_template_variables(template_string, data):
+    """Replace template variables with actual data"""
+    import re
+
+    # Simple template variable replacement
+    for key, value in data.items():
+        if value is not None:
+            # Handle multilingual objects (extract English version)
+            if isinstance(value, dict) and 'en' in value:
+                value = value['en']
+            elif isinstance(value, dict):
+                # If it's a dict but no 'en' key, convert to string representation
+                value = str(value)
+
+            template_string = template_string.replace(f'{{{{{key}}}}}', str(value))
+
+    # Handle conditional blocks (simple implementation for {{#if variable}}...{{/if}})
+    def replace_conditional(match):
+        var_name = match.group(1)
+        content = match.group(2)
+        if data.get(var_name):
+            return content
+        return ''
+
+    template_string = re.sub(r'\{\{#if (\w+)\}\}(.*?)\{\{/if\}\}', replace_conditional, template_string, flags=re.DOTALL)
+
+    return template_string
+
+# ============================================================================
+# ERROR HANDLERS
+# ============================================================================
+
+# Error handlers
+@app.errorhandler(404)
+def page_not_found(e):
+    return jsonify(error=str(e)), 404
+
+# Group Buy API endpoints
+@app.route('/api/group-buy/batches', methods=['GET'])
+def get_group_buy_batches():
+    """Get all group buy batches"""
+    try:
+        batches_file = os.path.join(DATA_DIR, 'group_buy_batches.json')
+        if not os.path.exists(batches_file):
+            return jsonify({}), 200
+
+        with open(batches_file, 'r', encoding='utf-8') as f:
+            batches = json.load(f)
+
+        return jsonify(batches), 200
+    except Exception as e:
+        app.logger.error(f"Error getting group buy batches: {str(e)}")
+        return jsonify({'error': 'Failed to get batches'}), 500
+
+@app.route('/api/group-buy/batches', methods=['POST'])
+def update_group_buy_batches():
+    """Update group buy batches"""
+    try:
+        data = request.get_json()
+        batches_file = os.path.join(DATA_DIR, 'group_buy_batches.json')
+
+        with open(batches_file, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+
+        return jsonify({'status': 'success'}), 200
+    except Exception as e:
+        app.logger.error(f"Error updating group buy batches: {str(e)}")
+        return jsonify({'error': 'Failed to update batches'}), 500
+
+@app.route('/api/group-buy/batch/<batch_id>', methods=['GET'])
+def get_group_buy_batch(batch_id):
+    """Get a specific group buy batch"""
+    try:
+        batches_file = os.path.join(DATA_DIR, 'group_buy_batches.json')
+        if not os.path.exists(batches_file):
+            return jsonify({'error': 'Batch not found'}), 404
+
+        with open(batches_file, 'r', encoding='utf-8') as f:
+            batches = json.load(f)
+
+        if batch_id not in batches:
+            return jsonify({'error': 'Batch not found'}), 404
+
+        return jsonify(batches[batch_id]), 200
+    except Exception as e:
+        app.logger.error(f"Error getting group buy batch: {str(e)}")
+        return jsonify({'error': 'Failed to get batch'}), 500
+
+@app.route('/api/group-buy/products', methods=['GET'])
+def get_group_buy_products():
+    """Get all group buy products"""
+    try:
+        products_file = os.path.join(DATA_DIR, 'group_buy_products.json')
+        if not os.path.exists(products_file):
+            return jsonify({}), 200
+
+        with open(products_file, 'r', encoding='utf-8') as f:
+            products = json.load(f)
+
+        # Filter by batch_id if provided
+        batch_id = request.args.get('batch_id')
+        if batch_id:
+            # Load batch data to get selected products
+            batches_file = os.path.join(DATA_DIR, 'group_buy_batches.json')
+            if os.path.exists(batches_file):
+                with open(batches_file, 'r', encoding='utf-8') as f:
+                    batches = json.load(f)
+
+                if batch_id in batches:
+                    selected_products = batches[batch_id].get('selectedProducts', [])
+                    filtered_products = {k: v for k, v in products.items() if k in selected_products}
+                    return jsonify(filtered_products), 200
+
+            # Fallback to old logic for backward compatibility
+            filtered_products = {k: v for k, v in products.items() if v.get('batchId') == batch_id}
+            return jsonify(filtered_products), 200
+
+        return jsonify(products), 200
+    except Exception as e:
+        app.logger.error(f"Error getting group buy products: {str(e)}")
+        return jsonify({'error': 'Failed to get products'}), 500
+
+@app.route('/api/group-buy/products', methods=['POST'])
+def update_group_buy_products():
+    """Update group buy products"""
+    try:
+        data = request.get_json()
+        products_file = os.path.join(DATA_DIR, 'group_buy_products.json')
+
+        with open(products_file, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+
+        return jsonify({'status': 'success'}), 200
+    except Exception as e:
+        app.logger.error(f"Error updating group buy products: {str(e)}")
+        return jsonify({'error': 'Failed to update products'}), 500
+
+@app.route('/api/group-buy/product/<product_id>', methods=['GET'])
+def get_group_buy_product(product_id):
+    """Get a specific group buy product"""
+    try:
+        products_file = os.path.join(DATA_DIR, 'group_buy_products.json')
+        if not os.path.exists(products_file):
+            return jsonify({'error': 'Product not found'}), 404
+
+        with open(products_file, 'r', encoding='utf-8') as f:
+            products = json.load(f)
+
+        if product_id not in products:
+            return jsonify({'error': 'Product not found'}), 404
+
+        return jsonify(products[product_id]), 200
+    except Exception as e:
+        app.logger.error(f"Error getting group buy product: {str(e)}")
+        return jsonify({'error': 'Failed to get product'}), 500
+
+@app.route('/api/group-buy/product', methods=['POST'])
+def create_group_buy_product():
+    """Create a new group buy product"""
+    try:
+        data = request.get_json()
+        products_file = os.path.join(DATA_DIR, 'group_buy_products.json')
+
+        # Validate required fields
+        required_fields = ['name', 'category', 'shortDescription', 'pricing']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({'error': f'Missing required field: {field}'}), 400
+
+        # Generate product ID
+        import uuid
+        product_id = f"PROD{str(uuid.uuid4())[:8].upper()}"
+
+        # Ensure specifications has the correct structure
+        specifications = data.get('specifications', {})
+        if 'sizes' not in specifications:
+            specifications['sizes'] = []
+        if 'colors' not in specifications:
+            specifications['colors'] = []
+
+        # Create product data
+        product_data = {
+            'id': product_id,
+            'name': data['name'],
+            'category': data['category'],
+            'shortDescription': data['shortDescription'],
+            'fullDescription': data.get('fullDescription', ''),
+            'mainImage': data.get('mainImage', ''),
+            'gallery': data.get('gallery', []),
+            'pdfUrl': data.get('pdfUrl', ''),
+            'specifications': specifications,
+            'pricing': data['pricing'],
+            'isActive': data.get('isActive', True),
+            'createdAt': datetime.datetime.now().isoformat() + 'Z',
+            'updatedAt': datetime.datetime.now().isoformat() + 'Z'
+        }
+
+        # Load existing products
+        if os.path.exists(products_file):
+            with open(products_file, 'r', encoding='utf-8') as f:
+                products = json.load(f)
+        else:
+            products = {}
+
+        # Add new product
+        products[product_id] = product_data
+
+        # Save products
+        save_json_file(products_file, products)
+
+        return jsonify({'message': 'Product created successfully', 'productId': product_id}), 201
+    except Exception as e:
+        app.logger.error(f"Error creating group buy product: {str(e)}")
+        return jsonify({'error': 'Failed to create product'}), 500
+
+@app.route('/api/group-buy/product/<product_id>', methods=['PUT'])
+def update_group_buy_product(product_id):
+    """Update a group buy product"""
+    try:
+        data = request.get_json()
+        products_file = os.path.join(DATA_DIR, 'group_buy_products.json')
+
+        if not os.path.exists(products_file):
+            return jsonify({'error': 'Products file not found'}), 404
+
+        # Load existing products
+        with open(products_file, 'r', encoding='utf-8') as f:
+            products = json.load(f)
+
+        if product_id not in products:
+            return jsonify({'error': 'Product not found'}), 404
+
+        # Get existing product data
+        product = products[product_id]
+
+        # Ensure specifications has the correct structure
+        specifications = data.get('specifications', product.get('specifications', {}))
+        if 'sizes' not in specifications:
+            specifications['sizes'] = []
+        if 'colors' not in specifications:
+            specifications['colors'] = []
+
+        # Update product data
+        product.update({
+            'name': data.get('name', product['name']),
+            'category': data.get('category', product['category']),
+            'shortDescription': data.get('shortDescription', product['shortDescription']),
+            'fullDescription': data.get('fullDescription', product.get('fullDescription', '')),
+            'mainImage': data.get('mainImage', product.get('mainImage', '')),
+            'gallery': data.get('gallery', product.get('gallery', [])),
+            'pdfUrl': data.get('pdfUrl', product.get('pdfUrl', '')),
+            'specifications': specifications,
+            'pricing': data.get('pricing', product['pricing']),
+            'isActive': data.get('isActive', product.get('isActive', True)),
+            'updatedAt': datetime.datetime.now().isoformat() + 'Z'
+        })
+
+        # Save products
+        save_json_file(products_file, products)
+
+        return jsonify({'message': 'Product updated successfully'}), 200
+    except Exception as e:
+        app.logger.error(f"Error updating group buy product: {str(e)}")
+        return jsonify({'error': 'Failed to update product'}), 500
+
+@app.route('/api/group-buy/product/<product_id>', methods=['DELETE'])
+def delete_group_buy_product(product_id):
+    """Delete a group buy product"""
+    try:
+        products_file = os.path.join(DATA_DIR, 'group_buy_products.json')
+
+        if not os.path.exists(products_file):
+            return jsonify({'error': 'Products file not found'}), 404
+
+        # Load existing products
+        with open(products_file, 'r', encoding='utf-8') as f:
+            products = json.load(f)
+
+        if product_id not in products:
+            return jsonify({'error': 'Product not found'}), 404
+
+        # Remove product
+        del products[product_id]
+
+        # Save products
+        save_json_file(products_file, products)
+
+        return jsonify({'message': 'Product deleted successfully'}), 200
+    except Exception as e:
+        app.logger.error(f"Error deleting group buy product: {str(e)}")
+        return jsonify({'error': 'Failed to delete product'}), 500
+
+@app.route('/api/group-buy/member-level', methods=['POST'])
+def check_member_level():
+    """Check member level by email"""
+    try:
+        data = request.get_json()
+        email = data.get('email', '').strip().lower()
+
+        if not email:
+            return jsonify({'error': 'Email is required'}), 400
+
+        # Check if user is super admin first
+        allowed_emails_str = os.environ.get('ALLOWED_EMAILS', '')
+        super_admin_emails = [email_addr.strip() for email_addr in allowed_emails_str.split(',') if email_addr.strip()]
+
+        if email in super_admin_emails:
+            return jsonify({
+                'email': email,
+                'level': 'instructor',  # Super admin gets instructor pricing
+                'levelName': '超级管理员',
+                'found': True,
+                'memberInfo': {
+                    'name': 'Super Admin',
+                    'id': 'SUPER_ADMIN',
+                    'isActive': True
+                }
+            }), 200
+
+        # Load members data
+        members_file = os.path.join(DATA_DIR, 'members.json')
+        if not os.path.exists(members_file):
+            return jsonify({
+                'email': email,
+                'level': 'non_member',
+                'levelName': '非会员',
+                'found': False
+            }), 200
+
+        with open(members_file, 'r', encoding='utf-8') as f:
+            members = json.load(f)
+
+        # Search for member by email
+        member_found = None
+        for member_id, member_data in members.items():
+            if member_data.get('email', '').strip().lower() == email:
+                member_found = member_data
+                break
+
+        if member_found:
+            role = member_found.get('role', 'member')
+            # Treat admin and super_admin as instructor level for pricing
+            if role in ['instructor', 'admin']:
+                level = 'instructor'
+                level_name = '教练' if role == 'instructor' else '管理员'
+            else:
+                level = 'member'
+                level_name = '会员'
+
+            return jsonify({
+                'email': email,
+                'level': level,
+                'levelName': level_name,
+                'found': True,
+                'memberInfo': {
+                    'name': member_found.get('name', ''),
+                    'id': member_found.get('id', ''),
+                    'isActive': member_found.get('isActive', False)
+                }
+            }), 200
+        else:
+            return jsonify({
+                'email': email,
+                'level': 'non_member',
+                'levelName': '非会员',
+                'found': False
+            }), 200
+
+    except Exception as e:
+        app.logger.error(f"Error checking member level: {str(e)}")
+        return jsonify({'error': 'Failed to check member level'}), 500
+
+@app.route('/api/group-buy/orders', methods=['GET'])
+def get_group_buy_orders():
+    """Get all group buy orders"""
+    try:
+        orders_file = os.path.join(DATA_DIR, 'group_buy_orders.json')
+        if not os.path.exists(orders_file):
+            return jsonify({}), 200
+
+        with open(orders_file, 'r', encoding='utf-8') as f:
+            orders = json.load(f)
+
+        # Filter by batch_id, status, or email if provided
+        batch_id = request.args.get('batch_id')
+        status = request.args.get('status')
+        email = request.args.get('email')
+
+        filtered_orders = orders
+        if batch_id:
+            filtered_orders = {k: v for k, v in filtered_orders.items() if v.get('batchId') == batch_id}
+        if status:
+            filtered_orders = {k: v for k, v in filtered_orders.items() if v.get('status') == status}
+        if email:
+            filtered_orders = {k: v for k, v in filtered_orders.items() if v.get('customerInfo', {}).get('email', '').lower() == email.lower()}
+
+        return jsonify(filtered_orders), 200
+    except Exception as e:
+        app.logger.error(f"Error getting group buy orders: {str(e)}")
+        return jsonify({'error': 'Failed to get orders'}), 500
+
+@app.route('/api/group-buy/orders', methods=['POST'])
+def update_group_buy_orders():
+    """Update group buy orders"""
+    try:
+        data = request.get_json()
+        orders_file = os.path.join(DATA_DIR, 'group_buy_orders.json')
+
+        with open(orders_file, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+
+        return jsonify({'status': 'success'}), 200
+    except Exception as e:
+        app.logger.error(f"Error updating group buy orders: {str(e)}")
+        return jsonify({'error': 'Failed to update orders'}), 500
+
+@app.route('/api/group-buy/order/create', methods=['POST'])
+def create_group_buy_order():
+    """Create a new group buy order"""
+    try:
+        data = request.get_json()
+
+        # Validate required fields
+        required_fields = ['customerInfo', 'items', 'currency', 'memberLevel']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({'error': f'{field} is required'}), 400
+
+        # Generate order ID and number
+        order_id = f"ORDER{int(time.time())}"
+        order_no = f"GB{datetime.datetime.now().strftime('%Y%m%d')}{str(int(time.time()))[-4:]}"
+
+        # Calculate totals
+        items_total_eur = 0
+        items_total_cny = 0
+
+        for item in data['items']:
+            line_total_eur = item['unitPrice']['EUR'] * item['quantity']
+            line_total_cny = item['unitPrice']['CNY'] * item['quantity']
+            items_total_eur += line_total_eur
+            items_total_cny += line_total_cny
+
+            # Add calculated line totals to item
+            item['lineTotal'] = {
+                'EUR': round(line_total_eur, 2),
+                'CNY': round(line_total_cny, 2)
+            }
+
+        # Generate payment link
+        config_file = os.path.join(DATA_DIR, 'group_buy_config.json')
+        payment_link = ""
+        if os.path.exists(config_file):
+            with open(config_file, 'r', encoding='utf-8') as f:
+                config = json.load(f)
+
+            currency = data['currency']
+            if currency in config.get('paymentTemplates', {}):
+                template = config['paymentTemplates'][currency]['template']
+                amount = items_total_eur if currency == 'EUR' else items_total_cny
+                payment_link = template.replace('{{orderNo}}', order_no).replace('{{amount}}', str(amount)).replace('{{email}}', data['customerInfo']['email'])
+
+        # Create order object
+        order = {
+            'id': order_id,
+            'orderNo': order_no,
+            'batchId': data.get('batchId', ''),
+            'customerInfo': data['customerInfo'],
+            'memberLevel': data['memberLevel'],
+            'currency': data['currency'],
+            'items': data['items'],
+            'amounts': {
+                'currency': data['currency'],
+                'itemsTotal': {
+                    'EUR': round(items_total_eur, 2),
+                    'CNY': round(items_total_cny, 2)
+                },
+                'finalTotal': {
+                    'EUR': round(items_total_eur, 2),
+                    'CNY': round(items_total_cny, 2)
+                }
+            },
+            'status': 'CREATED',
+            'paymentLink': payment_link,
+            'createdAt': datetime.datetime.now().isoformat() + 'Z',
+            'updatedAt': datetime.datetime.now().isoformat() + 'Z',
+            'notes': data.get('notes', '')
+        }
+
+        # Load existing orders
+        orders_file = os.path.join(DATA_DIR, 'group_buy_orders.json')
+        orders = {}
+        if os.path.exists(orders_file):
+            with open(orders_file, 'r', encoding='utf-8') as f:
+                orders = json.load(f)
+
+        # Add new order
+        orders[order_id] = order
+
+        # Save orders
+        with open(orders_file, 'w', encoding='utf-8') as f:
+            json.dump(orders, f, ensure_ascii=False, indent=2)
+
+        return jsonify({
+            'status': 'success',
+            'order': order
+        }), 201
+
+    except Exception as e:
+        app.logger.error(f"Error creating group buy order: {str(e)}")
+        return jsonify({'error': 'Failed to create order'}), 500
+
+@app.route('/api/group-buy/order/<order_id>/status', methods=['PUT'])
+def update_order_status(order_id):
+    """Update order status"""
+    try:
+        data = request.get_json()
+        new_status = data.get('status')
+
+        if not new_status:
+            return jsonify({'error': 'Status is required'}), 400
+
+        # Validate status
+        valid_statuses = ['CREATED', 'PAYMENT_PENDING_REVIEW', 'PAID', 'CANCELLED']
+        if new_status not in valid_statuses:
+            return jsonify({'error': 'Invalid status'}), 400
+
+        # Load orders
+        orders_file = os.path.join(DATA_DIR, 'group_buy_orders.json')
+        if not os.path.exists(orders_file):
+            return jsonify({'error': 'Order not found'}), 404
+
+        with open(orders_file, 'r', encoding='utf-8') as f:
+            orders = json.load(f)
+
+        if order_id not in orders:
+            return jsonify({'error': 'Order not found'}), 404
+
+        # Update status
+        orders[order_id]['status'] = new_status
+        orders[order_id]['updatedAt'] = datetime.datetime.now().isoformat() + 'Z'
+
+        # Save orders
+        with open(orders_file, 'w', encoding='utf-8') as f:
+            json.dump(orders, f, ensure_ascii=False, indent=2)
+
+        return jsonify({'status': 'success', 'order': orders[order_id]}), 200
+
+    except Exception as e:
+        app.logger.error(f"Error updating order status: {str(e)}")
+        return jsonify({'error': 'Failed to update order status'}), 500
+
+@app.route('/api/group-buy/order/<order_id>/payment-confirm', methods=['PUT'])
+def confirm_order_payment(order_id):
+    """Confirm order payment with currency and amount"""
+    try:
+        data = request.get_json()
+        new_status = data.get('status')
+        final_currency = data.get('finalCurrency')
+        final_amount = data.get('finalAmount')
+
+        if not new_status:
+            return jsonify({'error': 'Status is required'}), 400
+
+        if not final_currency:
+            return jsonify({'error': 'Final currency is required'}), 400
+
+        if not final_amount:
+            return jsonify({'error': 'Final amount is required'}), 400
+
+        # Validate status
+        valid_statuses = ['CREATED', 'PAYMENT_PENDING_REVIEW', 'PAID', 'CANCELLED']
+        if new_status not in valid_statuses:
+            return jsonify({'error': 'Invalid status'}), 400
+
+        # Validate currency
+        valid_currencies = ['EUR', 'CNY']
+        if final_currency not in valid_currencies:
+            return jsonify({'error': 'Invalid currency'}), 400
+
+        # Load orders
+        orders_file = os.path.join(DATA_DIR, 'group_buy_orders.json')
+        if not os.path.exists(orders_file):
+            return jsonify({'error': 'Order not found'}), 404
+
+        with open(orders_file, 'r', encoding='utf-8') as f:
+            orders = json.load(f)
+
+        if order_id not in orders:
+            return jsonify({'error': 'Order not found'}), 404
+
+        # Update order with payment confirmation
+        orders[order_id]['status'] = new_status
+        orders[order_id]['finalCurrency'] = final_currency
+        orders[order_id]['finalAmount'] = final_amount
+        orders[order_id]['updatedAt'] = datetime.datetime.now().isoformat() + 'Z'
+
+        # Save orders
+        with open(orders_file, 'w', encoding='utf-8') as f:
+            json.dump(orders, f, ensure_ascii=False, indent=2)
+
+        return jsonify({'status': 'success', 'order': orders[order_id]}), 200
+
+    except Exception as e:
+        app.logger.error(f"Error confirming order payment: {str(e)}")
+        return jsonify({'error': 'Failed to confirm payment'}), 500
+
+@app.route('/api/group-buy/config', methods=['GET'])
+def get_group_buy_config():
+    """Get group buy configuration"""
+    try:
+        config_file = os.path.join(DATA_DIR, 'group_buy_config.json')
+        if not os.path.exists(config_file):
+            # Return default config
+            default_config = {
+                "paymentTemplates": {
+                    "EUR": {"template": "", "description": "欧元支付链接模板"},
+                    "CNY": {"template": "", "description": "人民币支付链接模板"}
+                },
+                "exchangeRate": {"EUR_TO_CNY": 7.8},
+                "orderSettings": {"orderNoPrefix": "GB", "defaultCurrency": "EUR"}
+            }
+            return jsonify(default_config), 200
+
+        with open(config_file, 'r', encoding='utf-8') as f:
+            config = json.load(f)
+
+        return jsonify(config), 200
+    except Exception as e:
+        app.logger.error(f"Error getting group buy config: {str(e)}")
+        return jsonify({'error': 'Failed to get config'}), 500
+
+@app.route('/api/group-buy/config', methods=['POST'])
+def update_group_buy_config():
+    """Update group buy configuration"""
+    try:
+        data = request.get_json()
+        config_file = os.path.join(DATA_DIR, 'group_buy_config.json')
+
+        with open(config_file, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+
+        return jsonify({'status': 'success'}), 200
+    except Exception as e:
+        app.logger.error(f"Error updating group buy config: {str(e)}")
+        return jsonify({'error': 'Failed to update config'}), 500
+
+@app.route('/api/group-buy/categories', methods=['GET'])
+def get_group_buy_categories():
+    """Get all group buy categories"""
+    try:
+        categories_file = os.path.join(DATA_DIR, 'group_buy_categories.json')
+        if not os.path.exists(categories_file):
+            return jsonify({}), 200
+
+        with open(categories_file, 'r', encoding='utf-8') as f:
+            categories = json.load(f)
+
+        return jsonify(categories), 200
+    except Exception as e:
+        app.logger.error(f"Error getting group buy categories: {str(e)}")
+        return jsonify({'error': 'Failed to get categories'}), 500
+
+@app.route('/api/group-buy/category', methods=['POST'])
+def create_group_buy_category():
+    """Create a new group buy category"""
+    try:
+        data = request.get_json()
+        categories_file = os.path.join(DATA_DIR, 'group_buy_categories.json')
+
+        # Load existing categories
+        if os.path.exists(categories_file):
+            with open(categories_file, 'r', encoding='utf-8') as f:
+                categories = json.load(f)
+        else:
+            categories = {}
+
+        # Generate new category ID
+        category_id = f"CAT{str(len(categories) + 1).zfill(3)}"
+
+        # Create new category
+        new_category = {
+            'id': category_id,
+            'name': data.get('name'),
+            'description': data.get('description', ''),
+            'sortOrder': data.get('sortOrder', len(categories) + 1),
+            'isActive': data.get('isActive', True)
+        }
+
+        categories[category_id] = new_category
+
+        # Save categories
+        with open(categories_file, 'w', encoding='utf-8') as f:
+            json.dump(categories, f, ensure_ascii=False, indent=2)
+
+        return jsonify({'message': 'Category created successfully', 'categoryId': category_id}), 201
+    except Exception as e:
+        app.logger.error(f"Error creating group buy category: {str(e)}")
+        return jsonify({'error': 'Failed to create category'}), 500
+
+@app.route('/api/group-buy/category/<category_id>', methods=['PUT'])
+def update_group_buy_category(category_id):
+    """Update a group buy category"""
+    try:
+        data = request.get_json()
+        categories_file = os.path.join(DATA_DIR, 'group_buy_categories.json')
+
+        if not os.path.exists(categories_file):
+            return jsonify({'error': 'Categories file not found'}), 404
+
+        with open(categories_file, 'r', encoding='utf-8') as f:
+            categories = json.load(f)
+
+        if category_id not in categories:
+            return jsonify({'error': 'Category not found'}), 404
+
+        # Update category
+        categories[category_id].update({
+            'name': data.get('name', categories[category_id]['name']),
+            'description': data.get('description', categories[category_id].get('description', '')),
+            'sortOrder': data.get('sortOrder', categories[category_id].get('sortOrder', 1)),
+            'isActive': data.get('isActive', categories[category_id].get('isActive', True))
+        })
+
+        # Save categories
+        with open(categories_file, 'w', encoding='utf-8') as f:
+            json.dump(categories, f, ensure_ascii=False, indent=2)
+
+        return jsonify({'message': 'Category updated successfully'}), 200
+    except Exception as e:
+        app.logger.error(f"Error updating group buy category: {str(e)}")
+        return jsonify({'error': 'Failed to update category'}), 500
+
+@app.route('/api/group-buy/category/<category_id>', methods=['DELETE'])
+def delete_group_buy_category(category_id):
+    """Delete a group buy category"""
+    try:
+        categories_file = os.path.join(DATA_DIR, 'group_buy_categories.json')
+
+        if not os.path.exists(categories_file):
+            return jsonify({'error': 'Categories file not found'}), 404
+
+        with open(categories_file, 'r', encoding='utf-8') as f:
+            categories = json.load(f)
+
+        if category_id not in categories:
+            return jsonify({'error': 'Category not found'}), 404
+
+        # Remove category
+        del categories[category_id]
+
+        # Save categories
+        with open(categories_file, 'w', encoding='utf-8') as f:
+            json.dump(categories, f, ensure_ascii=False, indent=2)
+
+        return jsonify({'message': 'Category deleted successfully'}), 200
+    except Exception as e:
+        app.logger.error(f"Error deleting group buy category: {str(e)}")
+        return jsonify({'error': 'Failed to delete category'}), 500
+
+@app.route('/api/group-buy/export/orders', methods=['GET'])
+def export_group_buy_orders():
+    """Export group buy orders as CSV"""
+    try:
+        import csv
+        import io
+
+        # Get filter parameters
+        batch_id = request.args.get('batch_id')
+        status = request.args.get('status')
+
+        # Load orders
+        orders_file = os.path.join(DATA_DIR, 'group_buy_orders.json')
+        if not os.path.exists(orders_file):
+            return jsonify({'error': 'No orders found'}), 404
+
+        with open(orders_file, 'r', encoding='utf-8') as f:
+            orders = json.load(f)
+
+        # Filter orders
+        filtered_orders = orders
+        if batch_id:
+            filtered_orders = {k: v for k, v in filtered_orders.items() if v.get('batchId') == batch_id}
+        if status:
+            filtered_orders = {k: v for k, v in filtered_orders.items() if v.get('status') == status}
+
+        # Create CSV content
+        output = io.StringIO()
+        writer = csv.writer(output)
+
+        # Write header
+        writer.writerow([
+            'Order No', 'Created At', 'Email', 'Name', 'Member Level', 'Batch ID',
+            'Currency', 'Amount Total (Currency)', 'Amount Total EUR', 'Amount Total CNY',
+            'Status', 'Items Text', 'Phone', 'Address', 'Notes'
+        ])
+
+        # Write data rows
+        for order_id, order in filtered_orders.items():
+            customer = order.get('customerInfo', {})
+            amounts = order.get('amounts', {})
+
+            # Create items text
+            items_text = '; '.join([
+                f"{item['productName']}/{item.get('size', '')}/{item.get('color', '')} x{item['quantity']}"
+                for item in order.get('items', [])
+            ])
+
+            writer.writerow([
+                order.get('orderNo', ''),
+                order.get('createdAt', ''),
+                customer.get('email', ''),
+                customer.get('name', ''),
+                order.get('memberLevel', ''),
+                order.get('batchId', ''),
+                order.get('currency', ''),
+                amounts.get('finalTotal', {}).get(order.get('currency', 'EUR'), 0),
+                amounts.get('finalTotal', {}).get('EUR', 0),
+                amounts.get('finalTotal', {}).get('CNY', 0),
+                order.get('status', ''),
+                items_text,
+                customer.get('phone', ''),
+                customer.get('address', ''),
+                order.get('notes', '')
+            ])
+
+        # Prepare response
+        csv_content = output.getvalue()
+        output.close()
+
+        return jsonify({
+            'status': 'success',
+            'csv_content': csv_content,
+            'filename': f"group_buy_orders_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        }), 200
+
+    except Exception as e:
+        app.logger.error(f"Error exporting group buy orders: {str(e)}")
+        return jsonify({'error': 'Failed to export orders'}), 500
+
+# ================= Team & Realtime Location APIs =================
+TEAMS_FILE = os.path.join(DATA_DIR, 'teams.json')
+MEETING_POINTS_FILE = os.path.join(DATA_DIR, 'meeting_points.json')
+
+
+@app.route('/data/teams.json', methods=['GET'])
+def get_teams_data():
+    if not os.path.exists(TEAMS_FILE):
+        with open(TEAMS_FILE, 'w', encoding='utf-8') as f:
+            json.dump({}, f, ensure_ascii=False, indent=2)
+    return send_from_directory(DATA_DIR, 'teams.json')
+
+
+def _generate_team_id(teams: dict) -> str:
+    year = datetime.datetime.now().year
+    prefix = f"TEAM{year}"
+    max_seq = 0
+    for tid in teams.keys():
+        if tid.startswith(prefix):
+            try:
+                seq = int(tid[len(prefix):])
+                max_seq = max(max_seq, seq)
+            except Exception:
+                continue
+    return f"{prefix}{max_seq + 1:04d}"
+
+
+def _find_member_index(members: list, device_id: str) -> int:
+    for i, m in enumerate(members):
+        if m.get('deviceId') == device_id:
+            return i
+    return -1
+
+
+@app.route('/api/member/<member_id>/location', methods=['POST'])
+def update_member_location(member_id):
+    """Update a member's realtime location (concurrency-safe)."""
+    try:
+        if not re.match(r'^SN\d{4}\d{4}$', member_id):
+            return jsonify({'error': 'Invalid member ID format'}), 400
+
+        payload = request.get_json() or {}
+        lat, lng = payload.get('lat'), payload.get('lng')
+        if lat is None or lng is None:
+            return jsonify({'error': 'lat and lng are required'}), 400
+
+        members_file = os.path.join(DATA_DIR, 'members.json')
+        if not os.path.exists(members_file):
+            return jsonify({'error': 'Members data not found'}), 404
+
+        def op(f):
+            f.seek(0)
+            content = f.read().strip()
+            members = json.loads(content) if content else {}
+            if member_id not in members:
+                return jsonify({'error': 'Member not found'}), 404
+            now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+            members[member_id]['lastLocation'] = {
+                'lat': float(lat), 'lng': float(lng),
+                'accuracy': payload.get('accuracy'),
+                'altitude': payload.get('altitude'),
+                'heading': payload.get('heading'),
+                'speed': payload.get('speed'),
+                'timestamp': now
+            }
+            f.seek(0); f.truncate(); json.dump(members, f, ensure_ascii=False, indent=2); f.flush(); os.fsync(f.fileno())
+            return {'status': 'success', 'updatedAt': now}
+
+        result = safe_file_operation(members_file, op, mode='r+')
+        if hasattr(result, 'status_code'):
+            return result
+        return jsonify(result), 200
+    except Exception as e:
+        app.logger.error(f"Error updating member location: {str(e)}")
+        return jsonify({'error': 'Server error'}), 500
+
+
+@app.route('/api/team', methods=['POST'])
+def create_team():
+    """Create a team with structure: {id,name,resort,maxSize,members[]}"""
+    try:
+        data = request.get_json() or {}
+        name = data.get('name'); resort = data.get('resort'); max_size = data.get('maxSize', 20)
+        if not name or not resort:
+            return jsonify({'error': 'name and resort are required'}), 400
+        teams = load_json_file(TEAMS_FILE, {})
+        team_id = data.get('id') or _generate_team_id(teams)
+        if team_id in teams:
+            return jsonify({'error': 'Team with this ID already exists'}), 409
+        now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        members = []
+        for m in data.get('members', []):
+            if 'deviceId' in m:
+                members.append({
+                    'deviceId': m['deviceId'],
+                    'nickname': m.get('nickname') or '',
+                    'isLeader': bool(m.get('isLeader', False)),
+                    'shareLocation': bool(m.get('shareLocation', True)),
+                    'lastLocation': m.get('lastLocation'),
+                    'checkinTime': m.get('checkinTime') or now
+                })
+        team = {'id': team_id, 'name': name, 'resort': resort, 'maxSize': int(max_size), 'members': members,
+                'createdAt': now, 'updatedAt': now}
+        teams[team_id] = team
+        save_json_file(TEAMS_FILE, teams)
+        return jsonify({'status': 'success', 'team': team}), 201
+    except Exception as e:
+        app.logger.error(f"Error creating team: {str(e)}")
+        return jsonify({'error': 'Server error'}), 500
+
+
+@app.route('/api/team/<team_id>', methods=['GET'])
+def get_team(team_id):
+    try:
+        teams = load_json_file(TEAMS_FILE, {})
+        if team_id not in teams:
+            return jsonify({'error': 'Team not found'}), 404
+        return jsonify(teams[team_id]), 200
+    except Exception as e:
+        app.logger.error(f"Error getting team: {str(e)}")
+        return jsonify({'error': 'Server error'}), 500
+
+
+@app.route('/api/team/<team_id>/join', methods=['POST'])
+def join_team(team_id):
+    """Join or update a team member by deviceId; creates if not present. Concurrency-safe."""
+    try:
+        payload = request.get_json() or {}
+        device_id = payload.get('deviceId')
+        if not device_id:
+            return jsonify({'error': 'deviceId is required'}), 400
+
+        def op(f):
+            f.seek(0)
+            content = f.read().strip()
+            teams = json.loads(content) if content else {}
+            if team_id not in teams:
+                return jsonify({'error': 'Team not found'}), 404
+            team = teams[team_id]
+            members = team.get('members', [])
+            idx = _find_member_index(members, device_id)
+            now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+            if idx == -1:
+                if len(members) >= int(team.get('maxSize', 20)):
+                    return jsonify({'error': 'Team is full'}), 409
+                member = {
+                    'deviceId': device_id,
+                    'nickname': payload.get('nickname') or '',
+                    'isLeader': bool(payload.get('isLeader', False)),
+                    'shareLocation': bool(payload.get('shareLocation', True)),
+                    'lastLocation': payload.get('lastLocation'),
+                    'checkinTime': now
+                }
+                members.append(member)
+            else:
+                member = members[idx]
+                member['nickname'] = payload.get('nickname', member.get('nickname', ''))
+                if 'isLeader' in payload and payload.get('isLeader'):
+                    for m in members:
+                        m['isLeader'] = False
+                    member['isLeader'] = True
+                if 'shareLocation' in payload:
+                    member['shareLocation'] = bool(payload['shareLocation'])
+                if 'lastLocation' in payload and payload['lastLocation']:
+                    member['lastLocation'] = payload['lastLocation']
+            team['members'] = members
+            team['updatedAt'] = now
+            teams[team_id] = team
+            f.seek(0); f.truncate(); json.dump(teams, f, ensure_ascii=False, indent=2); f.flush(); os.fsync(f.fileno())
+            return {'status': 'success', 'team': team}
+
+        result = safe_file_operation(TEAMS_FILE, op, mode='r+')
+        if hasattr(result, 'status_code'):
+            return result
+        return jsonify(result), 200
+    except Exception as e:
+        app.logger.error(f"Error joining team: {str(e)}")
+        return jsonify({'error': 'Server error'}), 500
+
+
+@app.route('/api/team/<team_id>/member/<device_id>/location', methods=['POST'])
+def update_team_member_location(team_id, device_id):
+    """Update a team member's realtime location (concurrency-safe)."""
+    try:
+        payload = request.get_json() or {}
+        lat, lng = payload.get('lat'), payload.get('lng')
+        if lat is None or lng is None:
+            return jsonify({'error': 'lat and lng are required'}), 400
+
+        def op(f):
+            f.seek(0)
+            content = f.read().strip()
+            teams = json.loads(content) if content else {}
+            if team_id not in teams:
+                return jsonify({'error': 'Team not found'}), 404
+            team = teams[team_id]
+            members = team.get('members', [])
+            idx = _find_member_index(members, device_id)
+            if idx == -1:
+                return jsonify({'error': 'Member (device) not found in team'}), 404
+            now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+            members[idx]['lastLocation'] = {
+                'lat': float(lat), 'lng': float(lng),
+                'accuracy': payload.get('accuracy'),
+                'altitude': payload.get('altitude'),
+                'heading': payload.get('heading'),
+                'speed': payload.get('speed'),
+                'timestamp': now
+            }
+            team['members'] = members
+            team['updatedAt'] = now
+            teams[team_id] = team
+            f.seek(0); f.truncate(); json.dump(teams, f, ensure_ascii=False, indent=2); f.flush(); os.fsync(f.fileno())
+            return {'status': 'success', 'updatedAt': now}
+
+        result = safe_file_operation(TEAMS_FILE, op, mode='r+')
+        if hasattr(result, 'status_code'):
+            return result
+        return jsonify(result), 200
+    except Exception as e:
+        app.logger.error(f"Error updating team member location: {str(e)}")
+        return jsonify({'error': 'Server error'}), 500
+
+
+@app.route('/api/team/<team_id>/member/<device_id>', methods=['DELETE'])
+def remove_team_member(team_id, device_id):
+    try:
+        def op(f):
+            f.seek(0)
+            content = f.read().strip()
+            teams = json.loads(content) if content else {}
+            if team_id not in teams:
+                return jsonify({'error': 'Team not found'}), 404
+            team = teams[team_id]
+            members = team.get('members', [])
+            # 找到目标成员
+            target = None
+            for m in members:
+                if m.get('deviceId') == device_id:
+                    target = m
+                    break
+            if not target:
+                return jsonify({'error': 'Member (device) not found in team'}), 404
+            # 若为队长，删除整个团队
+            if target.get('isLeader'):
+                del teams[team_id]
+                f.seek(0); f.truncate(); json.dump(teams, f, ensure_ascii=False, indent=2); f.flush(); os.fsync(f.fileno())
+                return {'status': 'team_deleted', 'teamId': team_id, 'leaderDeviceId': device_id}
+            # 否则仅移除该成员
+            new_members = [m for m in members if m.get('deviceId') != device_id]
+            team['members'] = new_members
+            team['updatedAt'] = datetime.datetime.now(datetime.timezone.utc).isoformat()
+            teams[team_id] = team
+            f.seek(0); f.truncate(); json.dump(teams, f, ensure_ascii=False, indent=2); f.flush(); os.fsync(f.fileno())
+            return {'status': 'success'}
+        result = safe_file_operation(TEAMS_FILE, op, mode='r+')
+        if hasattr(result, 'status_code'):
+            return result
+        # If the team was deleted (leader exited), purge its meeting points as well
+        try:
+            if isinstance(result, dict) and result.get('status') == 'team_deleted':
+                purge_meeting_points_for_team(team_id)
+        except Exception as purge_err:
+            app.logger.error(f"Error purging meeting points after team deletion {team_id}: {purge_err}")
+        return jsonify(result), 200
+    except Exception as e:
+        app.logger.error(f"Error removing team member: {str(e)}")
+        return jsonify({'error': 'Server error'}), 500
+
+@app.route('/api/team/by-device/<device_id>', methods=['GET'])
+def get_teams_by_device(device_id):
+    """Find team(s) that currently include the given deviceId as a member.
+    Returns the most recently updated team as `team` and all matches as `teams`.
+    """
+    try:
+        teams = load_json_file(TEAMS_FILE, {})
+        matches = []
+        for t in teams.values():
+            members = t.get('members', [])
+            if any(m.get('deviceId') == device_id for m in members):
+                matches.append(t)
+        if not matches:
+            return jsonify({'found': False, 'deviceId': device_id, 'error': 'No team found for this device'}), 404
+
+        def ts(team):
+            val = team.get('updatedAt') or team.get('createdAt') or ''
+            try:
+                return datetime.datetime.fromisoformat(val.replace('Z', '+00:00'))
+            except Exception:
+                # Fallback minimal time for invalid/missing timestamps
+                return datetime.datetime.min.replace(tzinfo=datetime.timezone.utc)
+
+        matches.sort(key=ts, reverse=True)
+        return jsonify({'found': True, 'deviceId': device_id, 'team': matches[0], 'teams': matches}), 200
+    except Exception as e:
+        app.logger.error(f"Error finding team by device: {str(e)}")
+        return jsonify({'error': 'Server error'}), 500
+
+
+
+# ================= Meeting Points API endpoints =================
+
+def purge_meeting_points_for_team(team_id: str) -> bool:
+    """Remove all meeting points for a specific teamId from meeting_points.json."""
+    def op(f):
+        f.seek(0)
+        content = f.read().strip()
+        data = json.loads(content) if content else {}
+        if team_id in data:
+            del data[team_id]
+            f.seek(0); f.truncate(); json.dump(data, f, ensure_ascii=False, indent=2); f.flush(); os.fsync(f.fileno())
+            return True
+        return False
+    try:
+        return bool(safe_file_operation(MEETING_POINTS_FILE, op, mode='r+'))
+    except Exception as e:
+        app.logger.error(f"Error purging meeting points for team {team_id}: {e}")
+        return False
+
+@app.route('/api/team/<team_id>/meeting-points', methods=['GET'])
+def list_meeting_points(team_id):
+    try:
+        teams = load_json_file(TEAMS_FILE, {})
+        if team_id not in teams:
+            return jsonify({'error': 'Team not found'}), 404
+        data = load_json_file(MEETING_POINTS_FILE, {})
+        return jsonify({'meetingPoints': data.get(team_id, [])}), 200
+    except Exception as e:
+        app.logger.error(f"Error listing meeting points: {str(e)}")
+        return jsonify({'error': 'Server error'}), 500
+
+@app.route('/api/team/<team_id>/meeting-points', methods=['POST'])
+def create_meeting_point(team_id):
+    try:
+        payload = request.get_json() or {}
+        name = (payload.get('name') or '').strip()
+        lat = payload.get('latitude')
+        lng = payload.get('longitude')
+        created_by = (payload.get('createdBy') or '').strip()
+        creator_nickname = (payload.get('creatorNickname') or '').strip()
+        if not name or lat is None or lng is None or not created_by:
+            return jsonify({'error': 'name, latitude, longitude, createdBy are required'}), 400
+        try:
+            lat = float(lat); lng = float(lng)
+        except Exception:
+            return jsonify({'error': 'latitude/longitude must be numbers'}), 400
+        if not (-90.0 <= lat <= 90.0 and -180.0 <= lng <= 180.0):
+            return jsonify({'error': 'latitude/longitude out of range'}), 400
+
+        teams = load_json_file(TEAMS_FILE, {})
+        if team_id not in teams:
+            return jsonify({'error': 'Team not found'}), 404
+
+        mp = {
+            'id': f"mp_{uuid.uuid4().hex[:8]}",
+            'teamId': team_id,
+            'name': name,
+            'latitude': lat,
+            'longitude': lng,
+            'createdBy': created_by,
+            'creatorNickname': creator_nickname,
+            'createdAt': datetime.datetime.now(datetime.timezone.utc).isoformat().replace('+00:00', 'Z'),
+            'isActive': False
+        }
+
+        def op(f):
+            f.seek(0)
+            content = f.read().strip()
+            data = json.loads(content) if content else {}
+            lst = data.get(team_id, [])
+            lst.append(mp)
+            data[team_id] = lst
+            f.seek(0); f.truncate(); json.dump(data, f, ensure_ascii=False, indent=2); f.flush(); os.fsync(f.fileno())
+            return {'meetingPoint': mp}
+
+        result = safe_file_operation(MEETING_POINTS_FILE, op, mode='r+')
+        if hasattr(result, 'status_code'):
+            return result
+        return jsonify(result), 201
+    except Exception as e:
+        app.logger.error(f"Error creating meeting point: {str(e)}")
+        return jsonify({'error': 'Server error'}), 500
+
+@app.route('/api/team/<team_id>/meeting-points/<point_id>', methods=['PUT'])
+def update_meeting_point(team_id, point_id):
+    try:
+        payload = request.get_json() or {}
+        new_name = str(payload.get('name') or '').strip()
+        if not new_name:
+            return jsonify({'error': 'name is required'}), 400
+        teams = load_json_file(TEAMS_FILE, {})
+        if team_id not in teams:
+            return jsonify({'error': 'Team not found'}), 404
+        def op(f):
+            f.seek(0)
+            content = f.read().strip()
+            data = json.loads(content) if content else {}
+            lst = data.get(team_id, [])
+            mp = next((m for m in lst if m.get('id') == point_id), None)
+            if not mp:
+                return jsonify({'error': 'Meeting point not found'}), 404
+            mp['name'] = new_name
+            data[team_id] = lst
+            f.seek(0); f.truncate(); json.dump(data, f, ensure_ascii=False, indent=2); f.flush(); os.fsync(f.fileno())
+            return {'meetingPoint': mp}
+        result = safe_file_operation(MEETING_POINTS_FILE, op, mode='r+')
+        if hasattr(result, 'status_code'):
+            return result
+        return jsonify(result), 200
+    except Exception as e:
+        app.logger.error(f"Error updating meeting point: {str(e)}")
+        return jsonify({'error': 'Server error'}), 500
+
+@app.route('/api/team/<team_id>/meeting-points/<point_id>', methods=['DELETE'])
+def delete_meeting_point(team_id, point_id):
+    try:
+        teams = load_json_file(TEAMS_FILE, {})
+        if team_id not in teams:
+            return jsonify({'error': 'Team not found'}), 404
+        def op(f):
+            f.seek(0)
+            content = f.read().strip()
+            data = json.loads(content) if content else {}
+            lst = data.get(team_id, [])
+            idx = next((i for i, mp in enumerate(lst) if mp.get('id') == point_id), None)
+            if idx is None:
+                return jsonify({'error': 'Meeting point not found'}), 404
+            lst.pop(idx)
+            data[team_id] = lst
+            f.seek(0); f.truncate(); json.dump(data, f, ensure_ascii=False, indent=2); f.flush(); os.fsync(f.fileno())
+            return {'success': True}
+        result = safe_file_operation(MEETING_POINTS_FILE, op, mode='r+')
+        if hasattr(result, 'status_code'):
+            return result
+        return jsonify(result), 200
+    except Exception as e:
+        app.logger.error(f"Error deleting meeting point: {str(e)}")
+        return jsonify({'error': 'Server error'}), 500
+
+@app.route('/api/team/<team_id>/meeting-points/<point_id>/activate', methods=['POST'])
+def activate_meeting_point(team_id, point_id):
+    try:
+        teams = load_json_file(TEAMS_FILE, {})
+        if team_id not in teams:
+            return jsonify({'error': 'Team not found'}), 404
+        def op(f):
+            f.seek(0)
+            content = f.read().strip()
+            data = json.loads(content) if content else {}
+            lst = data.get(team_id, [])
+            found = False
+            for mp in lst:
+                if mp.get('id') == point_id:
+                    mp['isActive'] = True
+                    found = True
+                else:
+                    mp['isActive'] = False
+            if not found:
+                return jsonify({'error': 'Meeting point not found'}), 404
+            data[team_id] = lst
+            f.seek(0); f.truncate(); json.dump(data, f, ensure_ascii=False, indent=2); f.flush(); os.fsync(f.fileno())
+            return {'success': True}
+        result = safe_file_operation(MEETING_POINTS_FILE, op, mode='r+')
+        if hasattr(result, 'status_code'):
+            return result
+        return jsonify(result), 200
+    except Exception as e:
+        app.logger.error(f"Error activating meeting point: {str(e)}")
+        return jsonify({'error': 'Server error'}), 500
+
+@app.route('/api/team/<team_id>/meeting-points/clear-active', methods=['POST'])
+def clear_active_meeting_points(team_id):
+    try:
+        teams = load_json_file(TEAMS_FILE, {})
+        if team_id not in teams:
+            return jsonify({'error': 'Team not found'}), 404
+        def op(f):
+            f.seek(0)
+            content = f.read().strip()
+            data = json.loads(content) if content else {}
+            lst = data.get(team_id, [])
+            for mp in lst:
+                mp['isActive'] = False
+            data[team_id] = lst
+            f.seek(0); f.truncate(); json.dump(data, f, ensure_ascii=False, indent=2); f.flush(); os.fsync(f.fileno())
+            return {'success': True}
+        result = safe_file_operation(MEETING_POINTS_FILE, op, mode='r+')
+        if hasattr(result, 'status_code'):
+            return result
+        return jsonify(result), 200
+    except Exception as e:
+        app.logger.error(f"Error clearing active meeting points: {str(e)}")
+        return jsonify({'error': 'Server error'}), 500
+
+
+@app.errorhandler(413)
+def request_entity_too_large(e):
+    max_size_mb = app.config['MAX_CONTENT_LENGTH'] / (1024 * 1024)
+    return jsonify(error=f"File too large. Maximum allowed size is {max_size_mb:.1f}MB"), 413
+
+@app.errorhandler(500)
+def server_error(e):
+    app.logger.error('Server Error: %s', e)
+    return jsonify(error=str(e)), 500
+
+if __name__ == '__main__':
+    # Set up logging
+    import logging
+    logging.basicConfig(level=logging.INFO)
+
+    # Get host and port from environment variables or use defaults
+    host = os.environ.get('HOST', '0.0.0.0')
+    port = int(os.environ.get('PORT', 8899))
+
+    print(f"Starting server at http://{host}:{port}")
+    app.run(host=host, port=port, debug=True)

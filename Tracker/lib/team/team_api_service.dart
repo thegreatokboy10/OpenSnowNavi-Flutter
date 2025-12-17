@@ -48,6 +48,7 @@ class TeamApiService {
         Uri.parse('$_baseUrl/api/team'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
+          'id': name.hashCode.toString(),
           'name': name,
           'resort': resort,
           'maxSize': maxSize,

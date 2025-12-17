@@ -2,6 +2,7 @@
 import 'dart:async';
 import 'package:geolocator/geolocator.dart';
 import '../services/search_service.dart' show LatLng;
+import '../member/member_service.dart';
 import 'device_service.dart';
 import 'team_api_service.dart';
 import 'team_models.dart';
@@ -12,6 +13,7 @@ class TeamService {
 
   final DeviceService _deviceService = DeviceService.instance;
   final TeamStorageService _storageService = TeamStorageService.instance;
+  final MemberService _memberService = MemberService.instance;
 
   Team? _currentTeam;
   Timer? _locationUpdateTimer;
@@ -39,6 +41,30 @@ class TeamService {
 
   /// 同步获取设备ID（需要先调用 initialize）
   String get deviceId => _cachedDeviceId ?? _deviceService.getDeviceIdSync();
+
+  /// 获取有效的ID（优先使用 memberId，否则使用 deviceId）
+  /// 用于创建/加入/恢复团队时的身份标识
+  String get effectiveId {
+    if (_memberService.isLoggedIn) {
+      return _memberService.currentMember!.id;
+    }
+    return deviceId;
+  }
+
+  /// 获取有效的昵称（优先使用会员姓名）
+  Future<String> getEffectiveNickname() async {
+    if (_memberService.isLoggedIn &&
+        _memberService.currentMember?.name != null) {
+      return _memberService.currentMember!.name!;
+    }
+    return await _deviceService.getDefaultNickname();
+  }
+
+  /// 是否已登录会员
+  bool get isMemberLoggedIn => _memberService.isLoggedIn;
+
+  /// 是否可以创建团队（super_admin 或 admin 可以）
+  bool get canCreateTeam => _memberService.canCreateTeam;
 
   /// 获取当前团队
   Team? get currentTeam => _currentTeam;
@@ -71,10 +97,16 @@ class TeamService {
 
   /// 初始化 - 尝试恢复之前的团队
   Future<void> initialize() async {
-    // 初始化设备服务
+    // 初始化设备服务和会员服务
     await _deviceService.initialize();
     await _storageService.initialize();
+    await _memberService.initialize();
     _cachedDeviceId = await _deviceService.getDeviceId();
+
+    // 注册会员登出回调 - 会员退出登录时清除团队状态
+    _memberService.onLogout = () {
+      clearTeam();
+    };
 
     // 如果已有团队数据，不需要重新初始化
     if (_currentTeam != null) {
@@ -101,15 +133,15 @@ class TeamService {
       }
     }
 
-    // 如果本地没有保存的团队 ID，或者保存的团队已失效，尝试通过 deviceId 查询
-    print('[TeamService] initialize: trying to find team by deviceId');
-    final result = await _storageService.getTeamByDeviceId(deviceId);
+    // 如果本地没有保存的团队 ID，或者保存的团队已失效，尝试通过 effectiveId 查询
+    print('[TeamService] initialize: trying to find team by effectiveId');
+    final result = await _storageService.getTeamByDeviceId(effectiveId);
     if (result != null && result.found && result.firstTeam != null) {
       print(
-          '[TeamService] initialize: found team ${result.firstTeam!.id} by deviceId');
+          '[TeamService] initialize: found team ${result.firstTeam!.id} by effectiveId');
       await _restoreTeam(result.firstTeam!);
     } else {
-      print('[TeamService] initialize: no team found for deviceId');
+      print('[TeamService] initialize: no team found for effectiveId');
     }
   }
 
@@ -138,22 +170,27 @@ class TeamService {
     onTeamUpdated?.call(_currentTeam);
   }
 
-  /// 创建团队
+  /// 创建团队（必须是 super_admin 会员）
   Future<TeamResult> createTeam({
     required String name,
     required String resortKey,
-    String? nickname,
     int maxMembers = 6,
   }) async {
-    final memberNickname =
-        nickname ?? await _deviceService.getDefaultNickname();
-    await _deviceService.saveNickname(memberNickname);
+    // 检查是否已登录且有权限
+    if (!isMemberLoggedIn) {
+      return TeamResult(success: false, error: '请先登录会员账号');
+    }
+    if (!canCreateTeam) {
+      return TeamResult(success: false, error: '只有管理员可以创建团队');
+    }
+
+    final memberNickname = await getEffectiveNickname();
 
     final result = await _storageService.createTeam(
       name: name,
       resortKey: resortKey,
-      leaderDeviceId: deviceId,
-      leaderNickname: memberNickname,
+      leaderDeviceId: effectiveId, // 使用 memberId
+      leaderNickname: memberNickname, // 使用会员姓名
       maxMembers: maxMembers,
     );
 
@@ -167,16 +204,19 @@ class TeamService {
     return result;
   }
 
-  /// 加入团队
-  Future<JoinResult> joinTeam(String teamId, {String? nickname}) async {
-    final memberNickname =
-        nickname ?? await _deviceService.getDefaultNickname();
-    await _deviceService.saveNickname(memberNickname);
+  /// 加入团队（必须是登录会员）
+  Future<JoinResult> joinTeam(String teamId) async {
+    // 检查是否已登录
+    if (!isMemberLoggedIn) {
+      return JoinResult(success: false, error: '请先登录会员账号');
+    }
+
+    final memberNickname = await getEffectiveNickname();
 
     final result = await _storageService.joinTeam(
       teamId: teamId,
-      deviceId: deviceId,
-      nickname: memberNickname,
+      deviceId: effectiveId, // 使用 memberId
+      nickname: memberNickname, // 使用会员姓名
     );
 
     if (result.success && result.team != null) {
@@ -198,15 +238,27 @@ class TeamService {
     if (_currentTeam == null) return false;
 
     bool success;
-    success = await _storageService.leaveTeam(_currentTeam!.id, deviceId);
+    // 使用 effectiveId - 如果是会员登录，使用 memberId；否则使用 deviceId
+    success = await _storageService.leaveTeam(_currentTeam!.id, effectiveId);
 
     if (success) {
-      _stopTimers();
-      _currentTeam = null;
-      await _deviceService.saveCurrentTeamId(null);
-      onTeamUpdated?.call(null);
+      _clearTeamLocally();
     }
     return success;
+  }
+
+  /// 清除本地团队状态（不调用 API，仅在本地清除）
+  /// 用于会员登出时清除团队数据
+  void _clearTeamLocally() {
+    _stopTimers();
+    _currentTeam = null;
+    _deviceService.saveCurrentTeamId(null);
+    onTeamUpdated?.call(null);
+  }
+
+  /// 清除团队状态（公共方法，供外部调用）
+  void clearTeam() {
+    _clearTeamLocally();
   }
 
   /// 删除成员（仅队长）
