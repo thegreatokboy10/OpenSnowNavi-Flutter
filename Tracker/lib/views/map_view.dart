@@ -1296,7 +1296,49 @@ class _MapViewState extends State<MapView> {
             if (properties.isNotEmpty) {
               final name = properties['name'] ?? properties['ref'] ?? '未知';
               debugPrint('Tapped on feature: $name, properties: $properties');
-              _flyToPosition(coordinates);
+
+              // 提取 feature 的几何形状
+              List<List<double>>? featureCoordinates;
+              final rawGeometry = featureMap['geometry'];
+              debugPrint('Feature geometry raw: $rawGeometry');
+              if (rawGeometry is Map) {
+                final geometryType = rawGeometry['type']?.toString();
+                final geometryCoords = rawGeometry['coordinates'];
+                debugPrint(
+                    'Geometry type: $geometryType, coords count: ${geometryCoords is List ? geometryCoords.length : 0}');
+                if (geometryType == 'LineString' && geometryCoords is List) {
+                  featureCoordinates = [];
+                  for (final coord in geometryCoords) {
+                    if (coord is List && coord.length >= 2) {
+                      featureCoordinates.add([
+                        (coord[0] as num).toDouble(),
+                        (coord[1] as num).toDouble(),
+                      ]);
+                    }
+                  }
+                } else if (geometryType == 'MultiLineString' &&
+                    geometryCoords is List) {
+                  featureCoordinates = [];
+                  for (final line in geometryCoords) {
+                    if (line is List) {
+                      for (final coord in line) {
+                        if (coord is List && coord.length >= 2) {
+                          featureCoordinates.add([
+                            (coord[0] as num).toDouble(),
+                            (coord[1] as num).toDouble(),
+                          ]);
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+              debugPrint(
+                  'Extracted ${featureCoordinates?.length ?? 0} coordinates for highlight');
+
+              // 高亮整个 feature 并调整相机
+              await _highlightFeature(
+                  featureCoordinates, coordinates, properties);
               _showFeatureInfoPanel(properties, coordinates);
               return;
             }
@@ -1658,7 +1700,10 @@ class _MapViewState extends State<MapView> {
           ],
         ),
       ),
-    );
+    ).whenComplete(() {
+      // 关闭面板时移除高亮
+      _removeFeatureHighlight();
+    });
   }
 
   /// 规划路线到团队成员位置
@@ -2177,6 +2222,7 @@ class _MapViewState extends State<MapView> {
         fade ? SkiResorts.lowlightOpacity : SkiResorts.strokeOpacity;
     final liftOpacity =
         fade ? SkiResorts.lowlightOpacity : SkiResorts.liftStrokeOpacity;
+    final labelOpacity = fade ? SkiResorts.lowlightOpacity : 1.0;
 
     final difficulties = [
       'connection',
@@ -2189,6 +2235,7 @@ class _MapViewState extends State<MapView> {
     ];
 
     for (final difficulty in difficulties) {
+      // 淡化线条图层
       try {
         await _mapboxMap!.style.setStyleLayerProperty(
           'runs_$difficulty',
@@ -2196,13 +2243,43 @@ class _MapViewState extends State<MapView> {
           opacity,
         );
       } catch (e) {}
+
+      // 淡化名称标签图层
+      try {
+        await _mapboxMap!.style.setStyleLayerProperty(
+          'runs_${difficulty}_labels',
+          'text-opacity',
+          labelOpacity,
+        );
+      } catch (e) {}
+
+      // 淡化箭头图层（除了 connection）
+      if (difficulty != 'connection') {
+        try {
+          await _mapboxMap!.style.setStyleLayerProperty(
+            'runs_${difficulty}_arrows',
+            'icon-opacity',
+            labelOpacity,
+          );
+        } catch (e) {}
+      }
     }
 
+    // 淡化缆车线条图层
     try {
       await _mapboxMap!.style.setStyleLayerProperty(
         'lifts',
         'line-opacity',
         liftOpacity,
+      );
+    } catch (e) {}
+
+    // 淡化缆车名称标签图层
+    try {
+      await _mapboxMap!.style.setStyleLayerProperty(
+        'lifts_labels',
+        'text-opacity',
+        labelOpacity,
       );
     } catch (e) {}
   }
@@ -2302,6 +2379,182 @@ class _MapViewState extends State<MapView> {
     } catch (e) {}
 
     await _fadeRunsAndLiftsLayers(false);
+  }
+
+  /// 高亮显示被点击的雪道或缆车
+  Future<void> _highlightFeature(List<List<double>>? featureCoordinates,
+      Position tapPosition, Map<String, dynamic> properties) async {
+    if (_mapboxMap == null) return;
+
+    // 先移除旧的高亮
+    await _removeFeatureHighlight();
+
+    final coords = featureCoordinates ?? [];
+    final name = properties['name'] ?? properties['ref'] ?? '未知';
+
+    // 如果有完整的几何形状，绘制高亮线
+    if (coords.isNotEmpty) {
+      final geojson = {
+        'type': 'FeatureCollection',
+        'features': [
+          {
+            'type': 'Feature',
+            'geometry': {
+              'type': 'LineString',
+              'coordinates': coords,
+            },
+            'properties': {'name': name},
+          }
+        ],
+      };
+
+      try {
+        await _mapboxMap!.style.addSource(
+          GeoJsonSource(
+              id: 'feature_highlight_source', data: json.encode(geojson)),
+        );
+
+        await _mapboxMap!.style.addLayer(
+          LineLayer(
+            id: 'feature_highlight_layer',
+            sourceId: 'feature_highlight_source',
+            lineColor: SkiResorts.highlightRouteColor,
+            lineWidth: 12.0,
+            lineOpacity: 0.9,
+            lineCap: LineCap.ROUND,
+            lineJoin: LineJoin.ROUND,
+          ),
+        );
+
+        // 调整相机以显示整个 feature
+        await _fitCameraToFeature(coords, tapPosition);
+      } catch (e) {
+        debugPrint('Error highlighting feature: $e');
+      }
+    }
+
+    // 添加点击点标记
+    await _addTapPointMarker(tapPosition);
+  }
+
+  /// 移除 feature 高亮
+  Future<void> _removeFeatureHighlight() async {
+    if (_mapboxMap == null) return;
+
+    try {
+      await _mapboxMap!.style.removeStyleLayer('feature_highlight_layer');
+    } catch (e) {
+      // 图层不存在，忽略
+    }
+    try {
+      await _mapboxMap!.style.removeStyleSource('feature_highlight_source');
+    } catch (e) {
+      // 数据源不存在，忽略
+    }
+
+    // 移除点击点标记
+    if (_tapPointAnnotationManager != null) {
+      try {
+        await _mapboxMap!.annotations
+            .removeAnnotationManager(_tapPointAnnotationManager!);
+        _tapPointAnnotationManager = null;
+      } catch (e) {
+        // 忽略
+      }
+    }
+  }
+
+  PointAnnotationManager? _tapPointAnnotationManager;
+
+  /// 添加点击点标记
+  Future<void> _addTapPointMarker(Position position) async {
+    if (_mapboxMap == null) return;
+
+    // 移除旧的标记
+    if (_tapPointAnnotationManager != null) {
+      try {
+        await _mapboxMap!.annotations
+            .removeAnnotationManager(_tapPointAnnotationManager!);
+      } catch (e) {
+        // 忽略
+      }
+    }
+
+    // 创建新的标记管理器
+    _tapPointAnnotationManager =
+        await _mapboxMap!.annotations.createPointAnnotationManager();
+
+    // 生成标记图标 - 使用带描边的圆点
+    final iconBytes = await MarkerIconGenerator.generateTapPointIcon(
+      color: Color(SkiResorts.highlightRouteColor),
+      size: 24,
+      strokeWidth: 3,
+    );
+
+    await _tapPointAnnotationManager!.create(
+      PointAnnotationOptions(
+        geometry: Point(coordinates: position),
+        image: iconBytes,
+        iconSize: 1.0,
+        iconAnchor: IconAnchor.CENTER,
+      ),
+    );
+  }
+
+  /// 调整相机以显示整个 feature
+  Future<void> _fitCameraToFeature(
+      List<List<double>> coordinates, Position tapPosition) async {
+    if (_mapboxMap == null || coordinates.isEmpty) return;
+
+    double minLng = double.infinity;
+    double maxLng = double.negativeInfinity;
+    double minLat = double.infinity;
+    double maxLat = double.negativeInfinity;
+
+    for (final coord in coordinates) {
+      final lng = coord[0];
+      final lat = coord[1];
+      if (lng < minLng) minLng = lng;
+      if (lng > maxLng) maxLng = lng;
+      if (lat < minLat) minLat = lat;
+      if (lat > maxLat) maxLat = lat;
+    }
+
+    const padding = 0.001;
+    minLng -= padding;
+    maxLng += padding;
+    minLat -= padding;
+    maxLat += padding;
+
+    final bounds = CoordinateBounds(
+      southwest: Point(coordinates: Position(minLng, minLat)),
+      northeast: Point(coordinates: Position(maxLng, maxLat)),
+      infiniteBounds: false,
+    );
+
+    try {
+      // 计算边距，底部留出信息面板的空间
+      final edgeInsets =
+          MbxEdgeInsets(top: 100, left: 50, bottom: 250, right: 50);
+
+      final camera = await _mapboxMap!.cameraForCoordinateBounds(
+        bounds,
+        edgeInsets,
+        null,
+        null,
+        null,
+        null,
+      );
+
+      await _mapboxMap!.flyTo(
+        camera,
+        MapAnimationOptions(duration: 800),
+      );
+    } catch (e) {
+      debugPrint('Error fitting camera to feature: $e');
+      // 如果失败，至少飞到点击位置
+      _flyToPosition(tapPosition);
+    }
   }
 
   /// 高亮显示路线中的某一步（保持你原来的实现）

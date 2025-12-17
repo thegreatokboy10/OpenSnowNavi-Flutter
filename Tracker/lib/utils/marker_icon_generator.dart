@@ -339,5 +339,36 @@ class MarkerIconGenerator {
     return byteData!.buffer.asUint8List();
   }
 
+  /// 生成点击点标记图标（带描边的圆点）
+  static Future<Uint8List> generateTapPointIcon({
+    required Color color,
+    double size = 24,
+    double strokeWidth = 3,
+  }) async {
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    final paint = Paint();
+
+    final center = size / 2;
+    final outerRadius = size / 2 - strokeWidth / 2;
+    final innerRadius = outerRadius - strokeWidth;
+
+    // 绘制白色描边
+    paint.color = Colors.white;
+    paint.style = PaintingStyle.stroke;
+    paint.strokeWidth = strokeWidth;
+    canvas.drawCircle(Offset(center, center), outerRadius, paint);
+
+    // 绘制填充圆
+    paint.color = color;
+    paint.style = PaintingStyle.fill;
+    canvas.drawCircle(Offset(center, center), innerRadius, paint);
+
+    final picture = recorder.endRecording();
+    final image = await picture.toImage(size.toInt(), size.toInt());
+    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    return byteData!.buffer.asUint8List();
+  }
+
   static double _sin(double radians) => math.sin(radians);
 }
