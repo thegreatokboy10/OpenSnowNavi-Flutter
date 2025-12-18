@@ -1,8 +1,8 @@
 {
   "version": 0.6,
-  "generator": "Overpass API 0.7.62.4 2390de5a",
+  "generator": "Overpass API 0.7.62.8 e802775f",
   "osm3s": {
-    "timestamp_osm_base": "2025-01-01T17:16:51Z",
+    "timestamp_osm_base": "2025-12-18T11:42:47Z",
     "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL."
   },
   "elements": [
@@ -36,8 +36,8 @@
 {
   "type": "node",
   "id": 616940,
-  "lat": 46.1838352,
-  "lon": 6.8341134,
+  "lat": 46.1838475,
+  "lon": 6.8341203,
   "tags": {
     "aerialway": "station",
     "ele": "1670",
@@ -170,10 +170,11 @@
 {
   "type": "node",
   "id": 270536210,
-  "lat": 46.2078162,
-  "lon": 6.8573951,
+  "lat": 46.2078213,
+  "lon": 6.8574117,
   "tags": {
     "aerialway": "station",
+    "mapillary": "1224804455763349",
     "name": "Sépaya 2",
     "public_transport": "station"
   }
@@ -554,8 +555,8 @@
 {
   "type": "node",
   "id": 339334406,
-  "lat": 46.1933041,
-  "lon": 6.7731431,
+  "lat": 46.1933453,
+  "lon": 6.7731350,
   "tags": {
     "aerialway": "station",
     "name": "Dromonts 2",
@@ -1848,30 +1849,6 @@
 },
 {
   "type": "node",
-  "id": 808176115,
-  "lat": 46.2543534,
-  "lon": 6.8212993
-},
-{
-  "type": "node",
-  "id": 808184215,
-  "lat": 46.2542029,
-  "lon": 6.8212651
-},
-{
-  "type": "node",
-  "id": 808189897,
-  "lat": 46.2541846,
-  "lon": 6.8214991
-},
-{
-  "type": "node",
-  "id": 808200006,
-  "lat": 46.2542899,
-  "lon": 6.8215221
-},
-{
-  "type": "node",
   "id": 1116749454,
   "lat": 46.1728003,
   "lon": 6.7014466,
@@ -2186,8 +2163,8 @@
 {
   "type": "node",
   "id": 1623715806,
-  "lat": 46.2124456,
-  "lon": 6.8725931,
+  "lat": 46.2124470,
+  "lon": 6.8725536,
   "tags": {
     "aerialway": "station",
     "name": "Sépaya 2",
@@ -2683,8 +2660,8 @@
 {
   "type": "node",
   "id": 1626519554,
-  "lat": 46.1805398,
-  "lon": 6.8202185,
+  "lat": 46.1804994,
+  "lon": 6.8201107,
   "tags": {
     "aerialway": "station",
     "ele": "1983",
@@ -2987,8 +2964,8 @@
 {
   "type": "node",
   "id": 1627691311,
-  "lat": 46.1828362,
-  "lon": 6.8147395,
+  "lat": 46.1828557,
+  "lon": 6.8147341,
   "tags": {
     "aerialway": "station",
     "ele": "2138",
@@ -3015,8 +2992,8 @@
 {
   "type": "node",
   "id": 1627698471,
-  "lat": 46.1836066,
-  "lon": 6.8329468,
+  "lat": 46.1836112,
+  "lon": 6.8329280,
   "tags": {
     "aerialway": "station",
     "ele": "1696",
@@ -3266,8 +3243,8 @@
 {
   "type": "node",
   "id": 1644021974,
-  "lat": 46.1862272,
-  "lon": 6.8109069,
+  "lat": 46.1862270,
+  "lon": 6.8109078,
   "tags": {
     "aerialway": "station",
     "name": "Cuboré",
@@ -3482,8 +3459,8 @@
 {
   "type": "node",
   "id": 2081317936,
-  "lat": 46.2124908,
-  "lon": 6.8725627,
+  "lat": 46.2124898,
+  "lon": 6.8725232,
   "tags": {
     "aerialway": "station",
     "name": "Sépaya 1",
@@ -3493,8 +3470,8 @@
 {
   "type": "node",
   "id": 2081317937,
-  "lat": 46.2096456,
-  "lon": 6.8632430,
+  "lat": 46.2096466,
+  "lon": 6.8632391,
   "tags": {
     "aerialway": "station",
     "name": "Sépaya 1",
@@ -3566,8 +3543,8 @@
 {
   "type": "node",
   "id": 2149363430,
-  "lat": 46.1606530,
-  "lon": 6.6697000
+  "lat": 46.1606544,
+  "lon": 6.6696966
 },
 {
   "type": "node",
@@ -3688,57 +3665,6 @@
   "id": 2185563676,
   "lat": 46.1936385,
   "lon": 6.7727492
-},
-{
-  "type": "node",
-  "id": 2255105502,
-  "lat": 46.2755521,
-  "lon": 6.7211130
-},
-{
-  "type": "node",
-  "id": 2255105506,
-  "lat": 46.2755441,
-  "lon": 6.7209597
-},
-{
-  "type": "node",
-  "id": 2255105521,
-  "lat": 46.2756011,
-  "lon": 6.7210412
-},
-{
-  "type": "node",
-  "id": 2255105529,
-  "lat": 46.2756676,
-  "lon": 6.7209476
-},
-{
-  "type": "node",
-  "id": 2255105538,
-  "lat": 46.2756997,
-  "lon": 6.7213469
-},
-{
-  "type": "node",
-  "id": 2255105612,
-  "lat": 46.2758261,
-  "lon": 6.7211616
-},
-{
-  "type": "node",
-  "id": 2256170514,
-  "lat": 46.2542442,
-  "lon": 6.8215124,
-  "tags": {
-    "entrance": "main"
-  }
-},
-{
-  "type": "node",
-  "id": 2256170526,
-  "lat": 46.2543710,
-  "lon": 6.8214123
 },
 {
   "type": "node",
@@ -4160,8 +4086,8 @@
 {
   "type": "node",
   "id": 2610994315,
-  "lat": 46.3785038,
-  "lon": 6.7261882,
+  "lat": 46.3785283,
+  "lon": 6.7261942,
   "tags": {
     "aerialway": "station",
     "aerialway:access": "entry",
@@ -4186,8 +4112,8 @@
 {
   "type": "node",
   "id": 2610994381,
-  "lat": 46.3784948,
-  "lon": 6.7261263,
+  "lat": 46.3784943,
+  "lon": 6.7261444,
   "tags": {
     "aerialway": "station",
     "aerialway:access": "entry",
@@ -4693,8 +4619,8 @@
 {
   "type": "node",
   "id": 2722333406,
-  "lat": 46.3380123,
-  "lon": 6.7016469,
+  "lat": 46.3381854,
+  "lon": 6.7016610,
   "tags": {
     "aerialway": "station",
     "aerialway:summer:access": "no",
@@ -4837,8 +4763,8 @@
 {
   "type": "node",
   "id": 2843297347,
-  "lat": 46.1478337,
-  "lon": 6.6606728,
+  "lat": 46.1478581,
+  "lon": 6.6606930,
   "tags": {
     "aerialway": "pylon",
     "ref": "P4"
@@ -5547,8 +5473,8 @@
 {
   "type": "node",
   "id": 3224083005,
-  "lat": 46.2781896,
-  "lon": 6.7179155,
+  "lat": 46.2781646,
+  "lon": 6.7179182,
   "tags": {
     "aerialway": "station",
     "public_transport": "station"
@@ -5557,8 +5483,8 @@
 {
   "type": "node",
   "id": 3224083014,
-  "lat": 46.2791046,
-  "lon": 6.7178325,
+  "lat": 46.2791060,
+  "lon": 6.7178392,
   "tags": {
     "aerialway": "station",
     "public_transport": "station"
@@ -5703,8 +5629,8 @@
 {
   "type": "node",
   "id": 3232429403,
-  "lat": 46.1932602,
-  "lon": 6.7729873,
+  "lat": 46.1932969,
+  "lon": 6.7729967,
   "tags": {
     "aerialway": "station",
     "name": "Dromonts 1",
@@ -5845,8 +5771,8 @@
 {
   "type": "node",
   "id": 3235028992,
-  "lat": 46.1677243,
-  "lon": 6.6926391,
+  "lat": 46.1668707,
+  "lon": 6.6926607,
   "tags": {
     "aerialway": "station",
     "name": "Viking",
@@ -5927,12 +5853,6 @@
     "name": "Corne 1",
     "public_transport": "station"
   }
-},
-{
-  "type": "node",
-  "id": 3237276265,
-  "lat": 46.2541829,
-  "lon": 6.8213616
 },
 {
   "type": "node",
@@ -6040,28 +5960,6 @@
   "tags": {
     "aerialway": "station",
     "name": "Culet 2",
-    "public_transport": "station"
-  }
-},
-{
-  "type": "node",
-  "id": 3400949465,
-  "lat": 46.2478432,
-  "lon": 6.8710998,
-  "tags": {
-    "aerialway": "station",
-    "name": "Culet 1",
-    "public_transport": "station"
-  }
-},
-{
-  "type": "node",
-  "id": 3400949466,
-  "lat": 46.2554179,
-  "lon": 6.8674786,
-  "tags": {
-    "aerialway": "station",
-    "name": "Culet 1",
     "public_transport": "station"
   }
 },
@@ -6505,18 +6403,6 @@
     "operator": "SAEM Sports et Tourisme Châtel",
     "public_transport": "station"
   }
-},
-{
-  "type": "node",
-  "id": 3814473507,
-  "lat": 46.2543288,
-  "lon": 6.8214947
-},
-{
-  "type": "node",
-  "id": 3814473508,
-  "lat": 46.2543042,
-  "lon": 6.8214858
 },
 {
   "type": "node",
@@ -7357,12 +7243,6 @@
   "tags": {
     "aerialway": "pylon"
   }
-},
-{
-  "type": "node",
-  "id": 6590690464,
-  "lat": 46.1607987,
-  "lon": 6.6695154
 },
 {
   "type": "node",
@@ -9027,8 +8907,8 @@
 {
   "type": "node",
   "id": 8648588942,
-  "lat": 46.1684146,
-  "lon": 6.6924146,
+  "lat": 46.1685450,
+  "lon": 6.6921563,
   "tags": {
     "aerialway": "station",
     "name": "Viking",
@@ -9299,8 +9179,8 @@
 {
   "type": "node",
   "id": 8667533244,
-  "lat": 46.1843716,
-  "lon": 6.8329091,
+  "lat": 46.1843658,
+  "lon": 6.8329541,
   "tags": {
     "aerialway": "pylon"
   }
@@ -9308,8 +9188,8 @@
 {
   "type": "node",
   "id": 8667533245,
-  "lat": 46.1849181,
-  "lon": 6.8316821,
+  "lat": 46.1849051,
+  "lon": 6.8317405,
   "tags": {
     "aerialway": "pylon"
   }
@@ -9317,8 +9197,8 @@
 {
   "type": "node",
   "id": 8667533246,
-  "lat": 46.1853598,
-  "lon": 6.8306902,
+  "lat": 46.1853480,
+  "lon": 6.8307439,
   "tags": {
     "aerialway": "pylon"
   }
@@ -9326,8 +9206,8 @@
 {
   "type": "node",
   "id": 8667533247,
-  "lat": 46.1858749,
-  "lon": 6.8295337,
+  "lat": 46.1858595,
+  "lon": 6.8295930,
   "tags": {
     "aerialway": "pylon"
   }
@@ -9335,8 +9215,8 @@
 {
   "type": "node",
   "id": 8667533248,
-  "lat": 46.1869176,
-  "lon": 6.8271926,
+  "lat": 46.1869462,
+  "lon": 6.8271476,
   "tags": {
     "aerialway": "pylon"
   }
@@ -9344,8 +9224,8 @@
 {
   "type": "node",
   "id": 8667533249,
-  "lat": 46.1873821,
-  "lon": 6.8261496,
+  "lat": 46.1874147,
+  "lon": 6.8260933,
   "tags": {
     "aerialway": "pylon"
   }
@@ -9353,8 +9233,8 @@
 {
   "type": "node",
   "id": 8667533250,
-  "lat": 46.1878460,
-  "lon": 6.8251080,
+  "lat": 46.1878667,
+  "lon": 6.8250762,
   "tags": {
     "aerialway": "pylon"
   }
@@ -9362,8 +9242,8 @@
 {
   "type": "node",
   "id": 8667533251,
-  "lat": 46.1884186,
-  "lon": 6.8238223,
+  "lat": 46.1884394,
+  "lon": 6.8237875,
   "tags": {
     "aerialway": "pylon"
   }
@@ -9371,8 +9251,8 @@
 {
   "type": "node",
   "id": 8667533252,
-  "lat": 46.1887806,
-  "lon": 6.8230094,
+  "lat": 46.1887932,
+  "lon": 6.8229913,
   "tags": {
     "aerialway": "pylon"
   }
@@ -9380,8 +9260,8 @@
 {
   "type": "node",
   "id": 8667533253,
-  "lat": 46.1896600,
-  "lon": 6.8210348,
+  "lat": 46.1896908,
+  "lon": 6.8209715,
   "tags": {
     "aerialway": "pylon"
   }
@@ -9389,8 +9269,8 @@
 {
   "type": "node",
   "id": 8667533254,
-  "lat": 46.1898859,
-  "lon": 6.8205275,
+  "lat": 46.1899108,
+  "lon": 6.8204763,
   "tags": {
     "aerialway": "pylon"
   }
@@ -9398,8 +9278,8 @@
 {
   "type": "node",
   "id": 8667533255,
-  "lat": 46.1906564,
-  "lon": 6.8187974,
+  "lat": 46.1907003,
+  "lon": 6.8186998,
   "tags": {
     "aerialway": "pylon"
   }
@@ -9407,8 +9287,8 @@
 {
   "type": "node",
   "id": 8667533256,
-  "lat": 46.1909862,
-  "lon": 6.8180568,
+  "lat": 46.1910352,
+  "lon": 6.8179460,
   "tags": {
     "aerialway": "pylon"
   }
@@ -9416,8 +9296,8 @@
 {
   "type": "node",
   "id": 8667533257,
-  "lat": 46.1917571,
-  "lon": 6.8163258,
+  "lat": 46.1917640,
+  "lon": 6.8163059,
   "tags": {
     "aerialway": "pylon"
   }
@@ -9425,8 +9305,8 @@
 {
   "type": "node",
   "id": 8667533258,
-  "lat": 46.1835876,
-  "lon": 6.8324974,
+  "lat": 46.1835933,
+  "lon": 6.8324969,
   "tags": {
     "aerialway": "pylon"
   }
@@ -9434,8 +9314,8 @@
 {
   "type": "node",
   "id": 8667533259,
-  "lat": 46.1835023,
-  "lon": 6.8304821,
+  "lat": 46.1835119,
+  "lon": 6.8305354,
   "tags": {
     "aerialway": "pylon"
   }
@@ -9443,8 +9323,8 @@
 {
   "type": "node",
   "id": 8667533260,
-  "lat": 46.1834284,
-  "lon": 6.8287363,
+  "lat": 46.1834394,
+  "lon": 6.8287907,
   "tags": {
     "aerialway": "pylon"
   }
@@ -9452,8 +9332,8 @@
 {
   "type": "node",
   "id": 8667533261,
-  "lat": 46.1833781,
-  "lon": 6.8275454,
+  "lat": 46.1833898,
+  "lon": 6.8275949,
   "tags": {
     "aerialway": "pylon"
   }
@@ -9461,8 +9341,8 @@
 {
   "type": "node",
   "id": 8667533262,
-  "lat": 46.1833051,
-  "lon": 6.8258219,
+  "lat": 46.1833184,
+  "lon": 6.8258758,
   "tags": {
     "aerialway": "pylon"
   }
@@ -9470,8 +9350,8 @@
 {
   "type": "node",
   "id": 8667533263,
-  "lat": 46.1832415,
-  "lon": 6.8243179,
+  "lat": 46.1832521,
+  "lon": 6.8242788,
   "tags": {
     "aerialway": "pylon"
   }
@@ -9479,8 +9359,8 @@
 {
   "type": "node",
   "id": 8667533264,
-  "lat": 46.1831687,
-  "lon": 6.8225982,
+  "lat": 46.1831807,
+  "lon": 6.8225595,
   "tags": {
     "aerialway": "pylon"
   }
@@ -9488,8 +9368,8 @@
 {
   "type": "node",
   "id": 8667533265,
-  "lat": 46.1831122,
-  "lon": 6.8212623,
+  "lat": 46.1831222,
+  "lon": 6.8211524,
   "tags": {
     "aerialway": "pylon"
   }
@@ -9497,8 +9377,8 @@
 {
   "type": "node",
   "id": 8667533266,
-  "lat": 46.1831005,
-  "lon": 6.8209867,
+  "lat": 46.1831140,
+  "lon": 6.8209548,
   "tags": {
     "aerialway": "pylon"
   }
@@ -9506,8 +9386,8 @@
 {
   "type": "node",
   "id": 8667533267,
-  "lat": 46.1830165,
-  "lon": 6.8190015,
+  "lat": 46.1830325,
+  "lon": 6.8189908,
   "tags": {
     "aerialway": "pylon"
   }
@@ -9515,8 +9395,8 @@
 {
   "type": "node",
   "id": 8667533268,
-  "lat": 46.1829374,
-  "lon": 6.8171306,
+  "lat": 46.1829552,
+  "lon": 6.8171310,
   "tags": {
     "aerialway": "pylon"
   }
@@ -9524,8 +9404,8 @@
 {
   "type": "node",
   "id": 8667533269,
-  "lat": 46.1828780,
-  "lon": 6.8157282,
+  "lat": 46.1828963,
+  "lon": 6.8157123,
   "tags": {
     "aerialway": "pylon"
   }
@@ -9533,8 +9413,8 @@
 {
   "type": "node",
   "id": 8667533270,
-  "lat": 46.1828571,
-  "lon": 6.8152339,
+  "lat": 46.1828734,
+  "lon": 6.8151604,
   "tags": {
     "aerialway": "pylon"
   }
@@ -12106,8 +11986,8 @@
 {
   "type": "node",
   "id": 8667683450,
-  "lat": 46.3390574,
-  "lon": 6.7017377,
+  "lat": 46.3390139,
+  "lon": 6.7017243,
   "tags": {
     "aerialway": "pylon"
   }
@@ -12115,8 +11995,8 @@
 {
   "type": "node",
   "id": 8667683451,
-  "lat": 46.3382438,
-  "lon": 6.7016670,
+  "lat": 46.3382850,
+  "lon": 6.7016681,
   "tags": {
     "aerialway": "pylon"
   }
@@ -13820,8 +13700,8 @@
 {
   "type": "node",
   "id": 8667880134,
-  "lat": 46.1741838,
-  "lon": 6.8271254,
+  "lat": 46.1741980,
+  "lon": 6.8271011,
   "tags": {
     "aerialway": "pylon"
   }
@@ -13829,8 +13709,8 @@
 {
   "type": "node",
   "id": 8667880135,
-  "lat": 46.1746180,
-  "lon": 6.8266536,
+  "lat": 46.1746403,
+  "lon": 6.8266104,
   "tags": {
     "aerialway": "pylon"
   }
@@ -13838,8 +13718,8 @@
 {
   "type": "node",
   "id": 8667880136,
-  "lat": 46.1753716,
-  "lon": 6.8258347,
+  "lat": 46.1754114,
+  "lon": 6.8257551,
   "tags": {
     "aerialway": "pylon"
   }
@@ -13847,8 +13727,8 @@
 {
   "type": "node",
   "id": 8667880137,
-  "lat": 46.1754758,
-  "lon": 6.8257215,
+  "lat": 46.1754707,
+  "lon": 6.8256894,
   "tags": {
     "aerialway": "pylon"
   }
@@ -13856,8 +13736,8 @@
 {
   "type": "node",
   "id": 8667880138,
-  "lat": 46.1761978,
-  "lon": 6.8249369,
+  "lat": 46.1762029,
+  "lon": 6.8248771,
   "tags": {
     "aerialway": "pylon"
   }
@@ -13865,8 +13745,8 @@
 {
   "type": "node",
   "id": 8667880139,
-  "lat": 46.1766245,
-  "lon": 6.8244732,
+  "lat": 46.1766532,
+  "lon": 6.8243776,
   "tags": {
     "aerialway": "pylon"
   }
@@ -13874,8 +13754,8 @@
 {
   "type": "node",
   "id": 8667880140,
-  "lat": 46.1772943,
-  "lon": 6.8237454,
+  "lat": 46.1772855,
+  "lon": 6.8236761,
   "tags": {
     "aerialway": "pylon"
   }
@@ -13883,8 +13763,8 @@
 {
   "type": "node",
   "id": 8667880141,
-  "lat": 46.1781465,
-  "lon": 6.8228193,
+  "lat": 46.1781385,
+  "lon": 6.8227298,
   "tags": {
     "aerialway": "pylon"
   }
@@ -13892,8 +13772,8 @@
 {
   "type": "node",
   "id": 8667880142,
-  "lat": 46.1788632,
-  "lon": 6.8220405,
+  "lat": 46.1788515,
+  "lon": 6.8219389,
   "tags": {
     "aerialway": "pylon"
   }
@@ -13901,8 +13781,8 @@
 {
   "type": "node",
   "id": 8667880143,
-  "lat": 46.1799374,
-  "lon": 6.8208731,
+  "lat": 46.1799233,
+  "lon": 6.8207499,
   "tags": {
     "aerialway": "pylon"
   }
@@ -13910,8 +13790,8 @@
 {
   "type": "node",
   "id": 8667880144,
-  "lat": 46.1804340,
-  "lon": 6.8203335,
+  "lat": 46.1804325,
+  "lon": 6.8201850,
   "tags": {
     "aerialway": "pylon"
   }
@@ -13919,8 +13799,8 @@
 {
   "type": "node",
   "id": 8667880145,
-  "lat": 46.1803290,
-  "lon": 6.8204476,
+  "lat": 46.1803797,
+  "lon": 6.8202435,
   "tags": {
     "aerialway": "pylon"
   }
@@ -16518,27 +16398,9 @@
 },
 {
   "type": "node",
-  "id": 9041386988,
-  "lat": 46.2550104,
-  "lon": 6.8676734,
-  "tags": {
-    "aerialway": "pylon"
-  }
-},
-{
-  "type": "node",
   "id": 9041386989,
   "lat": 46.2550262,
   "lon": 6.8677506,
-  "tags": {
-    "aerialway": "pylon"
-  }
-},
-{
-  "type": "node",
-  "id": 9041386990,
-  "lat": 46.2538170,
-  "lon": 6.8682440,
   "tags": {
     "aerialway": "pylon"
   }
@@ -16554,27 +16416,9 @@
 },
 {
   "type": "node",
-  "id": 9041386992,
-  "lat": 46.2530507,
-  "lon": 6.8686103,
-  "tags": {
-    "aerialway": "pylon"
-  }
-},
-{
-  "type": "node",
   "id": 9041386993,
   "lat": 46.2530649,
   "lon": 6.8686793,
-  "tags": {
-    "aerialway": "pylon"
-  }
-},
-{
-  "type": "node",
-  "id": 9041386994,
-  "lat": 46.2523988,
-  "lon": 6.8689220,
   "tags": {
     "aerialway": "pylon"
   }
@@ -16590,27 +16434,9 @@
 },
 {
   "type": "node",
-  "id": 9041386996,
-  "lat": 46.2515142,
-  "lon": 6.8693449,
-  "tags": {
-    "aerialway": "pylon"
-  }
-},
-{
-  "type": "node",
   "id": 9041386997,
   "lat": 46.2515285,
   "lon": 6.8694067,
-  "tags": {
-    "aerialway": "pylon"
-  }
-},
-{
-  "type": "node",
-  "id": 9041386998,
-  "lat": 46.2509175,
-  "lon": 6.8696302,
   "tags": {
     "aerialway": "pylon"
   }
@@ -16626,15 +16452,6 @@
 },
 {
   "type": "node",
-  "id": 9041387000,
-  "lat": 46.2499873,
-  "lon": 6.8700748,
-  "tags": {
-    "aerialway": "pylon"
-  }
-},
-{
-  "type": "node",
   "id": 9041387001,
   "lat": 46.2499975,
   "lon": 6.8701316,
@@ -16644,27 +16461,9 @@
 },
 {
   "type": "node",
-  "id": 9041387002,
-  "lat": 46.2488032,
-  "lon": 6.8706409,
-  "tags": {
-    "aerialway": "pylon"
-  }
-},
-{
-  "type": "node",
   "id": 9041387003,
   "lat": 46.2488127,
   "lon": 6.8706925,
-  "tags": {
-    "aerialway": "pylon"
-  }
-},
-{
-  "type": "node",
-  "id": 9041387004,
-  "lat": 46.2480650,
-  "lon": 6.8709938,
   "tags": {
     "aerialway": "pylon"
   }
@@ -17386,54 +17185,6 @@
   "id": 9403738498,
   "lat": 46.2318528,
   "lon": 6.7880212
-},
-{
-  "type": "node",
-  "id": 9403897801,
-  "lat": 46.2757910,
-  "lon": 6.7211114
-},
-{
-  "type": "node",
-  "id": 9403897802,
-  "lat": 46.2757964,
-  "lon": 6.7211035
-},
-{
-  "type": "node",
-  "id": 9403897803,
-  "lat": 46.2757527,
-  "lon": 6.7210412
-},
-{
-  "type": "node",
-  "id": 9403897804,
-  "lat": 46.2757426,
-  "lon": 6.7210560
-},
-{
-  "type": "node",
-  "id": 9403897805,
-  "lat": 46.2756095,
-  "lon": 6.7212180
-},
-{
-  "type": "node",
-  "id": 9403897806,
-  "lat": 46.2756175,
-  "lon": 6.7212063
-},
-{
-  "type": "node",
-  "id": 9403897807,
-  "lat": 46.2755809,
-  "lon": 6.7209057
-},
-{
-  "type": "node",
-  "id": 9403897808,
-  "lat": 46.2756398,
-  "lon": 6.7209875
 },
 {
   "type": "node",
@@ -19475,12 +19226,6 @@
 },
 {
   "type": "node",
-  "id": 11392563383,
-  "lat": 46.1607842,
-  "lon": 6.6695522
-},
-{
-  "type": "node",
   "id": 11420876037,
   "lat": 46.1607395,
   "lon": 6.6700906,
@@ -19494,27 +19239,11 @@
 {
   "type": "node",
   "id": 11433125871,
-  "lat": 46.1607913,
-  "lon": 6.6695341,
+  "lat": 46.1607840,
+  "lon": 6.6695545,
   "tags": {
-    "access": "customers",
-    "amenity": "charging_station",
-    "capacity": "2",
-    "fee": "no",
-    "manufacturer": "Tesla",
-    "maxstay": "10 hours",
-    "motorcar": "yes",
-    "operator": "Les Gets",
-    "socket:type2": "2",
-    "socket:type2:output": "11 kW",
-    "socket:type2_cable": "2"
+    "no:amenity": "charging_station"
   }
-},
-{
-  "type": "node",
-  "id": 11433125872,
-  "lat": 46.1607708,
-  "lon": 6.6695852
 },
 {
   "type": "node",
@@ -19705,6 +19434,18 @@
   "lon": 6.8511278,
   "tags": {
     "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 11923713004,
+  "lat": 46.2094591,
+  "lon": 6.7736267,
+  "tags": {
+    "hiking": "yes",
+    "information": "route_marker",
+    "support": "pole",
+    "tourism": "information"
   }
 },
 {
@@ -20149,6 +19890,291 @@
   }
 },
 {
+  "type": "node",
+  "id": 12518067270,
+  "lat": 46.1839355,
+  "lon": 6.8339224,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 12518067271,
+  "lat": 46.1864001,
+  "lon": 6.8283766,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 12518067272,
+  "lat": 46.1897110,
+  "lon": 6.8209261,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 12518067273,
+  "lat": 46.1897436,
+  "lon": 6.8208527,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 12518067274,
+  "lat": 46.1910644,
+  "lon": 6.8178803,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 12518077708,
+  "lat": 46.1836029,
+  "lon": 6.8327272,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 12587808432,
+  "lat": 46.1606837,
+  "lon": 6.6698559
+},
+{
+  "type": "node",
+  "id": 12715240662,
+  "lat": 46.1647918,
+  "lon": 6.7150823,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 12715240663,
+  "lat": 46.1601501,
+  "lon": 6.7140239,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 13055688748,
+  "lat": 46.3384030,
+  "lon": 6.7016755,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 13072088489,
+  "lat": 46.2124123,
+  "lon": 6.8724400,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 13072088490,
+  "lat": 46.2124567,
+  "lon": 6.8724151,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 13072088491,
+  "lat": 46.2122408,
+  "lon": 6.8718788,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 13072088492,
+  "lat": 46.2122844,
+  "lon": 6.8718524,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 13072088493,
+  "lat": 46.2117877,
+  "lon": 6.8703954,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 13072088494,
+  "lat": 46.2118298,
+  "lon": 6.8703679,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 13072088495,
+  "lat": 46.2113262,
+  "lon": 6.8688847,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 13072088496,
+  "lat": 46.2113680,
+  "lon": 6.8688600,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 13072088497,
+  "lat": 46.2109325,
+  "lon": 6.8675960,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 13072088498,
+  "lat": 46.2109729,
+  "lon": 6.8675698,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 13072088499,
+  "lat": 46.2103788,
+  "lon": 6.8657835,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 13072088500,
+  "lat": 46.2104184,
+  "lon": 6.8657592,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 13072107601,
+  "lat": 46.2099554,
+  "lon": 6.8643974,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 13072107602,
+  "lat": 46.2099943,
+  "lon": 6.8643746,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 13072107603,
+  "lat": 46.2095047,
+  "lon": 6.8629220,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 13072107604,
+  "lat": 46.2090131,
+  "lon": 6.8613128,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 13072107605,
+  "lat": 46.2084217,
+  "lon": 6.8593772,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 13072107606,
+  "lat": 46.2080344,
+  "lon": 6.8581094,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 13073267666,
+  "lat": 46.1852940,
+  "lon": 6.8119823
+},
+{
+  "type": "node",
+  "id": 13234391936,
+  "lat": 46.1408006,
+  "lon": 6.6977565,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 13234413601,
+  "lat": 46.1502904,
+  "lon": 6.7199885,
+  "tags": {
+    "aerialway": "pylon"
+  }
+},
+{
+  "type": "node",
+  "id": 13304960232,
+  "lat": 46.1475639,
+  "lon": 6.6862152
+},
+{
+  "type": "node",
+  "id": 13304960233,
+  "lat": 46.1483379,
+  "lon": 6.6861513
+},
+{
   "type": "way",
   "id": 8215532,
   "nodes": [
@@ -20165,9 +20191,12 @@
   "tags": {
     "aerialway": "chair_lift",
     "aerialway:bicycle": "summer",
+    "aerialway:bubble": "no",
     "aerialway:capacity": "4000",
+    "aerialway:duration": "3",
     "aerialway:occupancy": "8",
-    "name": "Crosets"
+    "name": "Crosets",
+    "year_of_construction": "2008"
   }
 },
 {
@@ -20195,7 +20224,8 @@
     "aerialway:difference": "306",
     "aerialway:duration": "8:00",
     "aerialway:occupancy": "4",
-    "name": "Pauvre Conche"
+    "name": "Pauvre Conche",
+    "year_of_construction": "1991"
   }
 },
 {
@@ -20209,7 +20239,8 @@
     "aerialway": "platter",
     "aerialway:capacity": "600",
     "aerialway:occupancy": "1",
-    "name": "Ripaille 1"
+    "name": "Ripaille 1",
+    "year_of_construction": "1988"
   }
 },
 {
@@ -20217,19 +20248,24 @@
   "id": 8215671,
   "nodes": [
     616940,
+    12518067270,
     8667533244,
     8667533245,
     8667533246,
     8667533247,
+    12518067271,
     8667533248,
     8667533249,
     8667533250,
     8667533251,
     8667533252,
     8667533253,
+    12518067272,
+    12518067273,
     8667533254,
     8667533255,
     8667533256,
+    12518067274,
     8667533257,
     1625515262
   ],
@@ -20238,8 +20274,10 @@
     "aerialway:bicycle": "summer",
     "aerialway:bubble": "no",
     "aerialway:capacity": "2400",
+    "aerialway:duration": "6:50",
     "aerialway:occupancy": "4",
-    "name": "Mossettes"
+    "name": "Mossettes",
+    "year_of_construction": "1994"
   }
 },
 {
@@ -20375,8 +20413,10 @@
   "tags": {
     "aerialway": "chair_lift",
     "aerialway:capacity": "2000",
+    "aerialway:duration": "9:30",
     "aerialway:occupancy": "4",
-    "name": "Chaux"
+    "name": "Chaux",
+    "year_of_construction": "1989"
   }
 },
 {
@@ -20403,9 +20443,11 @@
   "tags": {
     "aerialway": "chair_lift",
     "aerialway:capacity": "2400",
+    "aerialway:duration": "8",
     "aerialway:occupancy": "4",
     "bicycle": "yes",
-    "name": "Aiguille des Champeys"
+    "name": "Aiguille des Champeys",
+    "year_of_construction": "1988"
   }
 },
 {
@@ -20421,8 +20463,10 @@
     "aerialway": "cable_car",
     "aerialway:bicycle": "summer",
     "aerialway:capacity": "1250",
+    "aerialway:duration": "5",
     "aerialway:occupancy": "125",
-    "name": "Champéry - Croix de Culet"
+    "name": "Champéry - Croix de Culet",
+    "year_of_construction": "1987"
   }
 },
 {
@@ -20434,8 +20478,10 @@
   ],
   "tags": {
     "aerialway": "platter",
+    "aerialway:capacity": "600",
+    "aerialway:duration": "3:40",
     "name": "Marcheuson",
-    "odbl": "clean"
+    "year_of_construction": "1985"
   }
 },
 {
@@ -20454,8 +20500,10 @@
   "tags": {
     "aerialway": "chair_lift",
     "aerialway:capacity": "2400",
+    "aerialway:duration": "3",
     "aerialway:occupancy": "6",
-    "name": "Planachaux"
+    "name": "Planachaux",
+    "year_of_construction": "2004"
   }
 },
 {
@@ -20463,6 +20511,7 @@
   "id": 8216408,
   "nodes": [
     1627698471,
+    12518077708,
     8667533258,
     8667533259,
     8667533260,
@@ -20481,9 +20530,10 @@
   "tags": {
     "aerialway": "chair_lift",
     "aerialway:capacity": "3000",
+    "aerialway:duration": "5:30",
     "aerialway:occupancy": "6",
     "name": "Grand Conche",
-    "ref:FR:CAIRN": "741160"
+    "year_of_construction": "2011"
   }
 },
 {
@@ -20537,7 +20587,8 @@
     "aerialway": "t-bar",
     "aerialway:capacity": "1200",
     "aerialway:occupancy": "2",
-    "name": "Ripaille 2"
+    "name": "Ripaille 2",
+    "year_of_construction": "1988"
   }
 },
 {
@@ -20558,7 +20609,8 @@
   "tags": {
     "aerialway": "t-bar",
     "aerialway:capacity": "900",
-    "name": "Champeys"
+    "name": "Champeys",
+    "year_of_construction": "1976"
   }
 },
 {
@@ -20830,27 +20882,6 @@
 },
 {
   "type": "way",
-  "id": 24898745,
-  "nodes": [
-    3400949465,
-    9041387004,
-    9041387002,
-    9041387000,
-    9041386998,
-    9041386996,
-    9041386994,
-    9041386992,
-    9041386990,
-    9041386988,
-    3400949466
-  ],
-  "tags": {
-    "aerialway": "platter",
-    "name": "Cutet 1"
-  }
-},
-{
-  "type": "way",
   "id": 24899026,
   "nodes": [
     3400985622,
@@ -20885,7 +20916,9 @@
   ],
   "tags": {
     "aerialway": "t-bar",
-    "name": "Derrière Pertuis"
+    "aerialway:capacity": "900",
+    "name": "Derrière Pertuis",
+    "year_of_construction": "1977"
   }
 },
 {
@@ -20893,11 +20926,23 @@
   "id": 24899602,
   "nodes": [
     1623715806,
+    13072088489,
+    13072088491,
+    13072088493,
+    13072088495,
+    13072088497,
+    13072088499,
+    13072107601,
+    13072107603,
+    13072107604,
+    13072107605,
+    13072107606,
     270536210
   ],
   "tags": {
     "aerialway": "t-bar",
-    "name": "Sépaya 2"
+    "name": "Sepaya I",
+    "year_of_construction": "1981"
   }
 },
 {
@@ -20925,12 +20970,13 @@
   "tags": {
     "aerialway": "chair_lift",
     "aerialway:bubble": "yes",
-    "aerialway:capacity": "2400",
+    "aerialway:capacity": "1600",
     "aerialway:duration": "5.34",
     "aerialway:heating": "no",
     "aerialway:occupancy": "6",
     "name": "Grand Paradis",
-    "oneway": "no"
+    "oneway": "no",
+    "year_of_construction": "2004"
   }
 },
 {
@@ -20955,9 +21001,11 @@
   "tags": {
     "aerialway": "chair_lift",
     "aerialway:capacity": "2400",
+    "aerialway:duration": "7",
     "aerialway:occupancy": "4",
     "name": "Chavanette",
-    "oneway": "no"
+    "oneway": "no",
+    "year_of_construction": "1987"
   }
 },
 {
@@ -21185,6 +21233,7 @@
     "aerialway:duration": "5",
     "aerialway:length": "1620",
     "aerialway:occupancy": "6",
+    "bicycle": "yes",
     "manufacturer": "Poma",
     "manufacturer:wikidata": "Q2103240",
     "name": "Proclou",
@@ -21293,7 +21342,10 @@
   ],
   "tags": {
     "aerialway": "platter",
-    "name": "Hameau"
+    "aerialway:capacity": "600",
+    "aerialway:duration": "2",
+    "name": "Hameau",
+    "year_of_construction": "2008"
   }
 },
 {
@@ -21301,12 +21353,17 @@
   "id": 29283989,
   "nodes": [
     1644021974,
+    13073267666,
     361485779
   ],
   "tags": {
     "aerialway": "drag_lift",
+    "aerialway:capacity": "605",
+    "aerialway:duration": "3:20",
+    "description": "Le TK Cuboré est inclus dans les deux domaines skiables d'Avoriaz et Champéry – Les Crosets – Champoussin – Morgins",
     "name": "Cuboré",
-    "ref:FR:CAIRN": "740403"
+    "ref:FR:CAIRN": "740403",
+    "year_of_construction": "2012"
   }
 },
 {
@@ -21739,6 +21796,7 @@
     8667821225,
     8667821226,
     8667821227,
+    13234391936,
     8667821228,
     8667821229,
     8667821230,
@@ -21877,15 +21935,15 @@
   ],
   "tags": {
     "aerialway": "chair_lift",
-    "aerialway:duration": "7:30",
+    "aerialway:duration": "3",
     "aerialway:length": "827",
-    "aerialway:occupancy": "4",
-    "manufacturer": "Skirail",
+    "aerialway:occupancy": "8",
+    "manufacturer": "Poma",
+    "manufacturer:wikidata": "Q2103240",
     "name": "Rosta",
     "opening_hours": "09:00-16:00",
-    "ref:FR:CAIRN": "740316",
-    "source": "GPS",
-    "start_date": "1992"
+    "source": "survey",
+    "start_date": "2025"
   }
 },
 {
@@ -22012,7 +22070,7 @@
   "tags": {
     "aerialway": "chair_lift",
     "aerialway:bubble": "no",
-    "aerialway:capacity": "2400",
+    "aerialway:capacity": "3300",
     "aerialway:difference": "421",
     "aerialway:duration": "6:30",
     "aerialway:heating": "no",
@@ -22104,7 +22162,8 @@
   ],
   "tags": {
     "aerialway": "platter",
-    "name": "Prés 2"
+    "name": "Prés 2",
+    "ref:FR:CAIRN": "740614"
   }
 },
 {
@@ -22116,7 +22175,8 @@
   ],
   "tags": {
     "aerialway": "platter",
-    "name": "Prés 1"
+    "name": "Prés 1",
+    "ref:FR:CAIRN": "740268"
   }
 },
 {
@@ -22498,6 +22558,8 @@
   "id": 32425248,
   "nodes": [
     364631146,
+    12715240662,
+    12715240663,
     364631148
   ],
   "tags": {
@@ -22666,8 +22728,10 @@
   ],
   "tags": {
     "aerialway": "platter",
+    "aerialway:capacity": "720",
     "aerialway:occupancy": "1",
-    "name": "Gueilly"
+    "name": "Gueilly",
+    "year_of_construction": "1999"
   }
 },
 {
@@ -23178,6 +23242,7 @@
     "aerialway:duration": "3.5",
     "manufacturer": "Poma",
     "name": "Téléski du Mont Baron",
+    "ref:FR:CAIRN": "740626",
     "short_name": "TK du Mont Baron",
     "source": "https://www.skiresort.fr/domaine-skiable/bernex/remontees-mecaniques/l87485/",
     "start_date": "1980"
@@ -23274,28 +23339,6 @@
 },
 {
   "type": "way",
-  "id": 66892064,
-  "nodes": [
-    808176115,
-    808184215,
-    3237276265,
-    808189897,
-    2256170514,
-    808200006,
-    3814473508,
-    3814473507,
-    2256170526,
-    808176115
-  ],
-  "tags": {
-    "aerialway": "station",
-    "building": "yes",
-    "public_transport": "station",
-    "source": "extraction vectorielle v1 cadastre-dgi-fr source : Direction Générale des Impôts - Cadas. Mise à jour : 2010"
-  }
-},
-{
-  "type": "way",
   "id": 96360500,
   "nodes": [
     1116749454,
@@ -23334,6 +23377,7 @@
     10647783661,
     10647783660,
     10647783659,
+    13234413601,
     10647783666,
     10647783665,
     10647783662,
@@ -23689,11 +23733,19 @@
   "id": 197938604,
   "nodes": [
     2081317936,
+    13072088490,
+    13072088492,
+    13072088494,
+    13072088496,
+    13072088498,
+    13072088500,
+    13072107602,
     2081317937
   ],
   "tags": {
     "aerialway": "platter",
-    "name": "Sépaya 1"
+    "name": "Sepaya II",
+    "year_of_construction": "1980"
   }
 },
 {
@@ -23720,8 +23772,10 @@
   "tags": {
     "aerialway": "chair_lift",
     "aerialway:capacity": "2400",
+    "aerialway:duration": "6:10",
     "aerialway:occupancy": "6",
-    "name": "Bochasses"
+    "name": "Bochasses",
+    "year_of_construction": "2012"
   }
 },
 {
@@ -23768,10 +23822,7 @@
     2149363441,
     2149363445,
     2149363442,
-    6590690464,
     11433125871,
-    11392563383,
-    11433125872,
     2149363439,
     2149363437,
     2149363435,
@@ -23780,6 +23831,7 @@
     2149363431,
     2149363434,
     2149363432,
+    12587808432,
     2149363438,
     2149363436,
     11420876037,
@@ -23794,37 +23846,10 @@
     "addr:street": "Route des Grandes Alpes",
     "aerialway": "yes",
     "covered": "yes",
+    "lit": "yes",
     "public_transport": "platform",
     "source": "cadastre-dgi-fr source : Direction Générale des Impôts - Cadastre. Mise à jour : 2013",
     "tactile_paving": "no"
-  }
-},
-{
-  "type": "way",
-  "id": 216152499,
-  "nodes": [
-    2255105538,
-    2255105612,
-    9403897801,
-    9403897802,
-    9403897803,
-    9403897804,
-    2255105529,
-    9403897808,
-    9403897807,
-    2255105506,
-    2255105521,
-    2255105502,
-    9403897806,
-    9403897805,
-    2255105538
-  ],
-  "tags": {
-    "aerialway": "station",
-    "building": "yes",
-    "name": "Essert",
-    "public_transport": "station",
-    "source": "cadastre-dgi-fr source : Direction Générale des Impôts - Cadastre. Mise à jour : 2013"
   }
 },
 {
@@ -23847,6 +23872,8 @@
   ],
   "tags": {
     "aerialway": "yes",
+    "covered": "yes",
+    "lit": "yes",
     "public_transport": "platform",
     "source": "cadastre-dgi-fr source : Direction Générale des Impôts - Cadastre. Mise à jour : 2013"
   }
@@ -23952,12 +23979,12 @@
     4578135789
   ],
   "tags": {
-    "aerialway": "cable_car",
+    "aerialway": "gondola",
     "aerialway:capacity": "2000",
     "aerialway:duration": "4",
     "aerialway:occupancy": "35",
     "bicycle": "yes",
-    "name": "Prodains Express",
+    "name": "Prodains Express 3S",
     "ref:FR:CAIRN": "741045"
   }
 },
@@ -24132,6 +24159,7 @@
   "tags": {
     "aerialway": "platter",
     "aerialway:capacity": "900",
+    "aerialway:duration": "5",
     "name": "Hôtel",
     "ref:FR:CAIRN": "740259"
   }
@@ -24187,7 +24215,8 @@
     "aerialway:capacity": "900",
     "aerialway:duration": "1:50",
     "manufacturer": "Poma",
-    "name": "Télésiège du Bécrêt",
+    "name": "Téléski du Bécrêt",
+    "ref:FR:CAIRN": "740737",
     "short_name": "TK du Bécret",
     "source": "https://www.skiresort.fr/domaine-skiable/bernex/remontees-mecaniques/l87487/",
     "start_date": "1989"
@@ -24206,6 +24235,7 @@
     8667683448,
     8667683449,
     8667683450,
+    13055688748,
     8667683451,
     2722333406
   ],
@@ -24238,6 +24268,7 @@
     "aerialway:duration": "1.16",
     "manufacturer": "Gimar Montaz-Mautino",
     "name": "Téléski de la Lèche",
+    "ref:FR:CAIRN": "741085",
     "short_name": "TKE de la Lèche",
     "source": "https://www.remontees-mecaniques.net/bdd/reportage-tke-de-la-leche-gmm-7511.html",
     "start_date": "2015"
@@ -24379,6 +24410,7 @@
     "aerialway:duration": "10",
     "aerialway:occupancy": "3",
     "name": "Graydon",
+    "ref:FR:CAIRN": "740588",
     "year_of_construction": "1979"
   }
 },
@@ -24535,7 +24567,8 @@
   ],
   "tags": {
     "aerialway": "magic_carpet",
-    "name": "Ludoffaz",
+    "name": "Les Luttins",
+    "ref:FR:CAIRN": "741004",
     "source": "BDOrtho"
   }
 },
@@ -24561,7 +24594,7 @@
   ],
   "tags": {
     "aerialway": "magic_carpet",
-    "name": "Platais",
+    "name": "Tapis Chavannes",
     "ref:FR:CAIRN": "741007"
   }
 },
@@ -24573,7 +24606,8 @@
     3232360218
   ],
   "tags": {
-    "aerialway": "magic_carpet"
+    "aerialway": "magic_carpet",
+    "name": "Tapis Platais"
   }
 },
 {
@@ -24654,7 +24688,7 @@
     3232427994
   ],
   "tags": {
-    "aerialway": "drag_lift",
+    "aerialway": "platter",
     "name": "Arare 1",
     "ref:FR:CAIRN": "740222"
   }
@@ -24713,7 +24747,7 @@
   ],
   "tags": {
     "aerialway": "magic_carpet",
-    "name": "Super-Châtel",
+    "name": "Tapis de Super Yeti",
     "oneway": "yes",
     "ref:FR:CAIRN": "740790"
   }
@@ -24884,8 +24918,10 @@
     "aerialway": "chair_lift",
     "aerialway:bubble": "no",
     "aerialway:capacity": "1874",
+    "aerialway:duration": "6:20",
     "aerialway:occupancy": "4",
-    "name": "Pointe de l'Au"
+    "name": "Pointe de l'Au",
+    "year_of_construction": "2013"
   }
 },
 {
@@ -25088,6 +25124,7 @@
     7858274139,
     6023309547,
     7858274143,
+    11923713004,
     7858274144,
     7858274145,
     7858274146,
@@ -25226,7 +25263,7 @@
     334726241
   ],
   "tags": {
-    "aerialway": "drag_lift",
+    "aerialway": "platter",
     "name": "Arare 2",
     "ref:FR:CAIRN": "740291"
   }
@@ -25397,23 +25434,23 @@
   "type": "way",
   "id": 1009693206,
   "nodes": [
-    3810041482,
-    9315999975,
-    9315999976,
-    9315999977,
-    9315999978,
-    9315999979,
-    9315999980,
-    9315999981,
-    9315999982,
-    9315999983,
-    9315999984,
-    9315999985,
-    9315999986,
-    9315999987,
-    9315999988,
+    3805986252,
     9315999989,
-    3805986252
+    9315999988,
+    9315999987,
+    9315999986,
+    9315999985,
+    9315999984,
+    9315999983,
+    9315999982,
+    9315999981,
+    9315999980,
+    9315999979,
+    9315999978,
+    9315999977,
+    9315999976,
+    9315999975,
+    3810041482
   ],
   "tags": {
     "aerialway": "chair_lift",
@@ -25456,10 +25493,8 @@
     340075023
   ],
   "tags": {
-    "aerialway": "gondola",
-    "aerialway:capacity": "2230",
-    "aerialway:duration": "5,50",
-    "aerialway:occupancy": "10",
+    "aerialway": "chair_lift",
+    "aerialway:occupancy": "6",
     "fee": "yes",
     "name": "Linga",
     "oneway": "yes",
@@ -25520,7 +25555,8 @@
   ],
   "tags": {
     "aerialway": "magic_carpet",
-    "name": "Joux"
+    "name": "Joux",
+    "ref:FR:CAIRN": "741134"
   }
 },
 {
@@ -25642,7 +25678,9 @@
   ],
   "tags": {
     "aerialway": "yes",
-    "public_transport": "platform"
+    "covered": "yes",
+    "public_transport": "platform",
+    "tactile_paving": "yes"
   }
 },
 {
@@ -25676,6 +25714,7 @@
   ],
   "tags": {
     "aerialway": "yes",
+    "covered": "yes",
     "public_transport": "platform"
   }
 },
@@ -25702,7 +25741,9 @@
     12120949088
   ],
   "tags": {
-    "aerialway": "magic_carpet"
+    "aerialway": "magic_carpet",
+    "aerialway:capacity": "450",
+    "name": "Tapis de l'Aiglon"
   }
 },
 {
@@ -25724,9 +25765,21 @@
     12291027546
   ],
   "tags": {
-    "aerialway": "gondola",
+    "aerialway": "zip_line",
     "aerialway:occupancy": "4",
     "name": "Le Morenza"
+  }
+},
+{
+  "type": "way",
+  "id": 1450703362,
+  "nodes": [
+    13304960232,
+    13304960233
+  ],
+  "tags": {
+    "aerialway": "rope_tow",
+    "name": "FIL-NEIGE EBAUDS"
   }
 }
 

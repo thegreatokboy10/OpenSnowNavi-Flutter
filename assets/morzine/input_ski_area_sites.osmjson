@@ -1,8 +1,8 @@
 {
   "version": 0.6,
-  "generator": "Overpass API 0.7.62.4 2390de5a",
+  "generator": "Overpass API 0.7.62.8 e802775f",
   "osm3s": {
-    "timestamp_osm_base": "2025-01-01T17:16:51Z",
+    "timestamp_osm_base": "2025-12-18T11:43:49Z",
     "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL."
   },
   "elements": [
@@ -560,11 +560,6 @@
     },
     {
       "type": "way",
-      "ref": 318947648,
-      "role": ""
-    },
-    {
-      "type": "way",
       "ref": 107512805,
       "role": ""
     },
@@ -645,12 +640,12 @@
     },
     {
       "type": "way",
-      "ref": 318938064,
+      "ref": 1364348731,
       "role": ""
     },
     {
       "type": "way",
-      "ref": 318937785,
+      "ref": 318938064,
       "role": ""
     },
     {
@@ -666,11 +661,6 @@
     {
       "type": "way",
       "ref": 318949691,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 318949666,
       "role": ""
     },
     {
@@ -785,16 +775,6 @@
     },
     {
       "type": "way",
-      "ref": 700160654,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 700160653,
-      "role": ""
-    },
-    {
-      "type": "way",
       "ref": 318938481,
       "role": ""
     },
@@ -894,16 +874,6 @@
   "members": [
     {
       "type": "way",
-      "ref": 362420851,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 55033106,
-      "role": ""
-    },
-    {
-      "type": "way",
       "ref": 316266866,
       "role": ""
     },
@@ -924,12 +894,42 @@
     },
     {
       "type": "way",
-      "ref": 386764435,
+      "ref": 169216401,
       "role": ""
     },
     {
       "type": "way",
-      "ref": 169216401,
+      "ref": 362420851,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 55033106,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 316266889,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1134826613,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 388133656,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 388133659,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 69324533,
       "role": ""
     },
     {
@@ -1059,7 +1059,152 @@
     },
     {
       "type": "way",
+      "ref": 316266880,
+      "role": ""
+    },
+    {
+      "type": "way",
       "ref": 909981285,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 343554883,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 316266873,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 909981287,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 909981288,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 909981286,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1135220662,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 387805668,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 316266865,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 55029625,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 909981294,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 910590946,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 910590945,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 316266883,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 387832685,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 387832686,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 910462652,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 993624445,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 387831654,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1133181517,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 909981290,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 266711299,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1420680575,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 316266871,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 386762318,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 386762317,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 386762909,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 909981293,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 189015006,
       "role": ""
     },
     {
@@ -1094,16 +1239,6 @@
     },
     {
       "type": "way",
-      "ref": 316266883,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 910590945,
-      "role": ""
-    },
-    {
-      "type": "way",
       "ref": 910590944,
       "role": ""
     },
@@ -1124,7 +1259,27 @@
     },
     {
       "type": "way",
-      "ref": 910590946,
+      "ref": 910590948,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 910590950,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1133181514,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 910590949,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1420715413,
       "role": ""
     },
     {
@@ -1139,27 +1294,7 @@
     },
     {
       "type": "way",
-      "ref": 386762318,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 386762319,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 909981293,
-      "role": ""
-    },
-    {
-      "type": "way",
       "ref": 362421740,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 189015006,
       "role": ""
     },
     {
@@ -1175,36 +1310,6 @@
     {
       "type": "way",
       "ref": 1064544026,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 387832685,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 387832686,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 910462652,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 993624445,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 387831654,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 1133181517,
       "role": ""
     },
     {
@@ -1254,61 +1359,6 @@
     },
     {
       "type": "way",
-      "ref": 909981294,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 55029625,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 316266865,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 387805668,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 1135220662,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 909981286,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 909981288,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 909981287,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 316266873,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 343554883,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 316266880,
-      "role": ""
-    },
-    {
-      "type": "way",
       "ref": 266708581,
       "role": ""
     },
@@ -1354,6 +1404,16 @@
     },
     {
       "type": "way",
+      "ref": 1420715412,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1420715411,
+      "role": ""
+    },
+    {
+      "type": "way",
       "ref": 387825873,
       "role": ""
     },
@@ -1365,16 +1425,6 @@
     {
       "type": "way",
       "ref": 370587063,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 909981290,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 266711299,
       "role": ""
     },
     {
@@ -1395,36 +1445,6 @@
     {
       "type": "way",
       "ref": 396536113,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 316266889,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 1134826613,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 388133656,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 388133659,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 69324533,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 316266871,
       "role": ""
     },
     {
@@ -1469,51 +1489,6 @@
     },
     {
       "type": "way",
-      "ref": 909981299,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 1064544027,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 909981289,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 909981298,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 55029916,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 1134775578,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 316266881,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 909981296,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 316266874,
-      "role": ""
-    },
-    {
-      "type": "way",
       "ref": 387804793,
       "role": ""
     },
@@ -1524,27 +1499,52 @@
     },
     {
       "type": "way",
+      "ref": 316266874,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 909981296,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 316266881,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1134775578,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 55029916,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 909981298,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 909981289,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1064544027,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 909981299,
+      "role": ""
+    },
+    {
+      "type": "way",
       "ref": 909981297,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 910590949,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 1133181514,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 910590950,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 910590948,
       "role": ""
     },
     {
@@ -1575,6 +1575,7 @@
   ],
   "tags": {
     "contact:website": "https://hiver.bernex-tourisme.com/",
+    "fixme": "à réparer",
     "name": "Bernex",
     "site": "piste",
     "type": "site"
@@ -1596,77 +1597,12 @@
     },
     {
       "type": "way",
-      "ref": 255407045,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 255407019,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 1307062184,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 390671115,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 390666957,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 390672678,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 1135232610,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 390677024,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 1341342457,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 390677030,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 390677828,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 1307062187,
-      "role": ""
-    },
-    {
-      "type": "way",
       "ref": 255406997,
       "role": ""
     },
     {
       "type": "way",
       "ref": 1341342458,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 255407021,
       "role": ""
     },
     {
@@ -1711,6 +1647,11 @@
     },
     {
       "type": "way",
+      "ref": 255407052,
+      "role": ""
+    },
+    {
+      "type": "way",
       "ref": 255407026,
       "role": ""
     },
@@ -1721,22 +1662,97 @@
     },
     {
       "type": "way",
-      "ref": 255407009,
-      "role": ""
-    },
-    {
-      "type": "way",
       "ref": 255407016,
       "role": ""
     },
     {
       "type": "way",
-      "ref": 255407052,
+      "ref": 255407009,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1371685218,
       "role": ""
     },
     {
       "type": "way",
       "ref": 255406998,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1135232612,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1307062188,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 390677828,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 390677030,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1307062178,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1307062175,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1307062191,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 40299692,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 232231738,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1135232610,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 390672678,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 390666957,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 390671114,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 255406989,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1307062181,
       "role": ""
     },
     {
@@ -1771,7 +1787,12 @@
     },
     {
       "type": "way",
-      "ref": 255407060,
+      "ref": 1421325684,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1421136908,
       "role": ""
     },
     {
@@ -1791,27 +1812,12 @@
     },
     {
       "type": "way",
-      "ref": 1307062188,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 1135232612,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 1307062185,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 255407006,
-      "role": ""
-    },
-    {
-      "type": "way",
       "ref": 255407000,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 255407003,
       "role": ""
     },
     {
@@ -1831,32 +1837,7 @@
     },
     {
       "type": "way",
-      "ref": 1307062178,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 1307062175,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 1307062191,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 40299692,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 232231738,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 255407003,
+      "ref": 1307062187,
       "role": ""
     },
     {
@@ -1921,27 +1902,27 @@
     },
     {
       "type": "way",
-      "ref": 390671114,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 255406989,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 1307062181,
-      "role": ""
-    },
-    {
-      "type": "way",
       "ref": 1307062180,
       "role": ""
     },
     {
       "type": "way",
+      "ref": 1421325674,
+      "role": ""
+    },
+    {
+      "type": "way",
       "ref": 390577320,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1371747211,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1371747214,
       "role": ""
     },
     {
@@ -1956,22 +1937,17 @@
     },
     {
       "type": "way",
+      "ref": 255407006,
+      "role": ""
+    },
+    {
+      "type": "way",
       "ref": 1135232614,
       "role": ""
     },
     {
       "type": "way",
       "ref": 442442840,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 40299687,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 299966155,
       "role": ""
     },
     {
@@ -1986,12 +1962,12 @@
     },
     {
       "type": "way",
-      "ref": 1060517304,
+      "ref": 1060517305,
       "role": ""
     },
     {
       "type": "way",
-      "ref": 1060517305,
+      "ref": 1421325675,
       "role": ""
     },
     {
@@ -2002,6 +1978,11 @@
     {
       "type": "way",
       "ref": 1307062189,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 390677024,
       "role": ""
     },
     {
@@ -2070,6 +2051,96 @@
       "role": ""
     },
     {
+      "type": "way",
+      "ref": 1371685216,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 255407045,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 255407021,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1371685215,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 255407019,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1307062184,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 390671115,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1341342457,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1371685217,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1371747207,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1371747208,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1371747210,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 299966156,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1371747213,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 40299687,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 299966155,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1371747215,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1371747216,
+      "role": ""
+    },
+    {
       "type": "relation",
       "ref": 5845120,
       "role": ""
@@ -2118,6 +2189,11 @@
     },
     {
       "type": "way",
+      "ref": 787515411,
+      "role": ""
+    },
+    {
+      "type": "way",
       "ref": 316300493,
       "role": ""
     },
@@ -2139,21 +2215,6 @@
     {
       "type": "way",
       "ref": 387311517,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 55038474,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 316300480,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 317447558,
       "role": ""
     },
     {
@@ -2188,6 +2249,11 @@
     },
     {
       "type": "way",
+      "ref": 151490329,
+      "role": ""
+    },
+    {
+      "type": "way",
       "ref": 316300479,
       "role": ""
     },
@@ -2204,6 +2270,61 @@
     {
       "type": "way",
       "ref": 1019604396,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 889626179,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 787515410,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 55038474,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 316300480,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 317447558,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 787515408,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 787515412,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 787515413,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1019604394,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 787515409,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 787515414,
       "role": ""
     },
     {
@@ -2230,21 +2351,6 @@
   "members": [
     {
       "type": "way",
-      "ref": 31349026,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 376346694,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 376346911,
-      "role": ""
-    },
-    {
-      "type": "way",
       "ref": 317444742,
       "role": ""
     },
@@ -2261,6 +2367,26 @@
     {
       "type": "way",
       "ref": 31349051,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 787517302,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 31349047,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1081167907,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 376372736,
       "role": ""
     },
     {
@@ -2295,12 +2421,237 @@
     },
     {
       "type": "way",
-      "ref": 31738076,
+      "ref": 31738086,
       "role": ""
     },
     {
       "type": "way",
-      "ref": 31738080,
+      "ref": 31770794,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 383116044,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 383116254,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 383244868,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 383246634,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 168362149,
+      "role": "site"
+    },
+    {
+      "type": "way",
+      "ref": 383420834,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 693010437,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 383116048,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1324639153,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1324639152,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1324639069,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 35881681,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 31770795,
+      "role": "site"
+    },
+    {
+      "type": "way",
+      "ref": 383420833,
+      "role": "site"
+    },
+    {
+      "type": "way",
+      "ref": 383420835,
+      "role": "site"
+    },
+    {
+      "type": "way",
+      "ref": 383116045,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 398942314,
+      "role": "site"
+    },
+    {
+      "type": "way",
+      "ref": 383249676,
+      "role": "site"
+    },
+    {
+      "type": "way",
+      "ref": 973515328,
+      "role": "site"
+    },
+    {
+      "type": "way",
+      "ref": 383249677,
+      "role": "site"
+    },
+    {
+      "type": "way",
+      "ref": 383422563,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 973515329,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 383422564,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 327304847,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 383249674,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 31770798,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 938161597,
+      "role": "site"
+    },
+    {
+      "type": "way",
+      "ref": 45666718,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 31770802,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 31770796,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 45817115,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 45666719,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1081167903,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 31349026,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 376346694,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 376346911,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1059318013,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 787517299,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1081167900,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 787517298,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1081167901,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1081167902,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1081167906,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 982177802,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 376372737,
       "role": ""
     },
     {
@@ -2311,21 +2662,6 @@
     {
       "type": "way",
       "ref": 376374286,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 31349047,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 376372736,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 1081167906,
       "role": ""
     },
     {
@@ -2345,31 +2681,6 @@
     },
     {
       "type": "way",
-      "ref": 31738079,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 376371973,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 1081167898,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 1081167897,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 31738082,
-      "role": ""
-    },
-    {
-      "type": "way",
       "ref": 31349263,
       "role": ""
     },
@@ -2380,27 +2691,94 @@
     },
     {
       "type": "way",
-      "ref": 982177802,
+      "ref": 31738080,
       "role": ""
     },
     {
       "type": "way",
-      "ref": 376372737,
+      "ref": 31738082,
       "role": ""
     },
     {
       "type": "way",
-      "ref": 31738086,
+      "ref": 1081167897,
       "role": ""
     },
     {
       "type": "way",
-      "ref": 31770794,
+      "ref": 1081167898,
       "role": ""
     },
     {
       "type": "way",
-      "ref": 383116254,
+      "ref": 376371973,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 31738079,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 31738076,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1081167904,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 787517301,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1081167895,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 693010438,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 599366280,
+      "role": ""
+    },
+    {
+      "type": "relation",
+      "ref": 9300848,
+      "role": ""
+    }
+  ],
+  "tags": {
+    "name": "La Chapelle d'Abondance",
+    "operator": "SELCA",
+    "site": "piste",
+    "type": "site"
+  }
+},
+{
+  "type": "relation",
+  "id": 19457712,
+  "members": [
+    {
+      "type": "way",
+      "ref": 693010438,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 383116045,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1324639153,
       "role": ""
     },
     {
@@ -2410,12 +2788,17 @@
     },
     {
       "type": "way",
-      "ref": 383244868,
+      "ref": 693010437,
       "role": ""
     },
     {
       "type": "way",
       "ref": 383420834,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 168362149,
       "role": ""
     },
     {
@@ -2435,22 +2818,12 @@
     },
     {
       "type": "way",
-      "ref": 383246634,
+      "ref": 327304847,
       "role": ""
     },
     {
       "type": "way",
-      "ref": 168362149,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 383116045,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 1324639153,
+      "ref": 383420835,
       "role": ""
     },
     {
@@ -2470,7 +2843,37 @@
     },
     {
       "type": "way",
+      "ref": 938161597,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 383249674,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 31770798,
+      "role": ""
+    },
+    {
+      "type": "way",
       "ref": 31770795,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 383422564,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 973515329,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 383422563,
       "role": ""
     },
     {
@@ -2485,113 +2888,22 @@
     },
     {
       "type": "way",
-      "ref": 383422563,
+      "ref": 45817115,
       "role": ""
     },
     {
       "type": "way",
-      "ref": 973515329,
+      "ref": 45666719,
       "role": ""
     },
     {
       "type": "way",
-      "ref": 383422564,
+      "ref": 593806449,
       "role": ""
     },
     {
       "type": "way",
-      "ref": 383420835,
-      "role": ""
-    },
-    {
-      "type": "relation",
-      "ref": 9300848,
-      "role": ""
-    }
-  ],
-  "tags": {
-    "name": "La Chapelle d'Abondance",
-    "site": "piste",
-    "type": "site"
-  }
-},
-{
-  "type": "relation",
-  "id": 5763952,
-  "members": [
-    {
-      "type": "way",
-      "ref": 29289470,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 327302810,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 382673339,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 382673338,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 382673083,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 382673081,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 327302811,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 24898730,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 382673340,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 24898728,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 765542250,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 327302812,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 382672289,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 1082753567,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 382672288,
+      "ref": 31770801,
       "role": ""
     },
     {
@@ -2601,17 +2913,72 @@
     },
     {
       "type": "way",
-      "ref": 1082706567,
+      "ref": 31770797,
       "role": ""
     },
     {
       "type": "way",
-      "ref": 382669400,
+      "ref": 383059250,
       "role": ""
     },
     {
       "type": "way",
-      "ref": 382669305,
+      "ref": 383059251,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1082753567,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 382672289,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 382672288,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 403535675,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 45666718,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 31770802,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 31770796,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 45815043,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 800472191,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 800472192,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 800472190,
       "role": ""
     },
     {
@@ -2621,7 +2988,12 @@
     },
     {
       "type": "way",
-      "ref": 24898731,
+      "ref": 382669305,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 382669400,
       "role": ""
     },
     {
@@ -2631,370 +3003,126 @@
     },
     {
       "type": "way",
-      "ref": 24898711,
+      "ref": 24898731,
       "role": ""
     },
     {
       "type": "way",
-      "ref": 24898714,
+      "ref": 157395550,
       "role": ""
     },
     {
       "type": "way",
-      "ref": 24898724,
+      "ref": 31770800,
       "role": ""
     },
     {
       "type": "way",
-      "ref": 49802643,
+      "ref": 49802663,
       "role": ""
     },
     {
       "type": "way",
-      "ref": 24899030,
+      "ref": 31770799,
       "role": ""
     },
     {
       "type": "way",
-      "ref": 149425684,
+      "ref": 49802662,
       "role": ""
     },
     {
       "type": "way",
-      "ref": 24898719,
+      "ref": 45726071,
       "role": ""
     },
     {
       "type": "way",
-      "ref": 24898717,
+      "ref": 157395581,
       "role": ""
     },
     {
       "type": "way",
-      "ref": 49058424,
+      "ref": 1300350404,
       "role": ""
     },
     {
       "type": "way",
-      "ref": 24898722,
+      "ref": 49802661,
       "role": ""
     },
     {
       "type": "way",
-      "ref": 49802654,
+      "ref": 157395584,
       "role": ""
     },
     {
       "type": "way",
-      "ref": 325533218,
+      "ref": 157395579,
       "role": ""
     },
     {
       "type": "way",
-      "ref": 325533413,
+      "ref": 157395586,
       "role": ""
     },
     {
       "type": "way",
-      "ref": 325533365,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 908020205,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 378042368,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 378042372,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 30750444,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 378126082,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 378041979,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 30749922,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 378046111,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 378042370,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 378046107,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 145471242,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 378129401,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 378129465,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 378051900,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 378051662,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 378206941,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 30964120,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 378129994,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 378052273,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 378130129,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 24916937,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 378205424,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 378129864,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 30958384,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 378208749,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 378208748,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 30627272,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 29288817,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 30720552,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 377621684,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 30964122,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 377373101,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 1112133111,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 1112133112,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 1112133113,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 1112133114,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 29288351,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 132119392,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 8215798,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 377609038,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 842336060,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 1112133122,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 145471236,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 377662130,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 377529617,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 8215843,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 32310241,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 377661665,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 30983078,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 377530276,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 377528454,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 149554770,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 377216348,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 377215154,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 29288813,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 29288816,
-      "role": ""
-    },
-    {
-      "type": "way",
-      "ref": 377219066,
-      "role": ""
-    },
-    {
-      "type": "relation",
-      "ref": 5626406,
+      "ref": 157395582,
       "role": ""
     }
   ],
   "tags": {
-    "contact:website": "http://www.portesdusoleil.com/chatel.html",
-    "name": "Châtel",
+    "name": "Torgon",
+    "operator": "SETT Sàrl",
     "site": "piste",
     "type": "site"
+  }
+},
+{
+  "type": "relation",
+  "id": 19457834,
+  "members": [
+    {
+      "type": "way",
+      "ref": 1422165435,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1422098961,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1422121628,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 601130399,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 601130338,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1422139284,
+      "role": ""
+    }
+  ],
+  "tags": {
+    "alt_name": "Les Portes du Soleil",
+    "landuse": "winter_sports",
+    "name": "Portes du Soleil",
+    "site": "piste",
+    "type": "site",
+    "website": "https://www.portesdusoleil.com/",
+    "wikidata": "Q264706",
+    "wikipedia": "fr:Portes du Soleil"
   }
 }
 
