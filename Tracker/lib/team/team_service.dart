@@ -1,6 +1,7 @@
 // 团队管理服务 - 整合设备识别和存储
 import 'dart:async';
 import 'package:geolocator/geolocator.dart';
+import '../config/team_config.dart';
 import '../services/search_service.dart' show LatLng;
 import '../member/member_service.dart';
 import 'device_service.dart';
@@ -381,7 +382,7 @@ class TeamService {
   void _startRefreshTimer() {
     _teamRefreshTimer?.cancel();
     _teamRefreshTimer = Timer.periodic(
-      const Duration(seconds: 10),
+      Duration(seconds: TeamConfig.teamRefreshIntervalSeconds),
       (_) => _refreshTeam(),
     );
   }
@@ -396,7 +397,7 @@ class TeamService {
     _locationUpdateTimer?.cancel();
     _updateLocation(); // 立即更新一次
     _locationUpdateTimer = Timer.periodic(
-      const Duration(seconds: 15),
+      Duration(seconds: TeamConfig.locationUploadIntervalSeconds),
       (_) => _updateLocation(),
     );
   }

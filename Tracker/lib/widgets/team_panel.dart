@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../config/app_theme.dart';
+import '../config/team_config.dart';
 import '../member/member_service.dart';
 import '../team/team_models.dart';
 import '../team/team_service.dart';
@@ -35,7 +36,7 @@ class _TeamPanelState extends State<TeamPanel> {
   final MemberService _memberService = MemberService.instance;
   final TextEditingController _teamNameController = TextEditingController();
   final TextEditingController _teamIdController = TextEditingController();
-  int _maxMembers = 6; // 默认团队人数
+  int _maxMembers = TeamConfig.defaultMaxMembers; // 默认团队人数
 
   bool _isLoading = true;
   String? _errorMessage;
@@ -242,7 +243,11 @@ class _TeamPanelState extends State<TeamPanel> {
               const SizedBox(width: 8),
               DropdownButton<int>(
                 value: _maxMembers,
-                items: [4, 6, 8, 10, 12, 15, 20]
+                items: List.generate(
+                  (TeamConfig.maxMaxMembers - TeamConfig.minMaxMembers) ~/ 2 +
+                      1,
+                  (i) => TeamConfig.minMaxMembers + i * 2,
+                )
                     .map((n) => DropdownMenuItem(
                           value: n,
                           child: Text('$n 人'),
@@ -651,8 +656,8 @@ class _TeamPanelState extends State<TeamPanel> {
               Slider(
                 value: newMax.toDouble(),
                 min: team.members.length.toDouble(),
-                max: 20,
-                divisions: 20 - team.members.length,
+                max: TeamConfig.maxMaxMembers.toDouble(),
+                divisions: TeamConfig.maxMaxMembers - team.members.length,
                 label: '$newMax人',
                 onChanged: (v) => setDialogState(() => newMax = v.toInt()),
               ),

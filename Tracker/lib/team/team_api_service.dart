@@ -76,7 +76,7 @@ class TeamApiService {
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body);
-        final team = Team.fromApiJson(json['team']);
+        final team = Team.fromApiJson(json);
         return ApiResult.success(team);
       } else if (response.statusCode == 404) {
         return ApiResult.failure('团队不存在');
