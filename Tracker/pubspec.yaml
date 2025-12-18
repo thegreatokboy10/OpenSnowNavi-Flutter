@@ -107,7 +107,7 @@ flutter:
 
   # Assets
   assets:
-    - assets/img/
+    - assets/img/snownavi_logo.jpg
     - assets/ski_resorts/palarinsal/runs.geojson
     - assets/ski_resorts/palarinsal/lifts.geojson
     - assets/ski_resorts/3valley/runs.geojson
