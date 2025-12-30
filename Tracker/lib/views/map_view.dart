@@ -268,7 +268,7 @@ class _MapViewState extends State<MapView> {
       // 初始化集合点服务
       MeetingPointService.instance.setContext(
         teamId: team.id,
-        deviceId: teamService.deviceId,
+        deviceId: teamService.effectiveId,
         nickname: teamService.currentMember?.nickname ?? '',
       );
       _initializeMeetingPointService();
@@ -2699,7 +2699,7 @@ class _MapViewState extends State<MapView> {
     if (team != null) {
       MeetingPointService.instance.setContext(
         teamId: team.id,
-        deviceId: teamService.deviceId,
+        deviceId: teamService.effectiveId,
         nickname: teamService.currentMember?.nickname ?? '',
       );
       _initializeMeetingPointService();

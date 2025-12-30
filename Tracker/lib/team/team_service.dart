@@ -34,22 +34,22 @@ class TeamService {
     return _instance!;
   }
 
-  /// 获取当前设备ID
+  /// 获取当前设备ID（已废弃，请使用 effectiveId）
+  @Deprecated('Use effectiveId instead')
   Future<String> getDeviceId() async {
-    _cachedDeviceId ??= await _deviceService.getDeviceId();
+    _cachedDeviceId ??= _memberService.currentMember!.id;
     return _cachedDeviceId!;
   }
 
-  /// 同步获取设备ID（需要先调用 initialize）
-  String get deviceId => _cachedDeviceId ?? _deviceService.getDeviceIdSync();
+  /// 同步获取设备ID（已废弃，请使用 effectiveId）
+  /// 注意：这里返回 effectiveId 以确保所有调用都使用正确的ID
+  @Deprecated('Use effectiveId instead')
+  String get deviceId => effectiveId;
 
-  /// 获取有效的ID（优先使用 memberId，否则使用 deviceId）
-  /// 用于创建/加入/恢复团队时的身份标识
+  /// 获取有效的ID（使用 memberId 作为身份标识）
+  /// 所有 API 调用都应该使用这个 ID
   String get effectiveId {
-    if (_memberService.isLoggedIn) {
-      return _memberService.currentMember!.id;
-    }
-    return deviceId;
+    return _memberService.currentMember!.id;
   }
 
   /// 获取有效的昵称（优先使用会员姓名）
@@ -74,7 +74,7 @@ class TeamService {
   TeamMember? get currentMember {
     if (_currentTeam == null) return null;
     return _currentTeam!.members.cast<TeamMember?>().firstWhere(
-          (m) => m?.deviceId == deviceId,
+          (m) => m?.deviceId == effectiveId,
           orElse: () => null,
         );
   }
@@ -157,7 +157,7 @@ class TeamService {
       print('[TeamService] _restoreTeam: need to check in today');
       await _storageService.checkIn(
         teamId: team.id,
-        deviceId: deviceId,
+        deviceId: effectiveId,
         nickname: member.nickname,
       );
       final refreshedTeam = await _storageService.getTeam(team.id);
@@ -288,7 +288,7 @@ class TeamService {
         '[TeamService] setLocationSharing: $share for team ${_currentTeam!.id}');
     final updatedTeam = await _storageService.setLocationSharing(
       teamId: _currentTeam!.id,
-      deviceId: deviceId,
+      deviceId: effectiveId,
       shareLocation: share,
     );
 
@@ -319,7 +319,7 @@ class TeamService {
     print('[TeamService] updateNickname: $newNickname');
     final updatedTeam = await _storageService.updateMemberNickname(
       teamId: _currentTeam!.id,
-      deviceId: deviceId,
+      deviceId: effectiveId,
       nickname: newNickname,
     );
 
@@ -420,7 +420,7 @@ class TeamService {
       );
       await _storageService.updateMemberLocation(
         teamId: _currentTeam!.id,
-        deviceId: deviceId,
+        deviceId: effectiveId,
         latitude: position.latitude,
         longitude: position.longitude,
         accuracy: position.accuracy,
@@ -460,12 +460,12 @@ class TeamService {
       // 必须开启位置共享且有位置数据
       if (!m.shareLocation || m.lastLocation == null) return false;
       // 如果不包含自己，过滤掉自己
-      if (!includeMyself && m.deviceId == deviceId) return false;
+      if (!includeMyself && m.deviceId == effectiveId) return false;
       return true;
     }).map((m) {
       // 计算颜色索引（基于成员在列表中的位置）
       final colorIndex = allMembers.indexOf(m);
-      final isMe = m.deviceId == deviceId;
+      final isMe = m.deviceId == effectiveId;
       return MemberLocation(
         deviceId: m.deviceId,
         nickname: isMe ? '${m.nickname} (我)' : m.nickname,

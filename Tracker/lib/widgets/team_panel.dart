@@ -408,7 +408,6 @@ class _TeamPanelState extends State<TeamPanel> {
   Widget _buildTeamView() {
     final team = _teamService.currentTeam!;
     final isLeader = _teamService.isLeader;
-    final currentMember = _teamService.currentMember;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -491,20 +490,6 @@ class _TeamPanelState extends State<TeamPanel> {
         ),
         const SizedBox(height: 16),
 
-        // 位置共享开关
-        if (currentMember != null)
-          SwitchListTile(
-            title: const Text('共享我的位置'),
-            subtitle: const Text('让队友看到你的实时位置'),
-            value: currentMember.shareLocation,
-            activeColor: AppTheme.toggleActiveColor,
-            onChanged: (value) async {
-              await _teamService.setLocationSharing(value);
-              setState(() {});
-            },
-            contentPadding: EdgeInsets.zero,
-          ),
-
         const Divider(),
 
         // 成员列表标题和刷新按钮
@@ -559,66 +544,145 @@ class _TeamPanelState extends State<TeamPanel> {
   }
 
   Widget _buildMemberTile(TeamMember member, bool isLeader) {
-    final isMe = member.deviceId == _teamService.deviceId;
+    final isMe = member.deviceId == _teamService.effectiveId;
     final isActive = member.hasCheckedInToday;
     final hasLocation = member.shareLocation && member.lastLocation != null;
 
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      onTap: hasLocation
-          ? () {
-              final memberLocation =
-                  _teamService.getMemberLocationByDeviceId(member.deviceId);
-              if (memberLocation != null && widget.onMemberTapped != null) {
-                widget.onMemberTapped!(memberLocation);
-              }
-            }
-          : null,
-      leading: CircleAvatar(
-        backgroundColor:
-            isActive ? Colors.green.shade100 : Colors.grey.shade200,
-        child: Icon(
-          member.isLeader ? Icons.star : Icons.person,
-          color: isActive ? Colors.green : Colors.grey,
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isMe ? Colors.blue.shade50 : Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isMe ? Colors.blue.shade200 : Colors.grey.shade200,
         ),
       ),
-      title: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(member.nickname),
-          if (isMe) const Text(' (我)', style: TextStyle(color: Colors.grey)),
-          if (member.isLeader)
-            const Padding(
-              padding: EdgeInsets.only(left: 4),
-              child: Icon(Icons.verified, size: 16, color: Colors.amber),
-            ),
-          if (hasLocation)
-            const Padding(
-              padding: EdgeInsets.only(left: 4),
-              child: Icon(Icons.location_on, size: 16, color: Colors.blue),
-            ),
-          if (isMe)
-            Padding(
-              padding: const EdgeInsets.only(left: 4),
-              child: InkWell(
-                onTap: () => _showEditNicknameDialog(member.nickname),
-                child: const Icon(Icons.edit, size: 16, color: Colors.grey),
+          // 第一行：头像、昵称、标签、操作按钮
+          Row(
+            children: [
+              // 头像
+              GestureDetector(
+                onTap: hasLocation
+                    ? () {
+                        final memberLocation = _teamService
+                            .getMemberLocationByDeviceId(member.deviceId);
+                        if (memberLocation != null &&
+                            widget.onMemberTapped != null) {
+                          widget.onMemberTapped!(memberLocation);
+                        }
+                      }
+                    : null,
+                child: CircleAvatar(
+                  radius: 18,
+                  backgroundColor:
+                      isActive ? Colors.green.shade100 : Colors.grey.shade200,
+                  child: Icon(
+                    member.isLeader ? Icons.star : Icons.person,
+                    size: 20,
+                    color: isActive ? Colors.green : Colors.grey,
+                  ),
+                ),
               ),
+              const SizedBox(width: 10),
+              // 昵称和标签
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            member.nickname,
+                            style: const TextStyle(fontWeight: FontWeight.w500),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (isMe)
+                          const Text(' (我)',
+                              style:
+                                  TextStyle(color: Colors.grey, fontSize: 12)),
+                        if (member.isLeader)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 4),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.amber.shade100,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Text('队长',
+                                  style: TextStyle(
+                                      fontSize: 10, color: Colors.amber)),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      isActive ? (hasLocation ? '正在共享位置' : '今日已签到') : '未签到',
+                      style: TextStyle(
+                        color: hasLocation ? Colors.blue : Colors.grey,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // 操作按钮区域
+              if (isMe)
+                IconButton(
+                  icon: const Icon(Icons.edit, size: 18, color: Colors.grey),
+                  onPressed: () => _showEditNicknameDialog(member.nickname),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  tooltip: '修改昵称',
+                ),
+              if (isLeader)
+                IconButton(
+                  icon: const Icon(Icons.remove_circle_outline,
+                      size: 20, color: Colors.red),
+                  onPressed: () => _removeMember(member),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  tooltip: '移除成员',
+                ),
+            ],
+          ),
+          // 第二行：位置共享开关（仅自己可见）
+          if (isMe) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(Icons.location_on,
+                    size: 16,
+                    color: member.shareLocation
+                        ? AppTheme.toggleActiveColor
+                        : Colors.grey),
+                const SizedBox(width: 6),
+                const Text('共享我的位置', style: TextStyle(fontSize: 13)),
+                const Spacer(),
+                SizedBox(
+                  height: 24,
+                  child: Switch(
+                    value: member.shareLocation,
+                    activeColor: AppTheme.toggleActiveColor,
+                    onChanged: (value) async {
+                      await _teamService.setLocationSharing(value);
+                      setState(() {});
+                    },
+                  ),
+                ),
+              ],
             ),
+          ],
         ],
       ),
-      subtitle: Text(
-        isActive ? (member.shareLocation ? '正在共享位置' : '今日已签到') : '未签到',
-        style: TextStyle(
-          color: isActive ? Colors.green : Colors.grey,
-          fontSize: 12,
-        ),
-      ),
-      trailing: isLeader && !isMe
-          ? IconButton(
-              icon: const Icon(Icons.remove_circle_outline, color: Colors.red),
-              onPressed: () => _removeMember(member),
-            )
-          : null,
     );
   }
 
