@@ -73,6 +73,7 @@ class _MapViewState extends State<MapView> {
   List<MeetingPoint> _meetingPoints = [];
   bool _showMeetingPointsLayer = true;
   bool _showMemberLocationsLayer = true;
+  bool _isUpdatingMemberMarkers = false; // 防止并发更新成员标记
 
   // Annotation 到数据的映射（用于原生点击回调）
   final Map<String, MemberLocation> _memberAnnotationMap = {};
@@ -2711,73 +2712,86 @@ class _MapViewState extends State<MapView> {
   Future<void> _updateMemberMarkers() async {
     if (_mapboxMap == null) return;
 
-    // 取消之前的点击监听
-    _memberTapCancelable?.cancel();
-    _memberTapCancelable = null;
-
-    // 清除 annotation 映射
-    _memberAnnotationMap.clear();
-
-    // 移除旧的图标标记
-    if (_memberIconManager != null) {
-      try {
-        await _mapboxMap!.annotations
-            .removeAnnotationManager(_memberIconManager!);
-        _memberIconManager = null;
-      } catch (e) {}
+    // 防止并发更新导致多个 manager 被创建
+    if (_isUpdatingMemberMarkers) {
+      debugPrint('[MapView] _updateMemberMarkers: already updating, skip');
+      return;
     }
+    _isUpdatingMemberMarkers = true;
 
-    // 如果图层关闭或没有成员位置，直接返回
-    if (!_showMemberLocationsLayer || _memberLocations.isEmpty) return;
+    try {
+      // 取消之前的点击监听
+      _memberTapCancelable?.cancel();
+      _memberTapCancelable = null;
 
-    // 创建新的 PointAnnotationManager
-    _memberIconManager =
-        await _mapboxMap!.annotations.createPointAnnotationManager();
+      // 清除 annotation 映射
+      _memberAnnotationMap.clear();
 
-    // 设置允许图标重叠，确保点击区域足够大
-    await _memberIconManager!.setIconAllowOverlap(true);
-    await _memberIconManager!.setIconIgnorePlacement(true);
-
-    // 注册原生点击回调
-    _memberTapCancelable = _memberIconManager!.tapEvents(
-      onTap: (annotation) {
-        final member = _memberAnnotationMap[annotation.id];
-        if (member != null) {
-          debugPrint('[Native Tap] Tapped on member: ${member.nickname}');
-          _flyToPosition(Position(
-            member.location.longitude,
-            member.location.latitude,
-          ));
-          _showMemberInfoPanel(member);
+      // 移除旧的图标标记
+      if (_memberIconManager != null) {
+        try {
+          await _mapboxMap!.annotations
+              .removeAnnotationManager(_memberIconManager!);
+        } catch (e) {
+          // 忽略移除失败
         }
-      },
-    );
+        _memberIconManager = null;
+      }
 
-    // 为每个成员创建带头像的标记
-    for (final member in _memberLocations) {
-      // 生成头像图标
-      final iconData = await MarkerIconGenerator.generateMemberIcon(
-        nickname: member.nickname,
-        color: Color(member.color),
-        size: AppTheme.memberIconSize,
-      );
+      // 如果图层关闭或没有成员位置，直接返回
+      if (!_showMemberLocationsLayer || _memberLocations.isEmpty) return;
 
-      final annotation = await _memberIconManager!.create(
-        PointAnnotationOptions(
-          geometry: Point(
-            coordinates: Position(
+      // 创建新的 PointAnnotationManager
+      _memberIconManager =
+          await _mapboxMap!.annotations.createPointAnnotationManager();
+
+      // 设置允许图标重叠，确保点击区域足够大
+      await _memberIconManager!.setIconAllowOverlap(true);
+      await _memberIconManager!.setIconIgnorePlacement(true);
+
+      // 注册原生点击回调
+      _memberTapCancelable = _memberIconManager!.tapEvents(
+        onTap: (annotation) {
+          final member = _memberAnnotationMap[annotation.id];
+          if (member != null) {
+            debugPrint('[Native Tap] Tapped on member: ${member.nickname}');
+            _flyToPosition(Position(
               member.location.longitude,
               member.location.latitude,
-            ),
-          ),
-          image: iconData,
-          iconSize: AppTheme.memberIconScale,
-          iconAnchor: IconAnchor.BOTTOM, // 箭头指向实际位置
-        ),
+            ));
+            _showMemberInfoPanel(member);
+          }
+        },
       );
 
-      // 存储 annotation ID 到成员的映射
-      _memberAnnotationMap[annotation.id] = member;
+      // 为每个成员创建带头像的标记
+      for (final member in _memberLocations) {
+        // 生成头像图标
+        final iconData = await MarkerIconGenerator.generateMemberIcon(
+          nickname: member.nickname,
+          color: Color(member.color),
+          size: AppTheme.memberIconSize,
+        );
+
+        final annotation = await _memberIconManager!.create(
+          PointAnnotationOptions(
+            geometry: Point(
+              coordinates: Position(
+                member.location.longitude,
+                member.location.latitude,
+              ),
+            ),
+            image: iconData,
+            iconSize: AppTheme.memberIconScale,
+            iconAnchor: IconAnchor.BOTTOM, // 箭头指向实际位置
+          ),
+        );
+
+        // 存储 annotation ID 到成员的映射
+        _memberAnnotationMap[annotation.id] = member;
+      }
+    } finally {
+      _isUpdatingMemberMarkers = false;
     }
   }
 

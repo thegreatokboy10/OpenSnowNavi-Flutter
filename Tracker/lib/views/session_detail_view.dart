@@ -34,9 +34,28 @@ class _SessionDetailViewState extends State<SessionDetailView> {
   Future<void> _loadData() async {
     final manager = context.read<SessionManager>();
     final points = await manager.fetchLocationPoints(widget.session.id);
+
+    // 检测统计数据是否有效（中断的轨迹可能统计数据为0）
+    final sessionStats = SessionStatistics.fromSession(widget.session);
+    final needRecalculate = points.isNotEmpty &&
+        sessionStats.totalDistance == 0 &&
+        sessionStats.maxSpeed == 0 &&
+        sessionStats.totalElevationGain == 0;
+
+    SessionStatistics stats;
+    if (needRecalculate) {
+      // 从轨迹点重新计算统计数据
+      stats = SessionStatistics.fromPoints(points);
+      debugPrint(
+          '[SessionDetailView] Recalculated stats from ${points.length} points: '
+          'distance=${stats.totalDistance}m, maxSpeed=${stats.maxSpeed}m/s');
+    } else {
+      stats = sessionStats;
+    }
+
     setState(() {
       _points = points;
-      _stats = SessionStatistics.fromSession(widget.session);
+      _stats = stats;
       _isLoading = false;
     });
   }
@@ -110,12 +129,39 @@ class _SessionDetailViewState extends State<SessionDetailView> {
       styleUri: MapboxConfig.styleUrl,
       onMapCreated: (mapboxMap) async {
         _mapboxMap = mapboxMap;
+        // 先添加 OpenSnowMap 图层（在轨迹下面）
+        await _addOpenSnowMapLayer(mapboxMap);
         await _addTrackLine(mapboxMap);
         await _addMarkers(mapboxMap);
         // 调整相机以适应轨迹
         await _fitBounds(mapboxMap, minLat, maxLat, minLng, maxLng);
       },
     );
+  }
+
+  /// 添加 OpenSnowMap 图层用于对照轨迹和雪道
+  Future<void> _addOpenSnowMapLayer(MapboxMap mapboxMap) async {
+    const sourceId = 'opensnowmap-source';
+    const layerId = 'opensnowmap-layer';
+
+    try {
+      await mapboxMap.style.addSource(
+        RasterSource(
+          id: sourceId,
+          tiles: ['https://tiles.opensnowmap.org/pistes/{z}/{x}/{y}.png'],
+          tileSize: 256,
+        ),
+      );
+      await mapboxMap.style.addLayer(
+        RasterLayer(
+          id: layerId,
+          sourceId: sourceId,
+          rasterOpacity: 0.7,
+        ),
+      );
+    } catch (e) {
+      debugPrint('Error adding OpenSnowMap layer: $e');
+    }
   }
 
   Future<void> _addTrackLine(MapboxMap mapboxMap) async {

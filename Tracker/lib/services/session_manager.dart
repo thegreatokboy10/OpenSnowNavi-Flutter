@@ -39,6 +39,9 @@ class SessionManager extends ChangeNotifier {
   int _motionSampleCounter = 0;
   static const int _motionSampleInterval = 10;
 
+  // 当前录制中的轨迹点（用于实时显示）
+  final List<LocationPoint> _currentTrackPoints = [];
+
   // Getters
   Session? get currentSession => _currentSession;
   bool get isRecording => _isRecording;
@@ -53,6 +56,10 @@ class SessionManager extends ChangeNotifier {
   double get elevationGain => _elevationGain;
   double get elevationLoss => _elevationLoss;
   GpsSignalStrength get gpsSignalStrength => _locationService.signalStrength;
+
+  /// 获取当前录制中的轨迹点（用于实时显示）
+  List<LocationPoint> get currentTrackPoints =>
+      List.unmodifiable(_currentTrackPoints);
 
   SessionManager() {
     _setupCallbacks();
@@ -98,6 +105,7 @@ class SessionManager extends ChangeNotifier {
     _lastPosition = null;
     _lastAltitude = null;
     _totalPausedDuration = 0;
+    _currentTrackPoints.clear(); // 清空轨迹点列表
 
     _isRecording = true;
     _isPaused = false;
@@ -161,6 +169,7 @@ class SessionManager extends ChangeNotifier {
     _isRecording = false;
     _isPaused = false;
     _currentSession = null;
+    _currentTrackPoints.clear(); // 清空轨迹点列表
 
     notifyListeners();
   }
@@ -201,6 +210,8 @@ class SessionManager extends ChangeNotifier {
       isAutoPaused: isAutoPaused,
     );
     _db.insertLocationPoint(point);
+    // 同时添加到内存列表（用于实时显示轨迹）
+    _currentTrackPoints.add(point);
 
     // 计算距离
     if (_lastPosition != null) {

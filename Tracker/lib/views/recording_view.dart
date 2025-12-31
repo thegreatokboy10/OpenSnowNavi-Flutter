@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' hide Size;
 import 'package:provider/provider.dart';
 import '../config/mapbox_config.dart';
+import '../models/location_point.dart';
 import '../services/session_manager.dart';
 import '../services/location_service.dart';
 
@@ -21,6 +22,8 @@ class _RecordingViewState extends State<RecordingView> {
   MapboxMap? _mapboxMap;
   bool _mapReady = false;
   Point? _lastMapCenter;
+  PolylineAnnotationManager? _trackLineManager; // 用于绘制实时轨迹
+  int _lastDrawnPointCount = 0; // 上次绘制的轨迹点数量
 
   @override
   void initState() {
@@ -35,13 +38,31 @@ class _RecordingViewState extends State<RecordingView> {
   void dispose() {
     _timer?.cancel();
     context.read<SessionManager>().removeListener(_onPositionUpdate);
+    _cleanupTrackLine();
     super.dispose();
+  }
+
+  Future<void> _cleanupTrackLine() async {
+    if (_trackLineManager != null && _mapboxMap != null) {
+      try {
+        await _mapboxMap!.annotations
+            .removeAnnotationManager(_trackLineManager!);
+      } catch (e) {
+        // ignore
+      }
+      _trackLineManager = null;
+    }
+    _lastDrawnPointCount = 0;
   }
 
   void _onPositionUpdate() {
     final manager = context.read<SessionManager>();
     final position = manager.currentPosition;
     if (position != null && _mapReady && _mapboxMap != null) {
+      // 更新实时轨迹
+      if (manager.isRecording) {
+        _updateTrackLine(manager.currentTrackPoints);
+      }
       final newCenter =
           Point(coordinates: Position(position.longitude, position.latitude));
       // 只有当位置变化超过一定距离时才移动地图
@@ -490,6 +511,44 @@ class _RecordingViewState extends State<RecordingView> {
           ),
         ),
       ],
+    );
+  }
+
+  /// 更新实时轨迹线
+  Future<void> _updateTrackLine(List<LocationPoint> points) async {
+    if (_mapboxMap == null || points.length < 2) return;
+
+    // 只有新增点时才更新轨迹（避免频繁重绘）
+    if (points.length == _lastDrawnPointCount) return;
+    _lastDrawnPointCount = points.length;
+
+    // 清除旧的轨迹线
+    if (_trackLineManager != null) {
+      try {
+        await _mapboxMap!.annotations
+            .removeAnnotationManager(_trackLineManager!);
+      } catch (e) {
+        // ignore
+      }
+      _trackLineManager = null;
+    }
+
+    // 创建新的 PolylineAnnotationManager
+    _trackLineManager =
+        await _mapboxMap!.annotations.createPolylineAnnotationManager();
+
+    // 构建坐标列表
+    final coordinates =
+        points.map((p) => Position(p.longitude, p.latitude)).toList();
+
+    // 绘制轨迹线
+    await _trackLineManager!.create(
+      PolylineAnnotationOptions(
+        geometry: LineString(coordinates: coordinates),
+        lineColor: 0xFF007AFF, // Apple Maps 蓝色
+        lineWidth: 4.0,
+        lineOpacity: 0.8,
+      ),
     );
   }
 }
