@@ -22,6 +22,7 @@ import '../widgets/team_panel.dart';
 import '../team/team_service.dart';
 import '../meeting_point/meeting_point_service.dart';
 import '../meeting_point/meeting_point_model.dart';
+import '../widgets/offline_map_manager.dart';
 
 /// 地图视图 - 用于滑雪路线规划
 class MapView extends StatefulWidget {
@@ -669,10 +670,34 @@ class _MapViewState extends State<MapView> {
                       },
                     ),
                   ],
+                  const Divider(),
+                  // 离线地图管理按钮
+                  ListTile(
+                    leading: const Icon(Icons.download_for_offline,
+                        color: Colors.blue),
+                    title: const Text('离线地图'),
+                    subtitle: const Text('下载雪场地图供离线使用'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      setState(() => _showLayerSelector = false);
+                      _showOfflineMapManager();
+                    },
+                  ),
                 ],
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  void _showOfflineMapManager() {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        child: OfflineMapManager(
+          onClose: () => Navigator.pop(context),
         ),
       ),
     );
@@ -2893,20 +2918,7 @@ class _MapViewState extends State<MapView> {
   /// 规划路线到集合点
   Future<void> _planRouteToMeetingPoint(MeetingPoint meetingPoint) async {
     try {
-      // 获取当前位置作为起点
-      final currentPosition = await _getCurrentPosition();
-      if (currentPosition == null) {
-        debugPrint('Cannot plan route: current position not available');
-        return;
-      }
-
-      // 设置起点和终点
-      _routePlanningData.origin = RoutePoint(
-        id: 'origin',
-        name: '当前位置',
-        coordinates: currentPosition,
-        type: RoutePointType.origin,
-      );
+      // 设置终点
       _routePlanningData.destination = RoutePoint(
         id: 'destination',
         name: meetingPoint.name,
@@ -2914,17 +2926,38 @@ class _MapViewState extends State<MapView> {
         type: RoutePointType.destination,
       );
 
-      // 显示路线规划面板
+      // 尝试获取当前位置作为起点
+      final currentPosition = await _getCurrentPosition();
+      if (currentPosition != null) {
+        _routePlanningData.origin = RoutePoint(
+          id: 'origin',
+          name: '当前位置',
+          coordinates: currentPosition,
+          type: RoutePointType.origin,
+        );
+      } else {
+        // 离线或无法获取位置时，清除起点让用户手动设置
+        _routePlanningData.origin = null;
+        debugPrint(
+            'Cannot get current position, user needs to set origin manually');
+      }
+
+      // 无论是否有起点，都显示路线规划面板
       setState(() {
         _showRoutePlanningPanel = true;
       });
 
-      // 自动算路
-      await _tryGenerateRoute();
-
-      debugPrint('Auto-planned route to meeting point: ${meetingPoint.name}');
+      // 如果有起点，自动算路
+      if (_routePlanningData.origin != null) {
+        await _tryGenerateRoute();
+        debugPrint('Auto-planned route to meeting point: ${meetingPoint.name}');
+      }
     } catch (e) {
       debugPrint('Failed to plan route to meeting point: $e');
+      // 即使出错也显示面板
+      setState(() {
+        _showRoutePlanningPanel = true;
+      });
     }
   }
 

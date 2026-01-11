@@ -1,11 +1,13 @@
 import 'meeting_point_model.dart';
 import 'meeting_point_api_service.dart';
+import '../services/meeting_point_cache_service.dart';
 
 /// 集合点更新回调
 typedef OnMeetingPointsUpdated = void Function(List<MeetingPoint> points);
 typedef OnActiveMeetingPointChanged = void Function(MeetingPoint? activePoint);
 
 /// 集合点服务 - 管理集合点的业务逻辑
+/// 支持在线加载和离线缓存
 class MeetingPointService {
   static final MeetingPointService _instance = MeetingPointService._internal();
   factory MeetingPointService() => _instance;
@@ -14,6 +16,7 @@ class MeetingPointService {
   static MeetingPointService get instance => _instance;
 
   final MeetingPointApiService _api = MeetingPointApiService.instance;
+  final MeetingPointCacheService _cache = MeetingPointCacheService.instance;
 
   List<MeetingPoint> _meetingPoints = [];
   String? _currentTeamId;
@@ -65,6 +68,7 @@ class MeetingPointService {
   }
 
   /// 加载集合点列表
+  /// 优先从网络加载，失败时尝试使用缓存
   Future<List<MeetingPoint>> loadMeetingPoints() async {
     if (_currentTeamId == null) {
       return [];
@@ -75,6 +79,12 @@ class MeetingPointService {
       _meetingPoints = result.data!;
       onMeetingPointsUpdated?.call(_meetingPoints);
 
+      // 缓存到本地
+      await _cache.cacheMeetingPoints(
+        teamId: _currentTeamId!,
+        points: _meetingPoints,
+      );
+
       // 检查是否有活动集合点
       final active = activeMeetingPoint;
       if (active != null) {
@@ -83,8 +93,31 @@ class MeetingPointService {
 
       return _meetingPoints;
     } else {
+      // 网络失败，尝试从缓存加载
+      return await _loadFromCache();
+    }
+  }
+
+  /// 从缓存加载集合点
+  Future<List<MeetingPoint>> _loadFromCache() async {
+    final cachedTeamId = await _cache.getCachedTeamId();
+
+    // 只有当缓存的团队ID与当前团队ID匹配时才使用缓存
+    if (cachedTeamId != _currentTeamId) {
       return [];
     }
+
+    final cachedPoints = await _cache.getCachedMeetingPoints();
+    if (cachedPoints.isNotEmpty) {
+      _meetingPoints = cachedPoints;
+      onMeetingPointsUpdated?.call(_meetingPoints);
+
+      final active = activeMeetingPoint;
+      if (active != null) {
+        onActiveMeetingPointChanged?.call(active);
+      }
+    }
+    return cachedPoints;
   }
 
   /// 添加集合点
