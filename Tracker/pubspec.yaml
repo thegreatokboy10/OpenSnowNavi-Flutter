@@ -74,6 +74,10 @@ dependencies:
   # QR code generation
   qr_flutter: ^4.1.0
 
+  # SnowNavi offline routing engine
+  snownavi_engine:
+    path: lib/snownavi_engine
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -116,6 +120,7 @@ flutter:
     - assets/ski_resorts/morzine/lifts.geojson
     - assets/ski_resorts/beidahu/runs.geojson
     - assets/ski_resorts/beidahu/lifts.geojson
+    - assets/ski_resorts/morzine/navigation.sqlite
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

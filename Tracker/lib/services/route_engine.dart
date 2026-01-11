@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'search_service.dart';
+import 'offline_route_service.dart';
 
 /// 路线信息
 class Route {
@@ -94,9 +96,10 @@ class Maneuver {
   }
 }
 
-/// 路线引擎 - 调用 SnowNavi 路线规划 API
+/// 路线引擎 - 支持离线优先、在线 fallback 的混合模式
 class RouteEngine {
   final String baseUrl;
+  final OfflineRouteService _offlineService = OfflineRouteService.instance;
 
   RouteEngine({this.baseUrl = 'https://snownavi.ski/route/v1'});
 
@@ -105,7 +108,80 @@ class RouteEngine {
   /// [endCoordinate] 终点坐标
   /// [stopovers] 途径点列表（可选）
   /// [selectedResortKey] 雪场标识
+  ///
+  /// 优先使用离线路由（如果雪场有 navigation.sqlite），否则使用在线 API
   Future<Route?> generateRoute({
+    required LatLng startCoordinate,
+    required LatLng endCoordinate,
+    List<LatLng>? stopovers,
+    String? selectedResortKey,
+  }) async {
+    // 1. 尝试离线路由
+    if (selectedResortKey != null) {
+      final offlineRoute = await _tryOfflineRoute(
+        resortKey: selectedResortKey,
+        startCoordinate: startCoordinate,
+        endCoordinate: endCoordinate,
+        stopovers: stopovers,
+      );
+      if (offlineRoute != null) {
+        debugPrint('[RouteEngine] Using offline route for $selectedResortKey');
+        return offlineRoute;
+      }
+    }
+
+    // 2. Fallback 到在线路由
+    debugPrint('[RouteEngine] Using online route for $selectedResortKey');
+    return _tryOnlineRoute(
+      startCoordinate: startCoordinate,
+      endCoordinate: endCoordinate,
+      stopovers: stopovers,
+      selectedResortKey: selectedResortKey,
+    );
+  }
+
+  /// 尝试离线路由
+  Future<Route?> _tryOfflineRoute({
+    required String resortKey,
+    required LatLng startCoordinate,
+    required LatLng endCoordinate,
+    List<LatLng>? stopovers,
+  }) async {
+    try {
+      // 检查是否支持离线路由
+      if (!await _offlineService.hasOfflineRouting(resortKey)) {
+        return null;
+      }
+
+      // 构建途经点列表
+      List<(double, double)>? waypointTuples;
+      if (stopovers != null && stopovers.isNotEmpty) {
+        waypointTuples =
+            stopovers.map((s) => (s.longitude, s.latitude)).toList();
+      }
+
+      // 调用离线路由
+      final osrmResponse = await _offlineService.generateRoute(
+        resortKey: resortKey,
+        startLon: startCoordinate.longitude,
+        startLat: startCoordinate.latitude,
+        endLon: endCoordinate.longitude,
+        endLat: endCoordinate.latitude,
+        waypoints: waypointTuples,
+      );
+
+      if (osrmResponse == null) return null;
+
+      // 解析 OSRM 格式响应
+      return Route.fromJson(osrmResponse);
+    } catch (e) {
+      debugPrint('[RouteEngine] Offline route failed: $e');
+      return null;
+    }
+  }
+
+  /// 在线路由（原有逻辑）
+  Future<Route?> _tryOnlineRoute({
     required LatLng startCoordinate,
     required LatLng endCoordinate,
     List<LatLng>? stopovers,
@@ -139,6 +215,7 @@ class RouteEngine {
         return null;
       }
     } catch (e) {
+      debugPrint('[RouteEngine] Online route failed: $e');
       return null;
     }
   }
