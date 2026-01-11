@@ -448,6 +448,7 @@ class TeamService {
 
   /// 获取成员位置列表（用于地图显示）
   /// [includeMyself] 是否包含自己的位置，默认 true
+  /// 注意：只返回24小时内有位置更新的成员
   List<MemberLocation> getMemberLocations({bool includeMyself = true}) {
     if (_currentTeam == null) {
       return [];
@@ -456,26 +457,30 @@ class TeamService {
     // 获取所有成员用于计算颜色索引
     final allMembers = _currentTeam!.members;
 
-    final result = allMembers.where((m) {
-      // 必须开启位置共享且有位置数据
-      if (!m.shareLocation || m.lastLocation == null) return false;
-      // 如果不包含自己，过滤掉自己
-      if (!includeMyself && m.deviceId == effectiveId) return false;
-      return true;
-    }).map((m) {
-      // 计算颜色索引（基于成员在列表中的位置）
-      final colorIndex = allMembers.indexOf(m);
-      final isMe = m.deviceId == effectiveId;
-      return MemberLocation(
-        deviceId: m.deviceId,
-        nickname: isMe ? '${m.nickname} (我)' : m.nickname,
-        location: m.lastLocation!.latLng,
-        lastUpdate: m.lastLocationUpdate,
-        colorIndex: colorIndex,
-        isLeader: m.isLeader,
-        isMe: isMe,
-      );
-    }).toList();
+    final result = allMembers
+        .where((m) {
+          // 必须开启位置共享且有位置数据
+          if (!m.shareLocation || m.lastLocation == null) return false;
+          // 如果不包含自己，过滤掉自己
+          if (!includeMyself && m.deviceId == effectiveId) return false;
+          return true;
+        })
+        .map((m) {
+          // 计算颜色索引（基于成员在列表中的位置）
+          final colorIndex = allMembers.indexOf(m);
+          final isMe = m.deviceId == effectiveId;
+          return MemberLocation(
+            deviceId: m.deviceId,
+            nickname: isMe ? '${m.nickname} (我)' : m.nickname,
+            location: m.lastLocation!.latLng,
+            lastUpdate: m.lastLocationUpdate,
+            colorIndex: colorIndex,
+            isLeader: m.isLeader,
+            isMe: isMe,
+          );
+        })
+        .where((m) => m.shouldShowOnMap) // 过滤掉超过24小时的成员
+        .toList();
 
     return result;
   }
@@ -502,6 +507,13 @@ class TeamService {
       isLeader: member.isLeader,
     );
   }
+}
+
+/// 位置状态枚举
+enum LocationStatus {
+  active, // 10分钟内更新 - 绿色
+  stale, // 10分钟到24小时 - 灰色
+  expired, // 超过24小时 - 不显示
 }
 
 /// 成员位置信息（用于地图显示）
@@ -540,4 +552,34 @@ class MemberLocation {
 
   /// 获取成员颜色
   int get color => memberColors[colorIndex % memberColors.length];
+
+  /// 获取位置更新时长
+  Duration? get updateAge {
+    if (lastUpdate == null) return null;
+    return DateTime.now().difference(lastUpdate!);
+  }
+
+  /// 获取位置状态
+  LocationStatus get locationStatus {
+    final age = updateAge;
+    if (age == null) return LocationStatus.expired;
+    if (age.inMinutes < 10) return LocationStatus.active;
+    if (age.inHours < 24) return LocationStatus.stale;
+    return LocationStatus.expired;
+  }
+
+  /// 是否应该在地图上显示（24小时内有更新）
+  bool get shouldShowOnMap => locationStatus != LocationStatus.expired;
+
+  /// 状态圆圈颜色
+  int get statusColor {
+    switch (locationStatus) {
+      case LocationStatus.active:
+        return 0xFF4CAF50; // 绿色
+      case LocationStatus.stale:
+        return 0xFF9E9E9E; // 灰色
+      case LocationStatus.expired:
+        return 0xFF9E9E9E; // 灰色
+    }
+  }
 }

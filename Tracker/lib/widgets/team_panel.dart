@@ -545,8 +545,28 @@ class _TeamPanelState extends State<TeamPanel> {
 
   Widget _buildMemberTile(TeamMember member, bool isLeader) {
     final isMe = member.deviceId == _teamService.effectiveId;
-    final isActive = member.hasCheckedInToday;
-    final hasLocation = member.shareLocation && member.lastLocation != null;
+    final isSharingLocation = member.isSharingLocation;
+    final isLocationActive = member.isLocationActive;
+
+    // 确定状态圆圈颜色
+    Color? statusDotColor;
+    if (isSharingLocation) {
+      statusDotColor = isLocationActive ? Colors.green : Colors.grey;
+    }
+
+    // 状态文字
+    String statusText;
+    Color statusTextColor;
+    if (isSharingLocation) {
+      statusText = isLocationActive ? '正在共享位置' : '位置共享中';
+      statusTextColor = isLocationActive ? Colors.green : Colors.grey;
+    } else if (member.shareLocation) {
+      statusText = '位置已过期';
+      statusTextColor = Colors.grey;
+    } else {
+      statusText = '未共享位置';
+      statusTextColor = Colors.grey;
+    }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -564,9 +584,9 @@ class _TeamPanelState extends State<TeamPanel> {
           // 第一行：头像、昵称、标签、操作按钮
           Row(
             children: [
-              // 头像
+              // 头像（带状态圆圈）
               GestureDetector(
-                onTap: hasLocation
+                onTap: isSharingLocation
                     ? () {
                         final memberLocation = _teamService
                             .getMemberLocationByDeviceId(member.deviceId);
@@ -576,15 +596,36 @@ class _TeamPanelState extends State<TeamPanel> {
                         }
                       }
                     : null,
-                child: CircleAvatar(
-                  radius: 18,
-                  backgroundColor:
-                      isActive ? Colors.green.shade100 : Colors.grey.shade200,
-                  child: Icon(
-                    member.isLeader ? Icons.star : Icons.person,
-                    size: 20,
-                    color: isActive ? Colors.green : Colors.grey,
-                  ),
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    CircleAvatar(
+                      radius: 18,
+                      backgroundColor: isSharingLocation
+                          ? Colors.blue.shade100
+                          : Colors.grey.shade200,
+                      child: Icon(
+                        member.isLeader ? Icons.star : Icons.person,
+                        size: 20,
+                        color: isSharingLocation ? Colors.blue : Colors.grey,
+                      ),
+                    ),
+                    // 状态圆圈（右上角）
+                    if (statusDotColor != null)
+                      Positioned(
+                        right: -2,
+                        top: -2,
+                        child: Container(
+                          width: 12,
+                          height: 12,
+                          decoration: BoxDecoration(
+                            color: statusDotColor,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
               const SizedBox(width: 10),
@@ -625,9 +666,9 @@ class _TeamPanelState extends State<TeamPanel> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      isActive ? (hasLocation ? '正在共享位置' : '今日已签到') : '未签到',
+                      statusText,
                       style: TextStyle(
-                        color: hasLocation ? Colors.blue : Colors.grey,
+                        color: statusTextColor,
                         fontSize: 11,
                       ),
                     ),

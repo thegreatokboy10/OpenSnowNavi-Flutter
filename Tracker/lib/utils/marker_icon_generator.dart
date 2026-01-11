@@ -5,12 +5,18 @@ import 'package:flutter/material.dart';
 
 /// 生成自定义地图标记图标
 class MarkerIconGenerator {
-  /// 生成团队成员头像图标（带名字缩写和箭头）
+  /// 生成团队成员头像图标（带名字缩写、箭头和状态圆圈）
+  /// [statusColor] 状态圆圈颜色，null 表示不显示状态圆圈
   static Future<Uint8List> generateMemberIcon({
     required String nickname,
     required Color color,
     double size = 160,
+    Color? statusColor,
   }) async {
+    // 为状态圆圈增加画布右上角空间
+    final canvasSize = size * 1.15; // 增加15%空间给状态圆圈
+    final iconOffset = size * 0.15; // 图标向左下偏移
+
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
     final paint = Paint();
@@ -24,9 +30,9 @@ class MarkerIconGenerator {
 
     // 画箭头/三角形指向实际位置
     final arrowPath = Path();
-    arrowPath.moveTo(size / 2, size); // 底部中心（指向实际位置）
-    arrowPath.lineTo(size / 2 - arrowWidth, size - arrowHeight);
-    arrowPath.lineTo(size / 2 + arrowWidth, size - arrowHeight);
+    arrowPath.moveTo(size / 2, size + iconOffset); // 底部中心（指向实际位置）
+    arrowPath.lineTo(size / 2 - arrowWidth, size - arrowHeight + iconOffset);
+    arrowPath.lineTo(size / 2 + arrowWidth, size - arrowHeight + iconOffset);
     arrowPath.close();
 
     paint.color = color;
@@ -34,7 +40,8 @@ class MarkerIconGenerator {
     canvas.drawPath(arrowPath, paint);
 
     // 动态计算圆形位置（考虑三角形高度）
-    final circleCenter = Offset(size / 2, size / 2 - arrowHeight * 0.25);
+    final circleCenter =
+        Offset(size / 2, size / 2 - arrowHeight * 0.25 + iconOffset);
     final circleRadius = size / 2 - arrowHeight * 0.5;
 
     // 外边框（边框宽度根据尺寸动态计算）
@@ -68,8 +75,27 @@ class MarkerIconGenerator {
       ),
     );
 
+    // 画状态圆圈（右上角）
+    if (statusColor != null) {
+      final statusRadius = size * 0.12;
+      // 状态圆圈位于主圆圈的右上角
+      final statusCenter = Offset(
+        circleCenter.dx + circleRadius * 0.7,
+        circleCenter.dy - circleRadius * 0.7,
+      );
+
+      // 白色边框
+      paint.color = Colors.white;
+      paint.style = PaintingStyle.fill;
+      canvas.drawCircle(statusCenter, statusRadius + 2, paint);
+
+      // 状态颜色填充
+      paint.color = statusColor;
+      canvas.drawCircle(statusCenter, statusRadius, paint);
+    }
+
     final picture = recorder.endRecording();
-    final image = await picture.toImage(size.toInt(), size.toInt());
+    final image = await picture.toImage(canvasSize.toInt(), canvasSize.toInt());
     final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
     return byteData!.buffer.asUint8List();
   }

@@ -85,6 +85,28 @@ class TeamMember {
         checkinTime.day == now.day;
   }
 
+  /// 获取位置更新时长
+  Duration? get locationUpdateAge {
+    if (lastLocationUpdate == null) return null;
+    return DateTime.now().difference(lastLocationUpdate!);
+  }
+
+  /// 位置是否在10分钟内更新（活跃状态）
+  bool get isLocationActive {
+    final age = locationUpdateAge;
+    return age != null && age.inMinutes < 10;
+  }
+
+  /// 位置是否在24小时内更新（可显示状态）
+  bool get isLocationValid {
+    final age = locationUpdateAge;
+    return age != null && age.inHours < 24;
+  }
+
+  /// 是否正在共享位置（开启共享 + 有位置数据 + 24小时内更新）
+  bool get isSharingLocation =>
+      shareLocation && lastLocation != null && isLocationValid;
+
   Map<String, dynamic> toJson() => {
         'deviceId': deviceId,
         'nickname': nickname,

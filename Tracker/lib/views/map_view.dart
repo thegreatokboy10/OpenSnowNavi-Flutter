@@ -2791,11 +2791,12 @@ class _MapViewState extends State<MapView> {
 
       // 为每个成员创建带头像的标记
       for (final member in _memberLocations) {
-        // 生成头像图标
+        // 生成头像图标（带状态圆圈）
         final iconData = await MarkerIconGenerator.generateMemberIcon(
           nickname: member.nickname,
           color: Color(member.color),
           size: AppTheme.memberIconSize,
+          statusColor: Color(member.statusColor), // 状态圆圈颜色
         );
 
         final annotation = await _memberIconManager!.create(
