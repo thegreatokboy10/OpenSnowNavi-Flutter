@@ -49,6 +49,14 @@ class _SessionDetailViewState extends State<SessionDetailView> {
       debugPrint(
           '[SessionDetailView] Recalculated stats from ${points.length} points: '
           'distance=${stats.totalDistance}m, maxSpeed=${stats.maxSpeed}m/s');
+
+      // 保存重新计算的统计数据到数据库
+      widget.session.totalDistance = stats.totalDistance;
+      widget.session.skiingDistance = stats.totalDistance;
+      widget.session.maxSpeed = stats.maxSpeed;
+      widget.session.totalElevationGain = stats.totalElevationGain;
+      widget.session.totalElevationLoss = stats.totalElevationLoss;
+      await manager.updateSession(widget.session);
     } else {
       stats = sessionStats;
     }

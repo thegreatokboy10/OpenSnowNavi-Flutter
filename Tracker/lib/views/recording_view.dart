@@ -30,8 +30,28 @@ class _RecordingViewState extends State<RecordingView> {
     super.initState();
     // 监听 SessionManager 的位置更新
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<SessionManager>().addListener(_onPositionUpdate);
+      final manager = context.read<SessionManager>();
+      manager.addListener(_onPositionUpdate);
+      // 检查是否已经在录制中（可能是恢复的 session）
+      _checkRecordingState(manager);
     });
+  }
+
+  /// 检查录制状态，如果正在录制则启动计时器
+  void _checkRecordingState(SessionManager manager) {
+    if (manager.isRecording && _timer == null) {
+      // 恢复计时器，计算已过时间
+      if (manager.currentSession != null) {
+        _elapsed = DateTime.now().difference(manager.currentSession!.startTime);
+      }
+      _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+        if (!manager.isPaused) {
+          setState(() {
+            _elapsed += const Duration(seconds: 1);
+          });
+        }
+      });
+    }
   }
 
   @override
@@ -57,6 +77,10 @@ class _RecordingViewState extends State<RecordingView> {
 
   void _onPositionUpdate() {
     final manager = context.read<SessionManager>();
+
+    // 检查录制状态（可能是从其他地方恢复的）
+    _checkRecordingState(manager);
+
     final position = manager.currentPosition;
     if (position != null && _mapReady && _mapboxMap != null) {
       // 更新实时轨迹

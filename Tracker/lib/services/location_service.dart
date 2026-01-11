@@ -81,9 +81,18 @@ class LocationService {
     _lowSpeedStartTime = null;
     _highSpeedStartTime = null;
 
-    const locationSettings = LocationSettings(
+    // 使用 Apple 平台特定设置来确保后台位置追踪稳定
+    // allowBackgroundLocationUpdates: 允许后台位置更新
+    // pauseLocationUpdatesAutomatically: 禁止系统自动暂停位置更新
+    // showBackgroundLocationIndicator: 显示后台位置指示器（蓝条）
+    // activityType: 设置为 fitness 以获得更好的位置追踪
+    final locationSettings = AppleSettings(
       accuracy: LocationAccuracy.bestForNavigation,
       distanceFilter: 1,
+      activityType: ActivityType.fitness,
+      pauseLocationUpdatesAutomatically: false,
+      allowBackgroundLocationUpdates: true,
+      showBackgroundLocationIndicator: true,
     );
 
     _positionSubscription = Geolocator.getPositionStream(

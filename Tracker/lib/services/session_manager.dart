@@ -42,10 +42,20 @@ class SessionManager extends ChangeNotifier {
   // 当前录制中的轨迹点（用于实时显示）
   final List<LocationPoint> _currentTrackPoints = [];
 
+  // 中断的 session（用于恢复录制）
+  Session? _interruptedSession;
+  List<LocationPoint> _interruptedSessionPoints = [];
+
   // Getters
   Session? get currentSession => _currentSession;
   bool get isRecording => _isRecording;
   bool get isPaused => _isPaused;
+
+  /// 是否有中断的录制需要恢复
+  bool get hasInterruptedSession => _interruptedSession != null;
+
+  /// 中断的 session 信息
+  Session? get interruptedSession => _interruptedSession;
   bool get isAutoPaused => _locationService.isAutoPaused;
   Position? get currentPosition => _currentPosition;
   double get currentSpeed => _currentSpeed;
@@ -69,6 +79,181 @@ class SessionManager extends ChangeNotifier {
     _locationService.onLocationUpdate = _handleLocationUpdate;
     _locationService.onHeadingUpdate = _handleHeadingUpdate;
     _motionService.onMotionUpdate = _handleMotionUpdate;
+  }
+
+  /// 初始化 - 检查未完成的 session
+  /// 如果发现中断的录制，保存供 UI 询问用户是否恢复
+  Future<void> initialize() async {
+    final sessions = await _db.getAllSessions();
+
+    // 查找未完成的 session（状态不是 stopped 的）
+    final incompleteSessions = sessions
+        .where(
+          (s) => s.state != SessionState.stopped,
+        )
+        .toList();
+
+    if (incompleteSessions.isNotEmpty) {
+      // 取最近的未完成 session
+      final session = incompleteSessions.first;
+      final points = await _db.getLocationPoints(session.id);
+
+      // 只有有轨迹点的 session 才提示恢复
+      if (points.isNotEmpty) {
+        _interruptedSession = session;
+        _interruptedSessionPoints = points;
+        debugPrint('[SessionManager] Found interrupted session: ${session.id}, '
+            'points: ${points.length}, started: ${session.startTime}');
+      } else {
+        // 没有轨迹点的 session 直接删除
+        await _db.deleteSession(session.id);
+        debugPrint(
+            '[SessionManager] Deleted empty interrupted session: ${session.id}');
+      }
+
+      // 处理其他未完成的 session（直接结束）
+      for (int i = 1; i < incompleteSessions.length; i++) {
+        await _finalizeSession(incompleteSessions[i]);
+      }
+    }
+  }
+
+  /// 结束一个 session 并重新计算统计数据
+  Future<void> _finalizeSession(Session session) async {
+    final points = await _db.getLocationPoints(session.id);
+
+    // 根据轨迹点重新计算统计数据
+    if (points.length >= 2) {
+      double totalDistance = 0;
+      double maxSpeed = 0;
+      double elevationGain = 0;
+      double elevationLoss = 0;
+      double? lastAlt;
+
+      for (int i = 1; i < points.length; i++) {
+        final prev = points[i - 1];
+        final curr = points[i];
+
+        totalDistance += Geolocator.distanceBetween(
+          prev.latitude,
+          prev.longitude,
+          curr.latitude,
+          curr.longitude,
+        );
+
+        if (curr.speed > maxSpeed) maxSpeed = curr.speed;
+
+        if (lastAlt != null) {
+          final altDiff = curr.altitude - lastAlt;
+          if (altDiff > 0) {
+            elevationGain += altDiff;
+          } else {
+            elevationLoss += altDiff.abs();
+          }
+        }
+        lastAlt = curr.altitude;
+      }
+
+      session.totalDistance = totalDistance;
+      session.skiingDistance = totalDistance;
+      session.maxSpeed = maxSpeed;
+      session.totalElevationGain = elevationGain;
+      session.totalElevationLoss = elevationLoss;
+    }
+
+    session.state = SessionState.stopped;
+    session.endTime ??=
+        points.isNotEmpty ? points.last.timestamp : DateTime.now();
+
+    await _db.updateSession(session);
+    debugPrint('[SessionManager] Finalized session: ${session.id}, '
+        'points: ${points.length}, distance: ${session.totalDistance.toStringAsFixed(0)}m');
+  }
+
+  /// 恢复中断的录制
+  Future<void> resumeInterruptedSession() async {
+    if (_interruptedSession == null) return;
+
+    _currentSession = _interruptedSession;
+    _currentTrackPoints.clear();
+    _currentTrackPoints.addAll(_interruptedSessionPoints);
+
+    // 恢复统计数据
+    _recalculateStats(_interruptedSessionPoints);
+
+    // 设置最后位置用于继续计算
+    if (_interruptedSessionPoints.isNotEmpty) {
+      final lastPoint = _interruptedSessionPoints.last;
+      _lastAltitude = lastPoint.altitude;
+    }
+
+    _isRecording = true;
+    _isPaused = false;
+    _currentSession?.state = SessionState.recording;
+    await _db.updateSession(_currentSession!);
+
+    // 开始位置追踪
+    _locationService.resetAutoPauseState();
+    await _locationService.startTracking();
+    _motionService.startTracking();
+
+    // 清除中断 session 引用
+    _interruptedSession = null;
+    _interruptedSessionPoints = [];
+
+    debugPrint(
+        '[SessionManager] Resumed interrupted session: ${_currentSession!.id}');
+    notifyListeners();
+  }
+
+  /// 放弃中断的录制（结束并保存）
+  Future<void> discardInterruptedSession() async {
+    if (_interruptedSession == null) return;
+
+    await _finalizeSession(_interruptedSession!);
+
+    _interruptedSession = null;
+    _interruptedSessionPoints = [];
+
+    debugPrint('[SessionManager] Discarded interrupted session');
+    notifyListeners();
+  }
+
+  /// 从轨迹点重新计算统计数据
+  void _recalculateStats(List<LocationPoint> points) {
+    _totalDistance = 0;
+    _skiingDistance = 0;
+    _maxSpeed = 0;
+    _elevationGain = 0;
+    _elevationLoss = 0;
+
+    if (points.length < 2) return;
+
+    double? lastAlt;
+    for (int i = 1; i < points.length; i++) {
+      final prev = points[i - 1];
+      final curr = points[i];
+
+      final dist = Geolocator.distanceBetween(
+        prev.latitude,
+        prev.longitude,
+        curr.latitude,
+        curr.longitude,
+      );
+      _totalDistance += dist;
+      if (curr.isMoving) _skiingDistance += dist;
+      if (curr.speed > _maxSpeed) _maxSpeed = curr.speed;
+
+      if (lastAlt != null) {
+        final altDiff = curr.altitude - lastAlt;
+        if (altDiff > 0) {
+          _elevationGain += altDiff;
+        } else {
+          _elevationLoss += altDiff.abs();
+        }
+      }
+      lastAlt = curr.altitude;
+    }
   }
 
   // 处理 heading 更新，用于实时刷新 UI
@@ -283,6 +468,12 @@ class SessionManager extends ChangeNotifier {
 
   Future<void> deleteSession(String sessionId) async {
     await _db.deleteSession(sessionId);
+    notifyListeners();
+  }
+
+  /// 更新 session（用于保存重新计算的统计数据）
+  Future<void> updateSession(Session session) async {
+    await _db.updateSession(session);
     notifyListeners();
   }
 }
