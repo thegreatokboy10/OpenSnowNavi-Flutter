@@ -1,0 +1,65 @@
+{
+  "version": "1.0",
+  "created_at": "2026-01-13T14:19:54.181Z",
+  "source_hashes": {
+    "runs": "5204e7619de790a612894609697642d5",
+    "lifts": "9d25538b606dafbd8a9c052fe2ffab89"
+  },
+  "operations": [
+    {
+      "op": "add_manual_edge",
+      "src_feat_id": "42b9e0f06fb823d18f8e94c4c2f9635a880205de",
+      "src_sub_id": 0,
+      "osm_id": null,
+      "src_feat_type": "run",
+      "from_node": 514,
+      "to_node": 712,
+      "name": "",
+      "difficulty": "novice",
+      "oneway": true,
+      "geom": "LINESTRING(6.7107828666666665 46.157405116666666, 6.7113590240478525 46.157762991027894, 6.7113590240478525 46.157762991027894, 6.711937400000001 46.1579031)",
+      "lift_type": null,
+      "duration": null,
+      "occupancy": null
+    },
+    {
+      "op": "add_manual_edge",
+      "src_feat_id": "88b7b01ab115509cdae23c9b7aa4a4498a5c78f6",
+      "src_sub_id": 0,
+      "osm_id": null,
+      "src_feat_type": "run",
+      "from_node": 1123,
+      "to_node": 1134,
+      "name": "",
+      "difficulty": "",
+      "oneway": false,
+      "geom": "LINESTRING(6.7135193 46.157937, 6.713032722473145 46.158015664747346, 6.713032722473145 46.158015664747346, 6.7124859999999975 46.157941499999986)",
+      "lift_type": null,
+      "duration": null,
+      "occupancy": null
+    },
+    {
+      "op": "add_manual_edge",
+      "src_feat_id": "af70b718aa3ce05bd75dc0610831303890668806",
+      "src_sub_id": 0,
+      "osm_id": null,
+      "src_feat_type": "run",
+      "from_node": 712,
+      "to_node": 1134,
+      "name": "",
+      "difficulty": "",
+      "oneway": false,
+      "geom": "LINESTRING(6.711937400000001 46.1579031, 6.7124859999999975 46.157941499999986)",
+      "lift_type": null,
+      "duration": null,
+      "occupancy": null
+    }
+  ],
+  "stats": {
+    "total": 3,
+    "flip": 0,
+    "update": 0,
+    "enable": 0,
+    "add": 3
+  }
+}

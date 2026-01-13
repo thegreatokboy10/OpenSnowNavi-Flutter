@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>SnowNavi 滑雪导航</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: 13px; }
+        #container { display: flex; height: 100vh; }
+        #map { flex: 1; }
+        
+        #sidebar {
+            width: 380px;
+            background: #f5f5f5;
+            border-left: 1px solid #ddd;
+            overflow-y: auto;
+        }
+        
+        .section {
+            padding: 15px;
+            border-bottom: 1px solid #ddd;
+        }
+        .section h3 {
+            font-size: 14px;
+            margin-bottom: 12px;
+            color: #333;
+        }
+        
+        .info-box {
+            background: #e7f3ff;
+            border: 1px solid #b3d7ff;
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 12px;
+            font-size: 12px;
+            color: #0056b3;
+        }
+        
+        .form-row {
+            margin-bottom: 12px;
+        }
+        .form-row label {
+            display: block;
+            font-size: 11px;
+            color: #666;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+        }
+        .form-row input, .form-row select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+        
+        .btn {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-primary:hover { background: #0056b3; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-success:hover { background: #1e7e34; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-danger:hover { background: #bd2130; }
+        .btn-sm { padding: 6px 10px; font-size: 12px; }
+        .btn:disabled { background: #ccc; cursor: not-allowed; }
+        
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .btn-group .btn { flex: 1; }
+        
+        /* 路线选择 */
+        .route-option {
+            padding: 12px;
+            margin: 8px 0;
+            background: white;
+            border-radius: 6px;
+            border: 2px solid #ddd;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .route-option:hover { border-color: #007bff; }
+        .route-option.selected { border-color: #007bff; background: #e7f3ff; }
+        .route-option.route-1 { border-left: 4px solid #3b82f6; }
+        .route-option.route-2 { border-left: 4px solid #22c55e; }
+        .route-option.route-3 { border-left: 4px solid #f59e0b; }
+        
+        .route-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+        .route-title { font-weight: 600; font-size: 14px; }
+        .route-badge {
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            background: #e0e0e0;
+        }
+        .route-stats {
+            display: flex;
+            gap: 15px;
+            font-size: 12px;
+            color: #666;
+        }
+        
+        /* 途经点列表 */
+        .waypoint-item {
+            display: flex;
+            align-items: center;
+            padding: 8px;
+            margin: 4px 0;
+            background: white;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        .waypoint-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            color: white;
+            margin-right: 10px;
+        }
+        .waypoint-start { background: #22c55e; }
+        .waypoint-end { background: #ef4444; }
+        .waypoint-via { background: #f59e0b; }
+        .waypoint-text { flex: 1; font-size: 12px; }
+        .waypoint-remove {
+            cursor: pointer;
+            color: #999;
+            padding: 4px;
+        }
+        .waypoint-remove:hover { color: #dc3545; }
+
+        /* 筛选行 */
+        .filter-row {
+            display: flex;
+            align-items: center;
+            padding: 4px 0;
+            font-size: 12px;
+        }
+        .filter-row input {
+            margin-right: 6px;
+        }
+        
+        /* 图例 */
+        .legend-row {
+            display: flex;
+            align-items: center;
+            padding: 3px 0;
+            font-size: 12px;
+        }
+        .legend-color {
+            width: 20px;
+            height: 4px;
+            margin-right: 8px;
+            border-radius: 2px;
+        }
+        
+        /* 模式指示 */
+        .mode-indicator {
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 12px;
+            font-size: 12px;
+            text-align: center;
+        }
+        .mode-start { background: #d4edda; color: #155724; }
+        .mode-end { background: #f8d7da; color: #721c24; }
+        .mode-waypoint { background: #fff3cd; color: #856404; }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="map"></div>
+        <div id="sidebar">
+            <!-- 导航设置 -->
+            <div class="section">
+                <h3>🎿 滑雪导航</h3>
+                <div class="info-box">
+                    💡 点击地图设置起点、终点和途经点，然后点击「规划路线」
+                </div>
+
+                <div class="form-row">
+                    <label>输入模式</label>
+                    <select id="input-mode" onchange="toggleInputMode()">
+                        <option value="node">节点模式 (点击节点)</option>
+                        <option value="coords">坐标模式 (点击任意位置，自动匹配)</option>
+                    </select>
+                </div>
+
+                <div class="form-row">
+                    <label>路由模式</label>
+                    <select id="route-mode" onchange="toggleRouteMode()">
+                        <option value="normal">普通模式 (多条备选路线)</option>
+                        <option value="explore">探索模式 (展示所有出发方向)</option>
+                    </select>
+                </div>
+
+                <div id="mode-indicator" class="mode-indicator mode-start">
+                    点击地图选择 <strong>起点</strong>
+                </div>
+
+                <div id="waypoints-list">
+                    <!-- 动态生成 -->
+                </div>
+
+                <div class="btn-group">
+                    <button class="btn btn-primary" id="plan-btn" onclick="planRoute()" disabled>
+                        🗺️ 规划路线
+                    </button>
+                    <button class="btn btn-danger btn-sm" onclick="clearAll()" style="flex:0.4">
+                        清空
+                    </button>
+                </div>
+            </div>
+
+            <!-- 偏好设置 -->
+            <div class="section">
+                <h3>⚙️ 偏好设置</h3>
+                <div class="form-row">
+                    <label>最大难度</label>
+                    <select id="max-difficulty">
+                        <option value="novice">Novice (初学)</option>
+                        <option value="easy">Easy (简单)</option>
+                        <option value="intermediate">Intermediate (中级)</option>
+                        <option value="advanced">Advanced (高级)</option>
+                        <option value="expert" selected>Expert (专家)</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <label>备选路线数量</label>
+                    <select id="num-alternatives">
+                        <option value="1">1 条</option>
+                        <option value="2">2 条</option>
+                        <option value="3" selected>3 条</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <label>路线相似度上限</label>
+                    <select id="max-overlap">
+                        <option value="0.3">30% (差异大)</option>
+                        <option value="0.5">50%</option>
+                        <option value="0.7">70%</option>
+                        <option value="0.8" selected>80% (默认)</option>
+                        <option value="0.9">90%</option>
+                        <option value="1.0">100% (不限制)</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <label>输出格式</label>
+                    <select id="output-format">
+                        <option value="snownavi" selected>SnowNavi 格式</option>
+                        <option value="osrm">OSRM 格式 (带导航指令)</option>
+                    </select>
+                </div>
+                <div class="info-box" style="font-size:11px;margin-top:8px;">
+                    💡 相似度越低，备选路线之间差异越大<br>
+                    💡 OSRM 格式包含详细导航指令，适用于第三方应用
+                </div>
+            </div>
+
+            <!-- 路线结果 -->
+            <div class="section" id="routes-section" style="display:none">
+                <h3>📍 路线方案</h3>
+                <div id="routes-list">
+                    <!-- 动态生成 -->
+                </div>
+            </div>
+
+            <!-- 显示控制 -->
+            <div class="section">
+                <h3>🔍 显示控制</h3>
+                <div class="filter-row"><input type="checkbox" id="show-edges" checked> 雪道/缆车</div>
+                <div class="filter-row"><input type="checkbox" id="show-nodes" checked> 节点 (点击可选择)</div>
+                <div class="filter-row"><input type="checkbox" id="show-arrows" checked> 方向箭头</div>
+            </div>
+
+            <!-- 图例 -->
+            <div class="section">
+                <h3>🎿 图例</h3>
+                <div class="legend-row"><div class="legend-color" style="background:#22c55e"></div>Novice</div>
+                <div class="legend-row"><div class="legend-color" style="background:#3b82f6"></div>Easy</div>
+                <div class="legend-row"><div class="legend-color" style="background:#ef4444"></div>Intermediate</div>
+                <div class="legend-row"><div class="legend-color" style="background:#111"></div>Advanced/Expert</div>
+                <div class="legend-row"><div class="legend-color" style="background:#8b5cf6"></div>Lift (缆车)</div>
+                <hr style="margin:8px 0">
+                <div class="legend-row"><div class="legend-color" style="background:#3b82f6;height:6px"></div>路线 1</div>
+                <div class="legend-row"><div class="legend-color" style="background:#22c55e;height:6px"></div>路线 2</div>
+                <div class="legend-row"><div class="legend-color" style="background:#f59e0b;height:6px"></div>路线 3</div>
+            </div>
+        </div>
+    </div>
+
+<script>
+// 全局状态
+let map, graphData;
+let startNode = null, endNode = null;
+let waypoints = [];
+let currentMode = 'start'; // 'start', 'end', 'waypoint'
+let inputMode = 'node'; // 'node' or 'coords' - 坐标输入模式
+let routeResults = null;
+let selectedRouteIndex = 0;
+let routeMode = 'normal';  // 'normal' 或 'explore'
+
+// 坐标模式下的原始坐标 (用于发送 API 请求)
+let startCoords = null;  // { lon, lat }
+let endCoords = null;
+let waypointsCoords = [];
+
+// 图层
+let baseLayer, routeLayer, markerLayer;
+
+// Polyline 解码函数 (Google Polyline 格式)
+function decodePolyline(encoded, precision = 5) {
+    const factor = Math.pow(10, precision);
+    const len = encoded.length;
+    let index = 0;
+    let lat = 0;
+    let lng = 0;
+    const coordinates = [];
+
+    while (index < len) {
+        let b;
+        let shift = 0;
+        let result = 0;
+
+        do {
+            b = encoded.charCodeAt(index++) - 63;
+            result |= (b & 0x1f) << shift;
+            shift += 5;
+        } while (b >= 0x20);
+
+        const dlat = ((result & 1) ? ~(result >> 1) : (result >> 1));
+        lat += dlat;
+
+        shift = 0;
+        result = 0;
+
+        do {
+            b = encoded.charCodeAt(index++) - 63;
+            result |= (b & 0x1f) << shift;
+            shift += 5;
+        } while (b >= 0x20);
+
+        const dlng = ((result & 1) ? ~(result >> 1) : (result >> 1));
+        lng += dlng;
+
+        coordinates.push([lng / factor, lat / factor]);
+    }
+
+    return coordinates;
+}
+
+// 难度颜色
+const colors = {
+    'novice': '#22c55e',
+    'easy': '#3b82f6',
+    'intermediate': '#ef4444',
+    'advanced': '#111',
+    'expert': '#111',
+    '': '#9ca3af'
+};
+
+// 路线颜色
+const routeColors = ['#3b82f6', '#22c55e', '#f59e0b'];
+
+// 图层
+let nodeLayer, arrowLayer;
+
+// 初始化
+document.addEventListener('DOMContentLoaded', async function() {
+    // 初始化地图
+    map = L.map('map').setView([43.0, 127.5], 14);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap'
+    }).addTo(map);
+
+    baseLayer = L.layerGroup().addTo(map);
+    nodeLayer = L.layerGroup().addTo(map);
+    arrowLayer = L.layerGroup().addTo(map);
+    routeLayer = L.layerGroup().addTo(map);
+    markerLayer = L.layerGroup().addTo(map);
+
+    // 加载图数据
+    try {
+        const resp = await fetch('/api/graph');
+        graphData = await resp.json();
+
+        map.setView([graphData.center.lat, graphData.center.lon], 14);
+        drawBaseMap();
+        drawNodes();
+    } catch (e) {
+        console.error('加载图数据失败:', e);
+    }
+
+    // 地图点击事件
+    map.on('click', onMapClick);
+
+    // 显示控制
+    document.getElementById('show-nodes').onchange = e => e.target.checked ? map.addLayer(nodeLayer) : map.removeLayer(nodeLayer);
+    document.getElementById('show-arrows').onchange = e => e.target.checked ? map.addLayer(arrowLayer) : map.removeLayer(arrowLayer);
+    document.getElementById('show-edges').onchange = e => e.target.checked ? map.addLayer(baseLayer) : map.removeLayer(baseLayer);
+
+    updateUI();
+});
+
+// 绘制底图（边）
+function drawBaseMap() {
+    baseLayer.clearLayers();
+    arrowLayer.clearLayers();
+
+    graphData.edges.forEach(edge => {
+        const coords = parseWKT(edge.geom);
+        if (coords.length < 2) return;
+
+        const isLift = edge.src_feat_type === 'lift';
+        const color = isLift ? '#8b5cf6' : (colors[edge.difficulty] || '#9ca3af');
+
+        // 绘制边
+        const line = L.polyline(coords, {
+            color: color,
+            weight: isLift ? 4 : 3,
+            opacity: 0.7
+        });
+
+        // 点击边显示信息
+        line.on('click', (e) => {
+            L.popup()
+                .setLatLng(e.latlng)
+                .setContent(`<b>Edge ${edge.edge_id}</b><br>
+                    名称: ${edge.name || '(无)'}<br>
+                    类型: ${edge.src_feat_type}<br>
+                    难度: ${edge.difficulty || '未知'}<br>
+                    长度: ${(edge.length_m/1000).toFixed(2)}km<br>
+                    方向: ${edge.from_node} → ${edge.to_node}<br>
+                    单向: ${edge.oneway ? '是' : '否'}`)
+                .openOn(map);
+            L.DomEvent.stopPropagation(e);
+        });
+
+        line.addTo(baseLayer);
+
+        // 方向箭头
+        if (edge.oneway && coords.length >= 2) {
+            const positions = [0.4, 0.7];
+            positions.forEach(pos => {
+                const idx = Math.floor((coords.length - 1) * pos);
+                const p1 = coords[idx];
+                const p2 = coords[Math.min(idx + 1, coords.length - 1)];
+
+                const dLat = p2[0] - p1[0];
+                const dLon = p2[1] - p1[1];
+                const angle = Math.atan2(-dLat, dLon) * 180 / Math.PI;
+
+                const icon = L.divIcon({
+                    html: `<div style="transform:rotate(${angle}deg);color:${color};font-size:10px;line-height:1;">▶</div>`,
+                    className: '',
+                    iconSize: [10, 10],
+                    iconAnchor: [5, 5]
+                });
+
+                L.marker([(p1[0]+p2[0])/2, (p1[1]+p2[1])/2], {icon, interactive: false}).addTo(arrowLayer);
+            });
+        }
+    });
+}
+
+// 绘制节点
+function drawNodes() {
+    nodeLayer.clearLayers();
+
+    graphData.nodes.forEach(node => {
+        const marker = L.circleMarker([node.lat, node.lon], {
+            radius: 6,
+            fillColor: node.kind === 'lift_station' ? '#8b5cf6' : '#374151',
+            color: '#fff',
+            weight: 2,
+            fillOpacity: 0.9
+        });
+
+        // Tooltip 显示节点 ID
+        marker.bindTooltip(`Node ${node.node_id}`, {
+            permanent: false,
+            direction: 'top',
+            offset: [0, -8]
+        });
+
+        // 点击节点设置起点/终点
+        marker.on('click', (e) => {
+            setNodeFromClick(node);
+            L.DomEvent.stopPropagation(e);
+        });
+
+        marker.addTo(nodeLayer);
+    });
+}
+
+// 从节点点击设置起点/终点
+function setNodeFromClick(node) {
+    const nodeObj = {
+        id: node.node_id,
+        lon: node.lon,
+        lat: node.lat
+    };
+
+    if (currentMode === 'start') {
+        startNode = nodeObj;
+        currentMode = 'end';
+    } else if (currentMode === 'end') {
+        endNode = nodeObj;
+        currentMode = 'waypoint';
+    } else {
+        waypoints.push(nodeObj);
+    }
+
+    updateUI();
+    updateMarkers();
+}
+
+// 解析 WKT
+function parseWKT(wkt) {
+    const m = wkt.match(/LINESTRING\((.+)\)/);
+    if (!m) return [];
+    return m[1].split(', ').map(p => {
+        const [lon, lat] = p.split(' ').map(Number);
+        return [lat, lon];
+    });
+}
+
+// 切换输入模式
+function toggleInputMode() {
+    inputMode = document.getElementById('input-mode').value;
+    // 清空当前选择
+    clearAll();
+}
+
+// 切换路由模式
+function toggleRouteMode() {
+    routeMode = document.getElementById('route-mode').value;
+    // 清空路线结果
+    routeResults = null;
+    routeLayer.clearLayers();
+    document.getElementById('routes-section').style.display = 'none';
+    updateUI();
+}
+
+// 地图点击处理
+async function onMapClick(e) {
+    const lat = e.latlng.lat;
+    const lon = e.latlng.lng;
+
+    if (inputMode === 'coords') {
+        // 坐标模式：直接使用点击坐标，暂时显示为临时节点
+        const tempNode = {
+            id: `(${lon.toFixed(4)}, ${lat.toFixed(4)})`,
+            lon: lon,
+            lat: lat,
+            isCoord: true  // 标记这是坐标而不是真正的节点
+        };
+
+        if (currentMode === 'start') {
+            startNode = tempNode;
+            startCoords = { lon, lat };
+            currentMode = 'end';
+        } else if (currentMode === 'end') {
+            endNode = tempNode;
+            endCoords = { lon, lat };
+            currentMode = 'waypoint';
+        } else {
+            waypoints.push(tempNode);
+            waypointsCoords.push({ lon, lat });
+        }
+
+        updateUI();
+        updateMarkers();
+    } else {
+        // 节点模式：查找最近节点
+        try {
+            const resp = await fetch(`/api/nearest?lon=${lon}&lat=${lat}`);
+            const data = await resp.json();
+
+            if (data.node_id < 0) {
+                alert('未找到附近的节点');
+                return;
+            }
+
+            const node = {
+                id: data.node_id,
+                lon: data.lon,
+                lat: data.lat
+            };
+
+            if (currentMode === 'start') {
+                startNode = node;
+                startCoords = null;
+                currentMode = 'end';
+            } else if (currentMode === 'end') {
+                endNode = node;
+                endCoords = null;
+                currentMode = 'waypoint';
+            } else {
+                waypoints.push(node);
+            }
+
+            updateUI();
+            updateMarkers();
+        } catch (e) {
+            console.error('查找节点失败:', e);
+        }
+    }
+}
+
+// 更新 UI
+function updateUI() {
+    const currentRouteMode = document.getElementById('route-mode').value;
+    const isExploreMode = currentRouteMode === 'explore';
+
+    // 更新模式指示
+    const indicator = document.getElementById('mode-indicator');
+    if (currentMode === 'start') {
+        indicator.className = 'mode-indicator mode-start';
+        indicator.innerHTML = '点击地图选择 <strong>起点</strong>';
+    } else if (currentMode === 'end') {
+        indicator.className = 'mode-indicator mode-end';
+        indicator.innerHTML = '点击地图选择 <strong>终点</strong>';
+    } else {
+        if (isExploreMode) {
+            indicator.className = 'mode-indicator mode-waypoint';
+            indicator.innerHTML = '<strong>探索模式</strong>：将展示从起点所有可通行方向的路线';
+        } else {
+            indicator.className = 'mode-indicator mode-waypoint';
+            indicator.innerHTML = '点击地图添加 <strong>途经点</strong>（可选）';
+        }
+    }
+
+    // 更新途经点列表
+    const list = document.getElementById('waypoints-list');
+    let html = '';
+
+    if (startNode) {
+        const label = startNode.isCoord ? `坐标 ${startNode.id}` : `Node ${startNode.id}`;
+        html += `<div class="waypoint-item">
+            <div class="waypoint-icon waypoint-start">起</div>
+            <div class="waypoint-text">${label}</div>
+            <div class="waypoint-remove" onclick="removePoint('start')">✕</div>
+        </div>`;
+    }
+
+    // 途经点只在普通模式下显示
+    if (!isExploreMode) {
+        waypoints.forEach((wp, i) => {
+            const label = wp.isCoord ? `坐标 ${wp.id}` : `Node ${wp.id}`;
+            html += `<div class="waypoint-item">
+                <div class="waypoint-icon waypoint-via">${i+1}</div>
+                <div class="waypoint-text">${label}</div>
+                <div class="waypoint-remove" onclick="removePoint('waypoint', ${i})">✕</div>
+            </div>`;
+        });
+    }
+
+    if (endNode) {
+        const label = endNode.isCoord ? `坐标 ${endNode.id}` : `Node ${endNode.id}`;
+        html += `<div class="waypoint-item">
+            <div class="waypoint-icon waypoint-end">终</div>
+            <div class="waypoint-text">${label}</div>
+            <div class="waypoint-remove" onclick="removePoint('end')">✕</div>
+        </div>`;
+    }
+
+    list.innerHTML = html || '<div style="color:#888;font-size:12px;text-align:center;padding:10px;">尚未选择任何点</div>';
+
+    // 更新规划按钮
+    document.getElementById('plan-btn').disabled = !(startNode && endNode);
+}
+
+// 更新地图标记
+function updateMarkers() {
+    markerLayer.clearLayers();
+
+    if (startNode) {
+        L.circleMarker([startNode.lat, startNode.lon], {
+            radius: 10,
+            fillColor: '#22c55e',
+            color: '#fff',
+            weight: 3,
+            fillOpacity: 1
+        }).addTo(markerLayer);
+    }
+
+    waypoints.forEach((wp, i) => {
+        const marker = L.circleMarker([wp.lat, wp.lon], {
+            radius: 8,
+            fillColor: '#f59e0b',
+            color: '#fff',
+            weight: 2,
+            fillOpacity: 1
+        }).addTo(markerLayer);
+    });
+
+    if (endNode) {
+        L.circleMarker([endNode.lat, endNode.lon], {
+            radius: 10,
+            fillColor: '#ef4444',
+            color: '#fff',
+            weight: 3,
+            fillOpacity: 1
+        }).addTo(markerLayer);
+    }
+}
+
+// 移除点
+function removePoint(type, index) {
+    if (type === 'start') {
+        startNode = null;
+        startCoords = null;
+        currentMode = 'start';
+    } else if (type === 'end') {
+        endNode = null;
+        endCoords = null;
+        currentMode = 'end';
+    } else {
+        waypoints.splice(index, 1);
+        waypointsCoords.splice(index, 1);
+    }
+
+    routeResults = null;
+    routeLayer.clearLayers();
+    document.getElementById('routes-section').style.display = 'none';
+
+    updateUI();
+    updateMarkers();
+}
+
+// 清空所有
+function clearAll() {
+    startNode = null;
+    endNode = null;
+    waypoints = [];
+    startCoords = null;
+    endCoords = null;
+    waypointsCoords = [];
+    currentMode = 'start';
+    routeResults = null;
+    selectedRouteIndex = 0;
+
+    routeLayer.clearLayers();
+    document.getElementById('routes-section').style.display = 'none';
+
+    updateUI();
+    updateMarkers();
+}
+
+// 规划路线
+async function planRoute() {
+    if (!startNode || !endNode) return;
+
+    const maxDiff = document.getElementById('max-difficulty').value;
+    const numAlt = document.getElementById('num-alternatives').value;
+    const maxOverlap = document.getElementById('max-overlap').value;
+    const currentRouteMode = document.getElementById('route-mode').value;
+    const outputFormat = document.getElementById('output-format').value;
+
+    let url;
+
+    if (startCoords && endCoords) {
+        // 坐标模式
+        url = `/api/route?start_lon=${startCoords.lon}&start_lat=${startCoords.lat}&end_lon=${endCoords.lon}&end_lat=${endCoords.lat}&alternatives=${numAlt}&max_difficulty=${maxDiff}&max_overlap=${maxOverlap}`;
+
+        // 添加途经点坐标（仅普通模式）
+        if (currentRouteMode !== 'explore' && waypointsCoords.length > 0) {
+            const wpStr = waypointsCoords.map(w => `${w.lon},${w.lat}`).join(';');
+            url += `&waypoints_coords=${wpStr}`;
+        }
+    } else {
+        // 节点模式
+        const waypointIds = waypoints.map(w => w.id).join(',');
+        url = `/api/route?start=${startNode.id}&end=${endNode.id}&alternatives=${numAlt}&max_difficulty=${maxDiff}&max_overlap=${maxOverlap}`;
+        if (currentRouteMode !== 'explore' && waypointIds) {
+            url += `&waypoints=${waypointIds}`;
+        }
+    }
+
+    // 添加路由模式参数
+    url += `&mode=${currentRouteMode}`;
+
+    // 添加输出格式参数
+    url += `&format=${outputFormat}`;
+
+    try {
+        document.getElementById('plan-btn').disabled = true;
+        document.getElementById('plan-btn').textContent = '规划中...';
+
+        const resp = await fetch(url);
+        const rawResults = await resp.json();
+
+        // 根据输出格式转换结果
+        if (outputFormat === 'osrm') {
+            routeResults = convertOsrmToInternal(rawResults);
+        } else {
+            routeResults = rawResults;
+        }
+
+        if (!routeResults.success) {
+            alert('路线规划失败: ' + (routeResults.error || routeResults.message));
+            // 清除之前的路线显示
+            routeLayer.clearLayers();
+            document.getElementById('routes-section').style.display = 'none';
+            return;
+        }
+
+        selectedRouteIndex = 0;
+        displayRoutes();
+        drawRoute(0);
+
+    } catch (e) {
+        console.error('路线规划失败:', e);
+        alert('路线规划失败');
+    } finally {
+        document.getElementById('plan-btn').disabled = false;
+        document.getElementById('plan-btn').textContent = '🗺️ 规划路线';
+    }
+}
+
+// 将 OSRM 格式转换为内部格式（用于 UI 显示）
+function convertOsrmToInternal(osrmResult) {
+    if (osrmResult.code !== 'Ok') {
+        return {
+            success: false,
+            error: osrmResult.message || 'Route not found',
+            routes: []
+        };
+    }
+
+    const routes = osrmResult.routes.map((route, index) => {
+        const leg = route.legs[0] || {};
+        const steps = leg.steps || [];
+
+        // 从 steps 中提取 instructions
+        const stepDetails = steps.map(step => ({
+            instruction: step.instruction || step.name,
+            name: step.name,
+            distance_m: step.distance,
+            duration_s: step.duration,
+            feat_type: step.feat_type || (step.mode === 'ferry' ? 'lift' : 'piste'),
+            difficulty: step.difficulty || '',
+            maneuver_type: step.maneuver?.type || 'continue',
+            geometry: step.geometry
+        }));
+
+        return {
+            index: index,
+            total_length: route.distance,
+            total_cost: route.duration,
+            first_edge_name: route.first_edge_name || (steps[0]?.name || ''),
+            steps: stepDetails,
+            // 保存原始 OSRM 数据用于调试
+            _osrm: route
+        };
+    });
+
+    return {
+        success: true,
+        routes: routes,
+        route_count: routes.length,
+        _format: 'osrm'
+    };
+}
+
+// 显示路线列表
+function displayRoutes() {
+    if (!routeResults || !routeResults.routes.length) return;
+
+    document.getElementById('routes-section').style.display = 'block';
+
+    const list = document.getElementById('routes-list');
+    let html = '';
+
+    const isExploreMode = routeResults.mode === 'explore';
+    const isOsrmFormat = routeResults._format === 'osrm';
+
+    routeResults.routes.forEach((route, i) => {
+        const selected = i === selectedRouteIndex ? 'selected' : '';
+        const lengthKm = (route.total_length / 1000).toFixed(2);
+
+        // 计算时间：使用 steps 如果有的话
+        let timeMin = 0;
+        if (route.steps && route.steps.length > 0) {
+            const lastStep = route.steps[route.steps.length - 1];
+            timeMin = Math.round((lastStep.cumulative_time_s || route.total_cost) / 60);
+        } else {
+            timeMin = Math.round(route.total_cost / 60);
+        }
+
+        // 计算段数
+        const segmentCount = isOsrmFormat ? (route.steps?.length || 0) : (route.edges?.length || 0);
+
+        // 探索模式下显示第一条边的信息
+        let titleHtml = '';
+        let badgeHtml = '';
+        if ((isExploreMode || isOsrmFormat) && route.first_edge_name) {
+            const diffColors = {
+                'novice': '#22c55e', 'easy': '#3b82f6',
+                'intermediate': '#ef4444', 'advanced': '#111', 'expert': '#111'
+            };
+            const diffColor = diffColors[route.first_edge_difficulty] || '#888';
+            const typeIcon = route.first_edge_type === 'lift' ? '🚡' : '⛷️';
+            titleHtml = `<span class="route-title">${typeIcon} ${route.first_edge_name}</span>`;
+            if (route.first_edge_difficulty) {
+                badgeHtml = `<span class="route-badge" style="background:${diffColor};color:white">${route.first_edge_difficulty}</span>`;
+            }
+        } else {
+            titleHtml = `<span class="route-title">路线 ${i+1}</span>`;
+            badgeHtml = i === 0 ? '<span class="route-badge" style="background:#22c55e;color:white">推荐</span>' : '';
+        }
+
+        // OSRM 格式显示导航指令预览
+        let instructionPreview = '';
+        if (isOsrmFormat && route.steps && route.steps.length > 0) {
+            const firstInstruction = route.steps[0]?.instruction || '';
+            if (firstInstruction) {
+                instructionPreview = `<div class="route-instruction-preview" style="font-size:11px;color:#666;margin-top:4px;">📢 ${firstInstruction}</div>`;
+            }
+        }
+
+        html += `<div class="route-option route-${i+1} ${selected}" onclick="selectRoute(${i})">
+            <div class="route-header">
+                ${titleHtml}
+                ${badgeHtml}
+            </div>
+            <div class="route-stats">
+                <span>📏 ${lengthKm} km</span>
+                <span>⏱️ ${timeMin} 分钟</span>
+                <span>🔗 ${segmentCount} 段</span>
+            </div>
+            ${instructionPreview}
+        </div>`;
+    });
+
+    list.innerHTML = html;
+}
+
+// 选择路线
+function selectRoute(index) {
+    selectedRouteIndex = index;
+    displayRoutes();
+    drawRoute(index);
+}
+
+// 绘制路线
+function drawRoute(index) {
+    routeLayer.clearLayers();
+
+    if (!routeResults || !routeResults.routes[index]) return;
+
+    const route = routeResults.routes[index];
+    const isOsrmFormat = routeResults._format === 'osrm';
+
+    if (isOsrmFormat) {
+        // OSRM 格式：从 steps 中的 geometry 绘制
+        drawOsrmRoute(route, index);
+    } else {
+        // SnowNavi 格式：使用 geojson
+        const geojson = route.geojson;
+
+        if (!geojson || !geojson.features) return;
+
+        // 绘制路线
+        geojson.features.forEach(feature => {
+            if (feature.geometry.type === 'LineString') {
+                const coords = feature.geometry.coordinates.map(c => [c[1], c[0]]);
+                const props = feature.properties || {};
+
+                // 检查是否是连接线（虚线）
+                const lineStyle = props.dash ? {
+                    color: routeColors[index % routeColors.length],
+                    weight: 4,
+                    opacity: 0.7,
+                    dashArray: '6, 6'
+                } : {
+                    color: routeColors[index % routeColors.length],
+                    weight: 6,
+                    opacity: 0.9
+                };
+
+                const line = L.polyline(coords, lineStyle).addTo(routeLayer);
+
+                // 添加悬停提示
+                if (props.name) {
+                    let tooltip = props.name;
+                    if (props.difficulty) tooltip += ` (${props.difficulty})`;
+                    if (props.length_m) tooltip += ` - ${(props.length_m/1000).toFixed(2)}km`;
+                    line.bindTooltip(tooltip);
+                }
+            }
+        });
+    }
+
+    // 调整视图
+    const bounds = routeLayer.getBounds();
+    if (bounds.isValid()) {
+        map.fitBounds(bounds, { padding: [50, 50] });
+    }
+}
+
+// 绘制 OSRM 格式的路线
+function drawOsrmRoute(route, index) {
+    const steps = route.steps || [];
+    const color = routeColors[index % routeColors.length];
+
+    steps.forEach((step, stepIndex) => {
+        if (!step.geometry) return;
+
+        // 解码 polyline
+        const coords = decodePolyline(step.geometry);
+        if (coords.length === 0) return;
+
+        // 转换为 Leaflet 格式 [lat, lon]
+        const latLngs = coords.map(c => [c[1], c[0]]);
+
+        // 根据类型设置样式
+        const isLift = step.feat_type === 'lift' || step.maneuver_type === 'ferry';
+        const lineStyle = {
+            color: color,
+            weight: 6,
+            opacity: 0.9
+        };
+
+        if (isLift) {
+            lineStyle.dashArray = '10, 5';  // 缆车用虚线
+        }
+
+        const line = L.polyline(latLngs, lineStyle).addTo(routeLayer);
+
+        // 添加悬停提示（显示导航指令）
+        let tooltip = step.instruction || step.name || '';
+        if (step.difficulty) tooltip += ` (${step.difficulty})`;
+        if (step.distance_m) tooltip += ` - ${(step.distance_m/1000).toFixed(2)}km`;
+        if (tooltip) {
+            line.bindTooltip(tooltip);
+        }
+
+        // 在转弯处添加标记
+        if (stepIndex > 0 && step.maneuver_type && step.maneuver_type !== 'continue' && step.maneuver_type !== 'depart') {
+            const turnPoint = latLngs[0];
+            L.circleMarker(turnPoint, {
+                radius: 5,
+                color: color,
+                fillColor: 'white',
+                fillOpacity: 1,
+                weight: 2
+            }).addTo(routeLayer).bindTooltip(step.instruction || '');
+        }
+    });
+}
+
+// 绘制坐标匹配虚线
+function drawSnappedLines() {
+    if (!routeResults) return;
+
+    const dashStyle = { dashArray: '6, 6', weight: 3, opacity: 0.8 };
+
+    // 起点匹配虚线
+    if (routeResults.start_snapped) {
+        const sp = routeResults.start_snapped;
+        if (sp.distance_m > 1) {  // 只有距离大于1米才画虚线
+            const line = L.polyline([
+                [sp.original_lat, sp.original_lon],
+                [sp.snapped_lat, sp.snapped_lon]
+            ], { color: '#22c55e', ...dashStyle }).addTo(routeLayer);
+            line.bindTooltip(`起点匹配 ${sp.distance_m.toFixed(0)}m`);
+
+            // 绘制原始位置标记
+            L.circleMarker([sp.original_lat, sp.original_lon], {
+                radius: 6,
+                color: '#22c55e',
+                fillColor: 'white',
+                fillOpacity: 1,
+                weight: 2
+            }).addTo(routeLayer).bindTooltip('原始起点');
+        }
+    }
+
+    // 终点匹配虚线
+    if (routeResults.end_snapped) {
+        const ep = routeResults.end_snapped;
+        if (ep.distance_m > 1) {
+            const line = L.polyline([
+                [ep.original_lat, ep.original_lon],
+                [ep.snapped_lat, ep.snapped_lon]
+            ], { color: '#ef4444', ...dashStyle }).addTo(routeLayer);
+            line.bindTooltip(`终点匹配 ${ep.distance_m.toFixed(0)}m`);
+
+            L.circleMarker([ep.original_lat, ep.original_lon], {
+                radius: 6,
+                color: '#ef4444',
+                fillColor: 'white',
+                fillOpacity: 1,
+                weight: 2
+            }).addTo(routeLayer).bindTooltip('原始终点');
+        }
+    }
+
+    // 途经点匹配虚线
+    if (routeResults.waypoints_snapped) {
+        routeResults.waypoints_snapped.forEach((wp, i) => {
+            if (wp.distance_m > 1) {
+                const line = L.polyline([
+                    [wp.original_lat, wp.original_lon],
+                    [wp.snapped_lat, wp.snapped_lon]
+                ], { color: '#3b82f6', ...dashStyle }).addTo(routeLayer);
+                line.bindTooltip(`途经点${i+1}匹配 ${wp.distance_m.toFixed(0)}m`);
+
+                L.circleMarker([wp.original_lat, wp.original_lon], {
+                    radius: 5,
+                    color: '#3b82f6',
+                    fillColor: 'white',
+                    fillOpacity: 1,
+                    weight: 2
+                }).addTo(routeLayer).bindTooltip(`原始途经点 ${i+1}`);
+            }
+        });
+    }
+}
+</script>
+</body>
+</html>
+

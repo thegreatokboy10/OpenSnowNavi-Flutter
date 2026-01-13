@@ -1,0 +1,33 @@
+{
+  "version": "1.0",
+  "created_at": "2026-01-13T14:06:25.936Z",
+  "source_hashes": {
+    "runs": "5204e7619de790a612894609697642d5",
+    "lifts": "9d25538b606dafbd8a9c052fe2ffab89"
+  },
+  "operations": [
+    {
+      "op": "add_manual_edge",
+      "src_feat_id": "5bcd0b3a10c330e05f14dd36683d1e4d09be777c",
+      "src_sub_id": 0,
+      "osm_id": null,
+      "src_feat_type": "run",
+      "from_node": 30,
+      "to_node": 763,
+      "name": "",
+      "difficulty": "novice",
+      "oneway": true,
+      "geom": "LINESTRING(6.772915899999997 46.1938711, 6.7729756625 46.19330513750001)",
+      "lift_type": null,
+      "duration": null,
+      "occupancy": null
+    }
+  ],
+  "stats": {
+    "total": 1,
+    "flip": 0,
+    "update": 0,
+    "enable": 0,
+    "add": 1
+  }
+}
