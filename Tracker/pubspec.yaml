@@ -77,6 +77,9 @@ dependencies:
   # SnowNavi offline routing engine
   snownavi_engine:
     path: lib/snownavi_engine
+  file_picker: ^10.3.8
+  url_launcher: ^6.3.1
+  archive: ^4.0.7
 
 dev_dependencies:
   flutter_test:

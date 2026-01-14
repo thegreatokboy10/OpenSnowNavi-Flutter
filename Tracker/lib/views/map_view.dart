@@ -15,6 +15,7 @@ import '../models/route_planning_state.dart';
 import '../services/session_manager.dart';
 import '../services/route_engine.dart' as re;
 import '../services/search_service.dart';
+import '../services/deep_link_service.dart';
 import '../utils/marker_icon_generator.dart';
 import '../widgets/route_planning_panel.dart';
 import '../widgets/poi_info_panel.dart';
@@ -83,6 +84,30 @@ class _MapViewState extends State<MapView> {
   Cancelable? _meetingPointTapCancelable;
 
   @override
+  void initState() {
+    super.initState();
+    // 注册共享路线接收回调
+    DeepLinkService.instance.onRouteReceived = _onSharedRouteReceived;
+  }
+
+  @override
+  void dispose() {
+    // 注销回调
+    DeepLinkService.instance.onRouteReceived = null;
+    super.dispose();
+  }
+
+  /// 当收到共享路线时的回调
+  void _onSharedRouteReceived(SharedRouteData routeData) {
+    debugPrint('[MapView] Received shared route via callback');
+    // 如果地图已初始化，立即加载；否则会在 _onMapCreated 中检查
+    if (_mapboxMap != null) {
+      _loadSharedRoute(routeData);
+      DeepLinkService.instance.clearPendingRoute();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Consumer<SessionManager>(
       builder: (context, manager, child) {
@@ -121,6 +146,7 @@ class _MapViewState extends State<MapView> {
                       data: _routePlanningData,
                       route: _currentRoute,
                       resortCoordinate: _getResortLatLng(),
+                      resortKey: _selectedResortKey,
                       onClose: _closeRoutePlanningPanel,
                       onPointSelected: _onRoutePointSelected,
                       onRemovePoint: _onRemoveRoutePoint,
@@ -285,6 +311,172 @@ class _MapViewState extends State<MapView> {
       debugPrint(
           '[MapView] Team restored, members: ${_memberLocations.length}, meeting points: ${_meetingPoints.length}');
     }
+
+    // 检查是否有待处理的共享路线
+    _checkAndLoadPendingRoute();
+  }
+
+  /// 检查并加载待处理的共享路线
+  void _checkAndLoadPendingRoute() {
+    final routeData = DeepLinkService.instance.pendingRouteData;
+    if (routeData != null) {
+      debugPrint('[MapView] Found pending shared route, loading...');
+      _loadSharedRoute(routeData);
+      DeepLinkService.instance.clearPendingRoute();
+    }
+  }
+
+  /// 加载共享的路线
+  Future<void> _loadSharedRoute(SharedRouteData routeData) async {
+    debugPrint('[MapView] _loadSharedRoute called');
+    debugPrint('[MapView] routeData.resortKey: ${routeData.resortKey}');
+    debugPrint('[MapView] current _selectedResortKey: $_selectedResortKey');
+    debugPrint(
+        '[MapView] origin: ${routeData.origin?.name} (${routeData.origin?.lat}, ${routeData.origin?.lng})');
+    debugPrint(
+        '[MapView] destination: ${routeData.destination?.name} (${routeData.destination?.lat}, ${routeData.destination?.lng})');
+
+    // 如果雪场不同，先切换雪场
+    if (routeData.resortKey != null &&
+        routeData.resortKey!.isNotEmpty &&
+        routeData.resortKey != _selectedResortKey) {
+      if (SkiResorts.list.containsKey(routeData.resortKey)) {
+        debugPrint('[MapView] Switching to resort: ${routeData.resortKey}');
+        setState(() {
+          _selectedResortKey = routeData.resortKey!;
+        });
+        await _loadSkiResortData();
+        // 等待数据加载完成
+        await Future.delayed(const Duration(milliseconds: 300));
+      } else {
+        debugPrint('[MapView] Resort not found: ${routeData.resortKey}');
+      }
+    }
+
+    // 清除现有路线规划
+    _routePlanningData.reset();
+    _currentRoute = null;
+    await _removeRouteLayer();
+    await _removeRoutePointMarkers();
+
+    // 设置起点
+    if (routeData.origin != null) {
+      _routePlanningData.origin =
+          routeData.origin!.toRoutePoint(RoutePointType.origin);
+      debugPrint('[MapView] Set origin: ${_routePlanningData.origin?.name}');
+    }
+
+    // 设置终点
+    if (routeData.destination != null) {
+      _routePlanningData.destination =
+          routeData.destination!.toRoutePoint(RoutePointType.destination);
+      debugPrint(
+          '[MapView] Set destination: ${_routePlanningData.destination?.name}');
+    }
+
+    // 设置途径点
+    for (final stopover in routeData.stopovers) {
+      _routePlanningData.stopovers
+          .add(stopover.toRoutePoint(RoutePointType.stopover));
+    }
+    debugPrint(
+        '[MapView] Set ${_routePlanningData.stopovers.length} stopovers');
+
+    // 显示路线规划面板
+    setState(() {
+      _showRoutePlanningPanel = true;
+      _showPOIPanel = false;
+      _showTeamPanel = false;
+    });
+
+    // 更新路线点标记（先显示标记）
+    await _updateRoutePointMarkers();
+    debugPrint('[MapView] Route point markers updated');
+
+    // 移动相机到路线区域
+    await _zoomToRoutePoints(routeData);
+
+    // 自动规划路线
+    if (_routePlanningData.origin != null &&
+        _routePlanningData.destination != null) {
+      debugPrint('[MapView] Starting route generation...');
+      await _tryGenerateRoute();
+      debugPrint(
+          '[MapView] Route generation completed, _currentRoute: ${_currentRoute != null}');
+    } else {
+      debugPrint(
+          '[MapView] Cannot generate route: origin=${_routePlanningData.origin != null}, destination=${_routePlanningData.destination != null}');
+    }
+
+    debugPrint('[MapView] Shared route loading completed');
+  }
+
+  /// 缩放相机到路线点
+  Future<void> _zoomToRoutePoints(SharedRouteData routeData) async {
+    if (_mapboxMap == null) return;
+
+    // 收集所有点的坐标
+    final List<Position> allPoints = [];
+    if (routeData.origin != null) {
+      allPoints.add(Position(routeData.origin!.lng, routeData.origin!.lat));
+    }
+    if (routeData.destination != null) {
+      allPoints.add(
+          Position(routeData.destination!.lng, routeData.destination!.lat));
+    }
+    for (final s in routeData.stopovers) {
+      allPoints.add(Position(s.lng, s.lat));
+    }
+
+    if (allPoints.isEmpty) return;
+
+    if (allPoints.length == 1) {
+      // 只有一个点，直接移动到该点
+      await _mapboxMap!.flyTo(
+        CameraOptions(
+          center: Point(coordinates: allPoints.first),
+          zoom: 15.0,
+        ),
+        MapAnimationOptions(duration: 500),
+      );
+    } else {
+      // 多个点，计算边界框
+      double minLat = double.infinity;
+      double maxLat = -double.infinity;
+      double minLng = double.infinity;
+      double maxLng = -double.infinity;
+
+      for (final p in allPoints) {
+        if (p.lat < minLat) minLat = p.lat.toDouble();
+        if (p.lat > maxLat) maxLat = p.lat.toDouble();
+        if (p.lng < minLng) minLng = p.lng.toDouble();
+        if (p.lng > maxLng) maxLng = p.lng.toDouble();
+      }
+
+      // 添加边距
+      final latPadding = (maxLat - minLat) * 0.2;
+      final lngPadding = (maxLng - minLng) * 0.2;
+
+      final bounds = CoordinateBounds(
+        southwest: Point(
+            coordinates: Position(minLng - lngPadding, minLat - latPadding)),
+        northeast: Point(
+            coordinates: Position(maxLng + lngPadding, maxLat + latPadding)),
+        infiniteBounds: false,
+      );
+
+      final camera = await _mapboxMap!.cameraForCoordinateBounds(
+        bounds,
+        MbxEdgeInsets(top: 150, left: 20, bottom: 50, right: 80),
+        null,
+        null,
+        null,
+        null,
+      );
+
+      await _mapboxMap!.flyTo(camera, MapAnimationOptions(duration: 500));
+    }
+    debugPrint('[MapView] Camera moved to route points');
   }
 
   /// 选择最近的雪场并重新加载数据

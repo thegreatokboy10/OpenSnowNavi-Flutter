@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' show Position;
 import '../models/route_planning_state.dart';
 import '../services/route_engine.dart' as re;
+import '../services/route_feedback_service.dart';
 import '../services/search_service.dart';
 
 /// 正在编辑的点位类型
@@ -12,6 +13,7 @@ class RoutePlanningPanel extends StatefulWidget {
   final RoutePlanningData data;
   final re.Route? route;
   final LatLng? resortCoordinate;
+  final String? resortKey; // 雪场 key，用于反馈
   final VoidCallback onClose;
   final Function(Position coordinates, String name, RoutePointType type,
       int stopoverIndex) onPointSelected;
@@ -27,6 +29,7 @@ class RoutePlanningPanel extends StatefulWidget {
     required this.data,
     this.route,
     this.resortCoordinate,
+    this.resortKey,
     required this.onClose,
     required this.onPointSelected,
     required this.onRemovePoint,
@@ -573,6 +576,22 @@ class _RoutePlanningPanelState extends State<RoutePlanningPanel> {
                       ],
                     ),
                   ),
+                  // 分享按钮
+                  IconButton(
+                    icon: const Icon(Icons.share, size: 20),
+                    tooltip: '分享路线',
+                    onPressed: () {
+                      RouteFeedbackService.showShareDialog(
+                        context: context,
+                        planningData: widget.data,
+                        route: route,
+                        resortKey: widget.resortKey,
+                      );
+                    },
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                  const SizedBox(width: 8),
                   Icon(_isRouteDetailsExpanded
                       ? Icons.keyboard_arrow_up
                       : Icons.keyboard_arrow_down),

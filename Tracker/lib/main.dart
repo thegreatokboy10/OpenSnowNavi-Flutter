@@ -3,6 +3,7 @@ import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:provider/provider.dart';
 import 'config/mapbox_config.dart';
 import 'services/session_manager.dart';
+import 'services/deep_link_service.dart';
 import 'views/recording_view.dart';
 import 'views/session_list_view.dart';
 import 'views/map_view.dart';
@@ -51,14 +52,29 @@ class MainPage extends StatefulWidget {
   State<MainPage> createState() => _MainPageState();
 }
 
-class _MainPageState extends State<MainPage> {
+class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
   int _selectedIndex = 0;
   bool _isInitializing = true;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _initializeApp();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // 当应用从后台回到前台时检查剪贴板
+    if (state == AppLifecycleState.resumed) {
+      _checkClipboardForRoute();
+    }
   }
 
   Future<void> _initializeApp() async {
@@ -74,7 +90,80 @@ class _MainPageState extends State<MainPage> {
       // 检查是否有中断的录制需要恢复
       if (manager.hasInterruptedSession) {
         _showInterruptedSessionDialog(manager);
+      } else {
+        // 没有中断的录制，检查剪贴板
+        _checkClipboardForRoute();
       }
+    }
+  }
+
+  /// 检查剪贴板中是否有分享的路线
+  Future<void> _checkClipboardForRoute() async {
+    debugPrint('[MainPage] Checking clipboard for route...');
+    final routeData = await DeepLinkService.instance.checkClipboardForRoute();
+    debugPrint(
+        '[MainPage] Route data: ${routeData != null ? 'found' : 'not found'}');
+    if (routeData != null && mounted) {
+      debugPrint('[MainPage] Showing route import dialog');
+      _showRouteImportDialog(routeData);
+    }
+  }
+
+  /// 显示路线导入确认对话框
+  Future<void> _showRouteImportDialog(SharedRouteData routeData) async {
+    final origin = routeData.origin?.name ?? '未知';
+    final destination = routeData.destination?.name ?? '未知';
+    final resortKey = routeData.resortKey ?? '未知雪场';
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.route, color: Colors.blue),
+            SizedBox(width: 8),
+            Text('发现分享路线'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('检测到剪贴板中有分享的路线，是否导入？'),
+            const SizedBox(height: 16),
+            Text('雪场: $resortKey',
+                style: TextStyle(color: Colors.grey.shade600)),
+            Text('路线: $origin → $destination',
+                style: TextStyle(color: Colors.grey.shade600)),
+            if (routeData.stopovers.isNotEmpty)
+              Text('途径点: ${routeData.stopovers.length}个',
+                  style: TextStyle(color: Colors.grey.shade600)),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('忽略'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('导入路线'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true && mounted) {
+      // 存储路线数据供 MapView 使用（MapView 会在显示时检测并加载）
+      DeepLinkService.instance.handleRouteData(routeData);
+      // 切换到地图页面
+      setState(() {
+        _selectedIndex = 1;
+      });
     }
   }
 

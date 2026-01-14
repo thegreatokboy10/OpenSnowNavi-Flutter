@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../models/session.dart';
 import '../services/session_manager.dart';
+import '../services/track_export_service.dart';
 import 'session_detail_view.dart';
 
 /// 历史记录列表视图
@@ -65,12 +66,81 @@ class _SessionListViewState extends State<SessionListView> {
     return '${mins.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
   }
 
+  Future<void> _exportTracks() async {
+    final filePath = await TrackExportService.exportAllTracks();
+    if (filePath != null && mounted) {
+      await TrackExportService.shareExport();
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('没有可导出的轨迹')),
+      );
+    }
+  }
+
+  Future<void> _importTracks() async {
+    final result = await TrackExportService.importTracks();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result.message)),
+      );
+      if (result.success && result.importedCount > 0) {
+        _loadSessions();
+      }
+    }
+  }
+
+  void _showExportImportMenu() {
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text(
+                '数据管理',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.upload_file, color: Colors.blue),
+              title: const Text('导出所有轨迹'),
+              subtitle: const Text('备份到 ZIP 文件并分享'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _exportTracks();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.download, color: Colors.green),
+              title: const Text('导入轨迹'),
+              subtitle: const Text('从备份文件恢复'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _importTracks();
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('History'),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.more_vert),
+            tooltip: '数据管理',
+            onPressed: _showExportImportMenu,
+          ),
+        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())

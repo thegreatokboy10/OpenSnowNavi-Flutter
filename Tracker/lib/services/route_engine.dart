@@ -10,12 +10,14 @@ class Route {
   final double duration; // 总时长（秒）
   final String summary; // 路线摘要
   final List<RouteStep> steps; // 路线步骤列表
+  final Map<String, dynamic>? rawJson; // 原始 OSRM JSON 响应（用于反馈）
 
   Route({
     required this.distance,
     required this.duration,
     required this.summary,
     required this.steps,
+    this.rawJson,
   });
 
   /// 从 JSON 解析路线
@@ -36,6 +38,7 @@ class Route {
       duration: (routeData['duration'] as num).toDouble(),
       summary: routeData['summary'] ?? '',
       steps: steps,
+      rawJson: json, // 保存原始响应
     );
   }
 }

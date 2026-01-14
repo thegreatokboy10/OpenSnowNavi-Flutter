@@ -55,7 +55,7 @@ class SkiGraph {
               ? (row['duration'] as num).toDouble()
               : null,
           liftType: row['lift_type'] as String?,
-          isOneway: (row['is_oneway'] as int?) == 1,
+          isOneway: (row['oneway'] as int?) == 1,
           geom: row['geom'] as String?,
         );
         graph.edges[edge.edgeId] = edge;
@@ -103,7 +103,7 @@ class SkiGraph {
             ? (edgeData['duration'] as num).toDouble()
             : null,
         liftType: edgeData['lift_type'] as String?,
-        isOneway: edgeData['is_oneway'] == true || edgeData['is_oneway'] == 1,
+        isOneway: edgeData['oneway'] == true || edgeData['oneway'] == 1,
         geom: edgeData['geom'] as String?,
       );
       graph.edges[edge.edgeId] = edge;
