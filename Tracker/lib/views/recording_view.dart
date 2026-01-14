@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart' as geo;
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' hide Size;
 import 'package:provider/provider.dart';
 import '../config/mapbox_config.dart';
@@ -263,8 +264,8 @@ class _RecordingViewState extends State<RecordingView> {
               ),
             );
 
-            // 自动定位到当前位置
-            await _goToCurrentLocation();
+            // 自动定位到当前位置（首次进入，不使用动画）
+            await _goToCurrentLocation(animated: false);
           },
         ),
         // 定位按钮
@@ -276,7 +277,7 @@ class _RecordingViewState extends State<RecordingView> {
             borderRadius: BorderRadius.circular(8),
             color: Colors.white,
             child: InkWell(
-              onTap: _goToCurrentLocation,
+              onTap: () => _goToCurrentLocation(),
               borderRadius: BorderRadius.circular(8),
               child: const Padding(
                 padding: EdgeInsets.all(10),
@@ -289,21 +290,77 @@ class _RecordingViewState extends State<RecordingView> {
     );
   }
 
-  Future<void> _goToCurrentLocation() async {
-    if (_mapboxMap == null) return;
+  /// 跳转到当前位置
+  /// [animated] - 是否使用动画（首次进入时为 false，点击按钮时为 true）
+  Future<void> _goToCurrentLocation({bool animated = true}) async {
+    if (_mapboxMap == null) {
+      debugPrint('[RecordingView] _goToCurrentLocation: mapboxMap is null');
+      return;
+    }
 
+    debugPrint(
+        '[RecordingView] _goToCurrentLocation: starting... (animated: $animated)');
     final manager = Provider.of<SessionManager>(context, listen: false);
-    final position = manager.currentPosition;
+    var position = manager.currentPosition;
+    debugPrint(
+        '[RecordingView] _goToCurrentLocation: manager.currentPosition = $position');
+
+    // 如果 SessionManager 中没有位置，尝试直接获取
+    if (position == null) {
+      debugPrint(
+          '[RecordingView] _goToCurrentLocation: trying to get position directly...');
+      try {
+        final geoPosition = await geo.Geolocator.getCurrentPosition(
+          locationSettings: const geo.LocationSettings(
+            accuracy: geo.LocationAccuracy.high,
+            timeLimit: Duration(seconds: 10),
+          ),
+        );
+        debugPrint(
+            '[RecordingView] _goToCurrentLocation: got position: ${geoPosition.latitude}, ${geoPosition.longitude}');
+        position = geo.Position(
+          longitude: geoPosition.longitude,
+          latitude: geoPosition.latitude,
+          timestamp: geoPosition.timestamp,
+          accuracy: geoPosition.accuracy,
+          altitude: geoPosition.altitude,
+          altitudeAccuracy: geoPosition.altitudeAccuracy,
+          heading: geoPosition.heading,
+          headingAccuracy: geoPosition.headingAccuracy,
+          speed: geoPosition.speed,
+          speedAccuracy: geoPosition.speedAccuracy,
+        );
+      } catch (e) {
+        debugPrint(
+            '[RecordingView] _goToCurrentLocation: error getting position: $e');
+      }
+    }
 
     if (position != null) {
       final center = Point(
         coordinates: Position(position.longitude, position.latitude),
       );
       _lastMapCenter = center;
-      await _mapboxMap!.flyTo(
-        CameraOptions(center: center, zoom: 16),
-        MapAnimationOptions(duration: 500),
-      );
+      debugPrint(
+          '[RecordingView] _goToCurrentLocation: moving to ${position.latitude}, ${position.longitude}');
+
+      final cameraOptions = CameraOptions(center: center, zoom: 16);
+
+      if (animated) {
+        // 用户点击按钮时使用动画
+        await _mapboxMap!.flyTo(
+          cameraOptions,
+          MapAnimationOptions(duration: 500),
+        );
+        debugPrint('[RecordingView] _goToCurrentLocation: flyTo completed');
+      } else {
+        // 首次进入时立即设置，避免被其他操作中断
+        await _mapboxMap!.setCamera(cameraOptions);
+        debugPrint('[RecordingView] _goToCurrentLocation: setCamera completed');
+      }
+    } else {
+      debugPrint(
+          '[RecordingView] _goToCurrentLocation: position is still null, cannot fly to location');
     }
   }
 

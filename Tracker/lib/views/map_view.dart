@@ -45,6 +45,8 @@ class _MapViewState extends State<MapView> {
   bool _showResortSelector = false; // 雪场选择器弹窗
   bool _showLayerSelector = false; // 图层选择器弹窗
   bool _initialLocationSet = false; // 是否已设置初始位置
+  bool _isAtUserLocation = false; // 当前地图是否聚焦在用户位置
+  Position? _lastKnownUserPosition; // 最后已知的用户位置
 
   // 路线规划相关状态
   final RoutePlanningData _routePlanningData = RoutePlanningData();
@@ -124,8 +126,9 @@ class _MapViewState extends State<MapView> {
           body: SafeArea(
             child: Stack(
               children: [
-                // 地图
+                // 地图 - 使用 const key 确保 widget 不会被重建
                 MapWidget(
+                  key: const ValueKey('main_map'),
                   cameraOptions: CameraOptions(
                     center: initialCenter,
                     zoom: resortZoom,
@@ -135,6 +138,7 @@ class _MapViewState extends State<MapView> {
                   onMapCreated: _onMapCreated,
                   onTapListener: _onMapSingleTap,
                   onLongTapListener: _onMapLongTap,
+                  onScrollListener: _onMapScroll,
                 ),
 
                 // 左上角：路线规划面板（避开比例尺，放在下方）
@@ -255,8 +259,8 @@ class _MapViewState extends State<MapView> {
       }
     }
 
-    // 自动定位到当前位置
-    await _goToCurrentLocation();
+    // 自动定位到当前位置（首次进入，不使用动画）
+    await _goToCurrentLocation(animated: false);
     _initialLocationSet = true;
 
     // 恢复团队状态（如果之前加入过团队）
@@ -601,10 +605,10 @@ class _MapViewState extends State<MapView> {
         _build3DToggleButton(),
         const SizedBox(height: 8),
 
-        // 定位到当前位置
+        // 定位按钮：在用户位置时跳转雪场，否则跳转用户位置
         _buildFloatingButton(
-          icon: Icons.my_location,
-          onPressed: _goToCurrentLocation,
+          icon: _isAtUserLocation ? Icons.downhill_skiing : Icons.my_location,
+          onPressed: _onLocationButtonPressed,
         ),
 
         // 加载指示器
@@ -988,21 +992,45 @@ class _MapViewState extends State<MapView> {
     }
   }
 
-  Future<void> _goToCurrentLocation() async {
-    if (_mapboxMap == null) return;
+  /// 定位按钮点击处理
+  void _onLocationButtonPressed() {
+    if (_isAtUserLocation) {
+      // 当前在用户位置，跳转到雪场
+      _goToResortLocation();
+    } else {
+      // 当前不在用户位置，跳转到用户位置
+      _goToCurrentLocation();
+    }
+  }
 
+  /// 跳转到当前位置
+  /// [animated] - 是否使用动画（首次进入时为 false，点击按钮时为 true）
+  Future<void> _goToCurrentLocation({bool animated = true}) async {
+    if (_mapboxMap == null) {
+      debugPrint('[MapView] _goToCurrentLocation: mapboxMap is null');
+      return;
+    }
+
+    debugPrint(
+        '[MapView] _goToCurrentLocation: starting... (animated: $animated)');
     final manager = Provider.of<SessionManager>(context, listen: false);
     var position = manager.currentPosition;
+    debugPrint(
+        '[MapView] _goToCurrentLocation: manager.currentPosition = $position');
 
     // 如果 SessionManager 中没有位置，尝试直接获取
     if (position == null) {
+      debugPrint(
+          '[MapView] _goToCurrentLocation: trying to get position directly...');
       try {
         final geoPosition = await geo.Geolocator.getCurrentPosition(
           locationSettings: const geo.LocationSettings(
             accuracy: geo.LocationAccuracy.high,
-            timeLimit: Duration(seconds: 5),
+            timeLimit: Duration(seconds: 10),
           ),
         );
+        debugPrint(
+            '[MapView] _goToCurrentLocation: got position: ${geoPosition.latitude}, ${geoPosition.longitude}');
         position = geo.Position(
           longitude: geoPosition.longitude,
           latitude: geoPosition.latitude,
@@ -1016,21 +1044,73 @@ class _MapViewState extends State<MapView> {
           speedAccuracy: geoPosition.speedAccuracy,
         );
       } catch (e) {
-        debugPrint('Could not get current location: $e');
+        debugPrint(
+            '[MapView] _goToCurrentLocation: error getting position: $e');
       }
     }
 
     if (position != null) {
-      await _mapboxMap!.flyTo(
-        CameraOptions(
-          center: Point(
-            coordinates: Position(position.longitude, position.latitude),
-          ),
-          zoom: 15,
+      // 保存用户位置
+      _lastKnownUserPosition = Position(position.longitude, position.latitude);
+      debugPrint(
+          '[MapView] _goToCurrentLocation: moving to ${position.latitude}, ${position.longitude}');
+
+      final cameraOptions = CameraOptions(
+        center: Point(
+          coordinates: Position(position.longitude, position.latitude),
         ),
-        MapAnimationOptions(duration: 1000),
+        zoom: 15,
       );
+
+      if (animated) {
+        // 用户点击按钮时使用动画
+        await _mapboxMap!.flyTo(
+          cameraOptions,
+          MapAnimationOptions(duration: 1000),
+        );
+        debugPrint('[MapView] _goToCurrentLocation: flyTo completed');
+      } else {
+        // 首次进入时立即设置，避免被其他操作中断
+        await _mapboxMap!.setCamera(cameraOptions);
+        debugPrint('[MapView] _goToCurrentLocation: setCamera completed');
+      }
+
+      // 设置状态为在用户位置，触发 UI 更新以显示正确的按钮图标
+      setState(() {
+        _isAtUserLocation = true;
+      });
+      debugPrint(
+          '[MapView] _goToCurrentLocation: done, _isAtUserLocation = true');
+    } else {
+      debugPrint(
+          '[MapView] _goToCurrentLocation: position is still null, cannot fly to location');
     }
+  }
+
+  /// 跳转到雪场位置
+  Future<void> _goToResortLocation() async {
+    if (_mapboxMap == null) return;
+
+    final resortData = SkiResorts.list[_selectedResortKey]!;
+    final resortCoord = resortData['coordinate'] as Map<String, dynamic>;
+    final resortZoom = resortData['zoom'] as double;
+
+    // 使用 flyTo 动画跳转到雪场
+    await _mapboxMap!.flyTo(
+      CameraOptions(
+        center: Point(
+          coordinates: Position(resortCoord['lng'], resortCoord['lat']),
+        ),
+        zoom: resortZoom,
+        pitch: _is3DMode ? 60.0 : 0.0,
+      ),
+      MapAnimationOptions(duration: 1000),
+    );
+
+    // 设置状态为不在用户位置
+    setState(() {
+      _isAtUserLocation = false;
+    });
   }
 
   Future<void> _goToResort() async {
@@ -1050,6 +1130,11 @@ class _MapViewState extends State<MapView> {
       ),
       MapAnimationOptions(duration: 1000),
     );
+
+    // 设置状态为不在用户位置
+    setState(() {
+      _isAtUserLocation = false;
+    });
   }
 
   Future<void> _loadSkiResortData() async {
@@ -1483,6 +1568,16 @@ class _MapViewState extends State<MapView> {
     });
 
     _showPOIMarker(coordinates);
+  }
+
+  /// 地图滚动/拖动 - 重置定位状态
+  void _onMapScroll(MapContentGestureContext context) {
+    // 用户手动拖动地图时，重置"在用户位置"状态
+    if (_isAtUserLocation) {
+      setState(() {
+        _isAtUserLocation = false;
+      });
+    }
   }
 
   /// 查询地图元素（雪道和缆车）
