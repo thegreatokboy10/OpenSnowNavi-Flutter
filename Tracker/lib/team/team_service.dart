@@ -37,7 +37,7 @@ class TeamService {
   /// 获取当前设备ID（已废弃，请使用 effectiveId）
   @Deprecated('Use effectiveId instead')
   Future<String> getDeviceId() async {
-    _cachedDeviceId ??= _memberService.currentMember!.id;
+    _cachedDeviceId ??= _memberService.currentMember?.id ?? '';
     return _cachedDeviceId!;
   }
 
@@ -48,8 +48,9 @@ class TeamService {
 
   /// 获取有效的ID（使用 memberId 作为身份标识）
   /// 所有 API 调用都应该使用这个 ID
+  /// 如果用户未登录，返回空字符串
   String get effectiveId {
-    return _memberService.currentMember!.id;
+    return _memberService.currentMember?.id ?? '';
   }
 
   /// 获取有效的昵称（优先使用会员姓名）
@@ -132,6 +133,13 @@ class TeamService {
             '[TeamService] initialize: saved team not found, clearing saved team ID');
         await _deviceService.saveCurrentTeamId(null);
       }
+    }
+
+    // 如果用户未登录，跳过通过 effectiveId 查询
+    if (!_memberService.isLoggedIn) {
+      print(
+          '[TeamService] initialize: user not logged in, skipping team lookup');
+      return;
     }
 
     // 如果本地没有保存的团队 ID，或者保存的团队已失效，尝试通过 effectiveId 查询
