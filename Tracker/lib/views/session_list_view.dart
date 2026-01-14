@@ -17,14 +17,17 @@ class SessionListView extends StatefulWidget {
 class _SessionListViewState extends State<SessionListView> {
   List<Session> _sessions = [];
   bool _isLoading = true;
+  bool _wasRecording = false; // 追踪上一次的录制状态
 
   @override
   void initState() {
     super.initState();
     _loadSessions();
-    // 监听 SessionManager 变化以自动刷新
+    // 监听 SessionManager 变化以自动刷新（仅在录制结束时）
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<SessionManager>().addListener(_onSessionManagerChanged);
+      final manager = context.read<SessionManager>();
+      _wasRecording = manager.isRecording;
+      manager.addListener(_onSessionManagerChanged);
     });
   }
 
@@ -36,11 +39,17 @@ class _SessionListViewState extends State<SessionListView> {
   }
 
   void _onSessionManagerChanged() {
-    // 当 SessionManager 通知变化且不在录制中时刷新列表
+    // 只在录制状态从 true 变为 false 时刷新列表（即录制结束时）
     final manager = context.read<SessionManager>();
-    if (!manager.isRecording) {
+    final isRecording = manager.isRecording;
+
+    if (_wasRecording && !isRecording) {
+      // 录制刚结束，刷新列表
+      debugPrint('[SessionListView] Recording ended, refreshing list');
       _loadSessions();
     }
+
+    _wasRecording = isRecording;
   }
 
   Future<void> _loadSessions() async {
