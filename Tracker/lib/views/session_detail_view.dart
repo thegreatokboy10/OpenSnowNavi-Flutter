@@ -1503,16 +1503,31 @@ class _SessionDetailViewState extends State<SessionDetailView> {
     // 清空轨迹线（从头开始）
     await _updateReplayTrackLine();
 
+    // 重置相机到起点
+    final startPoint = _replayService!.processedPoints.firstOrNull;
+    if (startPoint != null && _mapboxMap != null) {
+      await _mapboxMap!.flyTo(
+        CameraOptions(
+          center: startPoint.point,
+          zoom: _replayService!.config.cameraZoom,
+          pitch: _replayService!.config.cameraPitch,
+          bearing: startPoint.bearing,
+        ),
+        MapAnimationOptions(duration: 300),
+      );
+      _lastCameraBearing = startPoint.bearing;
+    }
+
     // 设置预估时长
     _exportService!.setEstimatedDuration(_replayService!.config.totalDuration);
 
     // 进入导出模式
     setState(() => _isExportMode = true);
 
-    // 等待 UI 更新
-    await Future.delayed(const Duration(milliseconds: 300));
+    // 等待 UI 完全更新和相机动画完成
+    await Future.delayed(const Duration(milliseconds: 500));
 
-    // 开始录制
+    // 开始录制（带音频）
     final started = await _exportService!.startRecording();
 
     if (!started) {
@@ -1528,6 +1543,9 @@ class _SessionDetailViewState extends State<SessionDetailView> {
       }
       return;
     }
+
+    // 录制已开始，等待1秒让录制稳定并捕获初始状态
+    await Future.delayed(const Duration(seconds: 1));
 
     // 监听回放完成
     _replayService!.addListener(_onExportReplayUpdate);

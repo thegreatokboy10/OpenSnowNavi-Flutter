@@ -71,12 +71,12 @@ class VideoExportService extends ChangeNotifier {
         return false;
       }
 
-      // 开始屏幕录制
+      // 开始屏幕录制（带音频，用于录制视频播放声音）
       _state = VideoExportState.recording;
       _recordingStartTime = DateTime.now();
       notifyListeners();
 
-      final started = await FlutterScreenRecording.startRecordScreen(
+      final started = await FlutterScreenRecording.startRecordScreenAndAudio(
         'snownavi_replay_${DateTime.now().millisecondsSinceEpoch}',
         titleNotification: 'SnowNavi',
         messageNotification: '正在录制轨迹回放...',
