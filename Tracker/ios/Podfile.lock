@@ -36,6 +36,10 @@ PODS:
   - Flutter (1.0.0)
   - flutter_compass (0.0.1):
     - Flutter
+  - flutter_foreground_task (0.0.1):
+    - Flutter
+  - flutter_screen_recording (0.0.1):
+    - Flutter
   - geolocator_apple (1.2.0):
     - Flutter
     - FlutterMacOS
@@ -82,6 +86,8 @@ DEPENDENCIES:
   - file_picker (from `.symlinks/plugins/file_picker/ios`)
   - Flutter (from `Flutter`)
   - flutter_compass (from `.symlinks/plugins/flutter_compass/ios`)
+  - flutter_foreground_task (from `.symlinks/plugins/flutter_foreground_task/ios`)
+  - flutter_screen_recording (from `.symlinks/plugins/flutter_screen_recording/ios`)
   - geolocator_apple (from `.symlinks/plugins/geolocator_apple/darwin`)
   - mapbox_maps_flutter (from `.symlinks/plugins/mapbox_maps_flutter/ios`)
   - path_provider_foundation (from `.symlinks/plugins/path_provider_foundation/darwin`)
@@ -111,6 +117,10 @@ EXTERNAL SOURCES:
     :path: Flutter
   flutter_compass:
     :path: ".symlinks/plugins/flutter_compass/ios"
+  flutter_foreground_task:
+    :path: ".symlinks/plugins/flutter_foreground_task/ios"
+  flutter_screen_recording:
+    :path: ".symlinks/plugins/flutter_screen_recording/ios"
   geolocator_apple:
     :path: ".symlinks/plugins/geolocator_apple/darwin"
   mapbox_maps_flutter:
@@ -138,6 +148,8 @@ SPEC CHECKSUMS:
   file_picker: b159e0c068aef54932bb15dc9fd1571818edaf49
   Flutter: e0871f40cf51350855a761d2e70bf5af5b9b5de7
   flutter_compass: cbbd285cea1584c7ac9c4e0c3e1f17cbea55e855
+  flutter_foreground_task: 21ef182ab0a29a3005cc72cd70e5f45cb7f7f817
+  flutter_screen_recording: f56d857cef9c6338f74909a15f60b3e5dc5ffb38
   geolocator_apple: 66b711889fd333205763b83c9dcf0a57a28c7afd
   mapbox_maps_flutter: d7bef6687c5be0e49518c4c5423276ca68e2228a
   MapboxCommon: 479562bceca6b10d1c3b8bca5006ef86c51d7255

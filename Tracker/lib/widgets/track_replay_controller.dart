@@ -7,12 +7,14 @@ class TrackReplayController extends StatelessWidget {
   final TrackReplayService replayService;
   final VoidCallback? onClose;
   final VoidCallback? onTap; // 用于通知父组件用户交互
+  final VoidCallback? onExport; // 导出视频按钮回调
 
   const TrackReplayController({
     super.key,
     required this.replayService,
     this.onClose,
     this.onTap,
+    this.onExport,
   });
 
   @override
@@ -50,6 +52,19 @@ class TrackReplayController extends StatelessWidget {
                       ),
                     ),
                     const Spacer(),
+                    // 导出视频按钮
+                    if (onExport != null)
+                      IconButton(
+                        icon: const Icon(Icons.ios_share, color: Colors.white70),
+                        onPressed: () {
+                          onTap?.call();
+                          onExport?.call();
+                        },
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        tooltip: '导出视频',
+                      ),
+                    if (onExport != null) const SizedBox(width: 8),
                     // 设置按钮
                     IconButton(
                       icon: const Icon(Icons.tune, color: Colors.white70),

@@ -87,6 +87,9 @@ dependencies:
   # Video player
   video_player: ^2.9.2
 
+  # Screen recording for video export
+  flutter_screen_recording: ^2.0.24
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

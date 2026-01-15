@@ -32,6 +32,10 @@
 	<string>SnowNavi Tracker needs your location to record ski tracks.</string>
 	<key>NSMotionUsageDescription</key>
 	<string>SnowNavi Tracker uses motion sensors to enhance tracking accuracy.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>SnowNavi Tracker needs microphone access to record audio during track replay video export.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>SnowNavi Tracker needs photo library access to save exported replay videos to your albums.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>SnowNavi Tracker needs access to your photo library to display photos and videos taken during your ski sessions on the track map.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>

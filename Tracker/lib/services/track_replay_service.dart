@@ -6,6 +6,7 @@ import '../models/location_point.dart';
 import '../models/replay_point.dart';
 import '../models/replay_state.dart';
 import '../models/session_media.dart';
+import '../models/video_export_config.dart';
 
 /// 轨迹回放服务
 /// 负责轨迹预处理、回放状态管理和进度控制
@@ -30,6 +31,10 @@ class TrackReplayService extends ChangeNotifier {
   SessionMedia? _currentShowingMedia; // 当前正在展示的媒体
   bool _isShowingMedia = false; // 是否正在展示媒体
 
+  // 导出模式相关
+  bool _isExportMode = false;
+  VideoExportConfig? _exportConfig;
+
   // Getters
   List<ReplayPoint> get processedPoints => _processedPoints;
   double get totalDistance => _totalDistance;
@@ -38,6 +43,45 @@ class TrackReplayService extends ChangeNotifier {
   ReplayConfig get config => _config;
   SessionMedia? get currentShowingMedia => _currentShowingMedia;
   bool get isShowingMedia => _isShowingMedia;
+  bool get isExportMode => _isExportMode;
+  VideoExportConfig? get exportConfig => _exportConfig;
+
+  /// 进入导出模式
+  void enterExportMode(VideoExportConfig config) {
+    _isExportMode = true;
+    _exportConfig = config;
+    notifyListeners();
+  }
+
+  /// 退出导出模式
+  void exitExportMode() {
+    _isExportMode = false;
+    _exportConfig = null;
+    notifyListeners();
+  }
+
+  /// 获取当前媒体显示时长（秒）
+  /// 导出模式下使用导出配置，否则使用回放配置
+  int getMediaDisplayDuration(SessionMedia media) {
+    if (_isExportMode && _exportConfig != null) {
+      switch (_exportConfig!.mediaMode) {
+        case MediaExportMode.skipMedia:
+          return 0; // 跳过媒体
+        case MediaExportMode.fixedDuration:
+          return _exportConfig!.maxVideoClipDuration;
+        case MediaExportMode.fullPlayback:
+          return -1; // -1 表示完整播放（视频）或默认时长（照片）
+      }
+    }
+    return _config.photoDisplayDuration;
+  }
+
+  /// 导出模式下是否应该跳过媒体
+  bool get shouldSkipMediaInExport {
+    return _isExportMode &&
+        _exportConfig != null &&
+        _exportConfig!.mediaMode == MediaExportMode.skipMedia;
+  }
 
   /// 加载保存的配置
   Future<void> loadSavedConfig() async {
@@ -447,6 +491,11 @@ class TrackReplayService extends ChangeNotifier {
 
   /// 检查是否到达媒体位置，返回需要展示的媒体
   SessionMedia? checkMediaAtProgress(double progress) {
+    // 导出模式下跳过媒体
+    if (shouldSkipMediaInExport) {
+      return null;
+    }
+
     if (!_config.showMediaDuringReplay || _mediaReplayList.isEmpty) {
       return null;
     }

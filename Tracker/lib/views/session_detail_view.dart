@@ -21,6 +21,9 @@ import '../utils/statistics.dart';
 import '../widgets/media_marker_icon_generator.dart';
 import '../widgets/media_viewer_dialog.dart';
 import '../widgets/track_replay_controller.dart';
+import '../widgets/video_export_dialog.dart';
+import '../models/video_export_config.dart';
+import '../services/video_export_service.dart';
 
 /// Session 详情视图
 class SessionDetailView extends StatefulWidget {
@@ -69,10 +72,15 @@ class _SessionDetailViewState extends State<SessionDetailView> {
   File? _currentMediaFile; // 当前媒体文件
   Offset? _mediaScreenPosition; // 媒体在屏幕上的位置
 
+  // 视频导出相关
+  VideoExportService? _exportService;
+  bool _isExportMode = false; // 是否处于导出模式
+
   @override
   void initState() {
     super.initState();
     _replayService = TrackReplayService();
+    _exportService = VideoExportService();
     _loadData();
   }
 
@@ -84,6 +92,7 @@ class _SessionDetailViewState extends State<SessionDetailView> {
     _photoDisplayTimer?.cancel();
     _replayVideoController?.dispose();
     _replayService?.dispose();
+    _exportService?.dispose();
     _mediaMarkerManager = null;
     _userMarkerManager = null;
     super.dispose();
@@ -293,42 +302,45 @@ class _SessionDetailViewState extends State<SessionDetailView> {
           if (isShowingMedia && currentMedia != null && _mediaScreenPosition != null)
             _buildPositionedMediaPreview(currentMedia),
 
-          // 回放控制面板（带自动隐藏动画）
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-            left: 16,
-            right: 16,
-            bottom: _showReplayControls
-                ? 32 + MediaQuery.of(context).padding.bottom
-                : -200, // 隐藏时滑出屏幕
-            child: TrackReplayController(
-              replayService: _replayService!,
-              onClose: _exitReplay,
-              onTap: _onReplayControlInteraction,
-            ),
-          ),
-          // 安全区域内的返回按钮（带自动隐藏动画）
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-            top: _showReplayControls
-                ? MediaQuery.of(context).padding.top + 16
-                : -60, // 隐藏时滑出屏幕
-            left: 16,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.5),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
-                onPressed: _exitReplay,
+          // 回放控制面板（带自动隐藏动画，导出模式时隐藏）
+          if (!_isExportMode)
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+              left: 16,
+              right: 16,
+              bottom: _showReplayControls
+                  ? 32 + MediaQuery.of(context).padding.bottom
+                  : -200, // 隐藏时滑出屏幕
+              child: TrackReplayController(
+                replayService: _replayService!,
+                onClose: _exitReplay,
+                onTap: _onReplayControlInteraction,
+                onExport: _showExportDialog,
               ),
             ),
-          ),
-          // 点击提示（控件隐藏时显示）
-          if (!_showReplayControls && !isShowingMedia)
+          // 安全区域内的返回按钮（带自动隐藏动画，导出模式时隐藏）
+          if (!_isExportMode)
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+              top: _showReplayControls
+                  ? MediaQuery.of(context).padding.top + 16
+                  : -60, // 隐藏时滑出屏幕
+              left: 16,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  onPressed: _exitReplay,
+                ),
+              ),
+            ),
+          // 点击提示（控件隐藏时显示，非导出模式）
+          if (!_showReplayControls && !isShowingMedia && !_isExportMode)
             Positioned(
               bottom: 20 + MediaQuery.of(context).padding.bottom,
               left: 0,
@@ -346,6 +358,34 @@ class _SessionDetailViewState extends State<SessionDetailView> {
                   ),
                 ),
               ),
+            ),
+
+          // 导出模式：顶部遮罩（刘海区域）
+          if (_isExportMode)
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              height: MediaQuery.of(context).padding.top,
+              child: Container(color: Colors.black),
+            ),
+
+          // 导出模式：底部遮罩（底部安全区域）
+          if (_isExportMode)
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              height: MediaQuery.of(context).padding.bottom,
+              child: Container(color: Colors.black),
+            ),
+
+          // 导出模式：水印
+          if (_isExportMode)
+            Positioned(
+              right: 16,
+              bottom: MediaQuery.of(context).padding.bottom + 16,
+              child: _buildExportWatermark(),
             ),
         ],
       ),
@@ -1267,20 +1307,35 @@ class _SessionDetailViewState extends State<SessionDetailView> {
       (timer) => _updateMediaOrbit(media),
     );
 
+    // 获取媒体显示时长（导出模式会使用导出配置）
+    final displayDuration = _replayService!.getMediaDisplayDuration(media);
+
     // 处理照片/视频
     if (media.type == MediaType.photo) {
       // 照片：固定展示时长后自动继续
-      final displaySeconds = _replayService!.config.photoDisplayDuration;
+      final displaySeconds = displayDuration > 0
+          ? displayDuration
+          : _replayService!.config.photoDisplayDuration;
       _photoDisplayTimer?.cancel();
       _photoDisplayTimer = Timer(
         Duration(seconds: displaySeconds),
         () => _finishMediaOrbit(),
       );
     } else {
-      // 视频：自动播放，播放完成后继续
+      // 视频处理
       if (_replayVideoController != null) {
         _replayVideoController!.addListener(_onVideoPlaybackChanged);
         _replayVideoController!.play();
+
+        // 导出模式下：固定时长后跳过
+        if (displayDuration > 0 && _replayService!.isExportMode) {
+          _photoDisplayTimer?.cancel();
+          _photoDisplayTimer = Timer(
+            Duration(seconds: displayDuration),
+            () => _finishMediaOrbit(),
+          );
+        }
+        // displayDuration == -1 表示完整播放，不设置定时器
       }
     }
   }
@@ -1394,10 +1449,185 @@ class _SessionDetailViewState extends State<SessionDetailView> {
     // 继续回放
     _replayService?.finishShowingMedia();
 
-    // 重新启动自动隐藏定时器
-    _resetHideControlsTimer();
+    // 重新启动自动隐藏定时器（非导出模式）
+    if (!_isExportMode) {
+      _resetHideControlsTimer();
+    }
 
     if (mounted) setState(() {});
+  }
+
+  // ==================== 视频导出功能 ====================
+
+  /// 显示导出设置对话框
+  Future<void> _showExportDialog() async {
+    // 暂停回放
+    _replayService?.pause();
+
+    final config = await VideoExportSettingsDialog.show(context);
+
+    if (config != null && mounted) {
+      _startExport(config);
+    } else {
+      // 用户取消，恢复播放
+      _replayService?.play();
+    }
+  }
+
+  /// 开始导出
+  Future<void> _startExport(VideoExportConfig config) async {
+    if (_exportService == null || _replayService == null) return;
+
+    // 设置导出模式配置到回放服务
+    _replayService!.enterExportMode(config);
+
+    // 重置回放到开头
+    _replayService!.stop();
+
+    // 设置预估时长
+    _exportService!.setEstimatedDuration(_replayService!.config.totalDuration);
+
+    // 进入导出模式
+    setState(() => _isExportMode = true);
+
+    // 等待 UI 更新
+    await Future.delayed(const Duration(milliseconds: 300));
+
+    // 开始录制
+    final started = await _exportService!.startRecording();
+
+    if (!started) {
+      // 录制启动失败
+      _replayService!.exitExportMode();
+      setState(() => _isExportMode = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_exportService!.errorMessage ?? '无法启动录制'),
+          ),
+        );
+      }
+      return;
+    }
+
+    // 监听回放完成
+    _replayService!.addListener(_onExportReplayUpdate);
+
+    // 开始回放
+    _replayService!.play();
+  }
+
+  /// 导出模式下的回放更新
+  void _onExportReplayUpdate() {
+    // 更新导出进度
+    _exportService?.updateProgress(_replayService!.currentProgress);
+
+    // 检查回放是否完成
+    if (_replayService!.playbackState == ReplayPlaybackState.finished) {
+      _finishExport();
+    }
+  }
+
+  /// 完成导出
+  Future<void> _finishExport() async {
+    _replayService?.removeListener(_onExportReplayUpdate);
+    _replayService?.exitExportMode();
+
+    // 停止录制
+    final outputPath = await _exportService?.stopRecording();
+
+    // 退出导出模式
+    setState(() => _isExportMode = false);
+
+    if (outputPath != null && mounted) {
+      // 显示完成对话框
+      await VideoExportCompletionDialog.show(
+        context,
+        exportService: _exportService!,
+        onSaveToGallery: () async {
+          final saved = await _exportService!.saveToGallery();
+          if (mounted) {
+            Navigator.pop(context);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(saved ? '已保存到相册' : '保存失败'),
+              ),
+            );
+          }
+        },
+        onShare: () async {
+          await _exportService!.shareVideo();
+        },
+        onClose: () {
+          Navigator.pop(context);
+          _exportService?.cleanup();
+        },
+      );
+    }
+  }
+
+  /// 取消导出
+  Future<void> _cancelExport() async {
+    _replayService?.removeListener(_onExportReplayUpdate);
+    _replayService?.exitExportMode();
+    _replayService?.stop();
+    await _exportService?.cancelRecording();
+
+    setState(() => _isExportMode = false);
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('已取消导出')),
+      );
+    }
+  }
+
+  /// 构建导出水印
+  Widget _buildExportWatermark() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Logo 图标（使用滤色处理）
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: ColorFiltered(
+              colorFilter: const ColorFilter.mode(
+                Colors.white,
+                BlendMode.srcIn,
+              ),
+              child: Image.asset(
+                'assets/img/snownavi_logo.jpg',
+                width: 24,
+                height: 24,
+                color: Colors.white,
+                colorBlendMode: BlendMode.srcIn,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          const Text(
+            'SnowNavi',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              shadows: [
+                Shadow(
+                  color: Colors.black,
+                  blurRadius: 2,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _fitBounds(MapboxMap mapboxMap, double minLat, double maxLat,
