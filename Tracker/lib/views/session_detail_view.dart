@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
@@ -8,13 +9,16 @@ import '../config/mapbox_config.dart';
 import '../models/session.dart';
 import '../models/location_point.dart';
 import '../models/session_media.dart';
+import '../models/replay_state.dart';
 import '../services/session_manager.dart';
 import '../services/media_gallery_service.dart';
+import '../services/track_replay_service.dart';
 import 'package:photo_manager/photo_manager.dart' show PermissionState;
 import '../utils/gpx_exporter.dart';
 import '../utils/statistics.dart';
 import '../widgets/media_marker_icon_generator.dart';
 import '../widgets/media_viewer_dialog.dart';
+import '../widgets/track_replay_controller.dart';
 
 /// Session 详情视图
 class SessionDetailView extends StatefulWidget {
@@ -39,14 +43,23 @@ class _SessionDetailViewState extends State<SessionDetailView> {
   PointAnnotationManager? _mediaMarkerManager;
   final Map<String, SessionMedia> _mediaAnnotationMap = {};
 
+  // 3D 回放相关状态
+  TrackReplayService? _replayService;
+  bool _isReplayMode = false;
+  Timer? _lineUpdateTimer;
+  double _lastCameraBearing = 0;
+
   @override
   void initState() {
     super.initState();
+    _replayService = TrackReplayService();
     _loadData();
   }
 
   @override
   void dispose() {
+    _lineUpdateTimer?.cancel();
+    _replayService?.dispose();
     _mediaMarkerManager = null;
     super.dispose();
   }
@@ -152,44 +165,92 @@ class _SessionDetailViewState extends State<SessionDetailView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Session Details'),
-        actions: [
-          // 媒体标注开关
-          if (_mediaItems.isNotEmpty)
-            IconButton(
-              icon: Icon(
-                _showMediaMarkers ? Icons.photo_library : Icons.photo_library_outlined,
-                color: _showMediaMarkers ? Colors.orange : null,
-              ),
-              onPressed: _toggleMediaMarkers,
-              tooltip: _showMediaMarkers ? '隐藏照片' : '显示照片',
-            ),
-          // 加载媒体指示器
-          if (_isLoadingMedia)
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 12),
-              child: SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-            ),
-          IconButton(
-            icon: const Icon(Icons.share),
-            onPressed: _points.isEmpty ? null : _exportGPX,
-            tooltip: 'Export GPX',
-          ),
-        ],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                Expanded(flex: 2, child: _buildMap()),
-                Expanded(flex: 1, child: _buildStats()),
+      appBar: _isReplayMode
+          ? null // 回放模式隐藏导航栏
+          : AppBar(
+              title: const Text('Session Details'),
+              actions: [
+                // 3D 回放按钮
+                if (_points.length >= 2)
+                  IconButton(
+                    icon: const Icon(Icons.play_circle_outline),
+                    onPressed: _startReplay,
+                    tooltip: '3D 回放',
+                  ),
+                // 媒体标注开关
+                if (_mediaItems.isNotEmpty)
+                  IconButton(
+                    icon: Icon(
+                      _showMediaMarkers
+                          ? Icons.photo_library
+                          : Icons.photo_library_outlined,
+                      color: _showMediaMarkers ? Colors.orange : null,
+                    ),
+                    onPressed: _toggleMediaMarkers,
+                    tooltip: _showMediaMarkers ? '隐藏照片' : '显示照片',
+                  ),
+                // 加载媒体指示器
+                if (_isLoadingMedia)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 12),
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  ),
+                IconButton(
+                  icon: const Icon(Icons.share),
+                  onPressed: _points.isEmpty ? null : _exportGPX,
+                  tooltip: 'Export GPX',
+                ),
               ],
             ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _isReplayMode
+              ? _buildReplayView()
+              : Column(
+                  children: [
+                    Expanded(flex: 2, child: _buildMap()),
+                    Expanded(flex: 1, child: _buildStats()),
+                  ],
+                ),
+    );
+  }
+
+  /// 构建回放模式视图
+  Widget _buildReplayView() {
+    return Stack(
+      children: [
+        // 全屏地图
+        Positioned.fill(child: _buildMap()),
+        // 回放控制面板
+        Positioned(
+          left: 16,
+          right: 16,
+          bottom: 32 + MediaQuery.of(context).padding.bottom,
+          child: TrackReplayController(
+            replayService: _replayService!,
+            onClose: _exitReplay,
+          ),
+        ),
+        // 安全区域内的返回按钮
+        Positioned(
+          top: MediaQuery.of(context).padding.top + 16,
+          left: 16,
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.5),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: _exitReplay,
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -466,6 +527,260 @@ class _SessionDetailViewState extends State<SessionDetailView> {
     } else {
       await _removeMediaMarkers();
     }
+  }
+
+  // ==================== 3D 回放功能 ====================
+
+  /// 开始回放模式
+  Future<void> _startReplay() async {
+    if (_points.isEmpty || _replayService == null) return;
+
+    // 处理轨迹
+    await _replayService!.processTrack(_points);
+
+    if (_replayService!.processedPoints.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('轨迹数据不足，无法回放')),
+        );
+      }
+      return;
+    }
+
+    setState(() => _isReplayMode = true);
+
+    // 等待地图准备好
+    await Future.delayed(const Duration(milliseconds: 100));
+
+    if (_mapboxMap != null) {
+      // 隐藏静态轨迹和标注
+      await _hideStaticTrack();
+      await _removeMediaMarkers();
+
+      // 初始化回放轨迹图层
+      await _initReplayTrackLayers();
+
+      // 监听回放更新
+      _replayService!.addListener(_onReplayUpdate);
+
+      // 启动轨迹线更新定时器（频率低于相机更新）
+      _lineUpdateTimer = Timer.periodic(
+        Duration(milliseconds: _replayService!.config.lineUpdateIntervalMs),
+        (_) => _updateReplayTrackLine(),
+      );
+
+      // 开始播放
+      _replayService!.play();
+    }
+  }
+
+  /// 退出回放模式
+  Future<void> _exitReplay() async {
+    _lineUpdateTimer?.cancel();
+    _lineUpdateTimer = null;
+    _replayService?.removeListener(_onReplayUpdate);
+    _replayService?.stop();
+
+    if (_mapboxMap != null) {
+      await _removeReplayTrackLayers();
+      await _showStaticTrack();
+      await _resetCameraToOverview();
+
+      // 恢复媒体标注
+      if (_mediaItems.isNotEmpty && _showMediaMarkers) {
+        await _addMediaMarkers(_mapboxMap!);
+      }
+    }
+
+    setState(() => _isReplayMode = false);
+  }
+
+  /// 回放更新回调
+  void _onReplayUpdate() {
+    final point = _replayService!.currentPoint;
+    if (point != null && _isReplayMode && _mapboxMap != null) {
+      _updateReplayCamera(point);
+    }
+
+    // 检查是否结束
+    if (_replayService!.playbackState == ReplayPlaybackState.finished) {
+      // 回放结束，可以选择自动退出或停留在结束状态
+    }
+  }
+
+  /// 更新相机跟随回放位置
+  Future<void> _updateReplayCamera(dynamic point) async {
+    if (_mapboxMap == null) return;
+
+    final config = _replayService!.config;
+
+    // 平滑方向变化（指数移动平均）
+    final targetBearing = point.bearing as double;
+    final bearingDiff = ((targetBearing - _lastCameraBearing + 540) % 360) - 180;
+    _lastCameraBearing =
+        (_lastCameraBearing + bearingDiff * config.bearingSmoothingFactor) % 360;
+
+    await _mapboxMap!.flyTo(
+      CameraOptions(
+        center: point.point,
+        zoom: config.cameraZoom,
+        pitch: config.cameraPitch,
+        bearing: _lastCameraBearing,
+      ),
+      MapAnimationOptions(duration: config.cameraUpdateIntervalMs),
+    );
+  }
+
+  /// 初始化回放轨迹图层
+  Future<void> _initReplayTrackLayers() async {
+    if (_mapboxMap == null) return;
+
+    try {
+      // 添加 GeoJSON source（初始为空）
+      await _mapboxMap!.style.addSource(
+        GeoJsonSource(
+          id: 'replay-track-source',
+          data: '{"type":"FeatureCollection","features":[]}',
+        ),
+      );
+
+      // 添加轨迹外边框（更宽、更深的颜色）
+      await _mapboxMap!.style.addLayer(
+        LineLayer(
+          id: 'replay-track-outline-layer',
+          sourceId: 'replay-track-source',
+          lineColor: 0xFFCC6600, // 深橙色
+          lineWidth: 6.0,
+          lineCap: LineCap.ROUND,
+          lineJoin: LineJoin.ROUND,
+        ),
+      );
+
+      // 添加主轨迹层
+      await _mapboxMap!.style.addLayer(
+        LineLayer(
+          id: 'replay-track-layer',
+          sourceId: 'replay-track-source',
+          lineColor: Colors.orange.value,
+          lineWidth: 4.0,
+          lineCap: LineCap.ROUND,
+          lineJoin: LineJoin.ROUND,
+        ),
+      );
+    } catch (e) {
+      debugPrint('[SessionDetailView] Error initializing replay layers: $e');
+    }
+  }
+
+  /// 更新回放轨迹线
+  Future<void> _updateReplayTrackLine() async {
+    if (_mapboxMap == null || _replayService == null) return;
+
+    final coordinates = _replayService!.visibleTrackCoordinates;
+    if (coordinates.length < 2) return;
+
+    final geoJson = jsonEncode({
+      'type': 'Feature',
+      'geometry': {
+        'type': 'LineString',
+        'coordinates': coordinates.map((p) => [p.lng, p.lat]).toList(),
+      },
+    });
+
+    try {
+      // 更新 source 数据
+      final source =
+          await _mapboxMap!.style.getSource('replay-track-source');
+      if (source is GeoJsonSource) {
+        await source.updateGeoJSON(geoJson);
+      }
+    } catch (e) {
+      debugPrint('[SessionDetailView] Error updating replay track: $e');
+    }
+  }
+
+  /// 移除回放轨迹图层
+  Future<void> _removeReplayTrackLayers() async {
+    if (_mapboxMap == null) return;
+
+    try {
+      await _mapboxMap!.style.removeStyleLayer('replay-track-layer');
+      await _mapboxMap!.style.removeStyleLayer('replay-track-outline-layer');
+      await _mapboxMap!.style.removeStyleSource('replay-track-source');
+    } catch (e) {
+      debugPrint('[SessionDetailView] Error removing replay layers: $e');
+    }
+  }
+
+  /// 隐藏静态轨迹
+  Future<void> _hideStaticTrack() async {
+    if (_mapboxMap == null) return;
+
+    try {
+      await _mapboxMap!.style
+          .setStyleLayerProperty('track-layer', 'visibility', 'none');
+    } catch (e) {
+      debugPrint('[SessionDetailView] Error hiding track: $e');
+    }
+  }
+
+  /// 显示静态轨迹
+  Future<void> _showStaticTrack() async {
+    if (_mapboxMap == null) return;
+
+    try {
+      await _mapboxMap!.style
+          .setStyleLayerProperty('track-layer', 'visibility', 'visible');
+    } catch (e) {
+      debugPrint('[SessionDetailView] Error showing track: $e');
+    }
+  }
+
+  /// 重置相机到概览视角
+  Future<void> _resetCameraToOverview() async {
+    if (_mapboxMap == null || _points.isEmpty) return;
+
+    // 计算边界
+    double minLat = double.infinity, maxLat = -double.infinity;
+    double minLng = double.infinity, maxLng = -double.infinity;
+    for (final p in _points) {
+      if (p.latitude < minLat) minLat = p.latitude;
+      if (p.latitude > maxLat) maxLat = p.latitude;
+      if (p.longitude < minLng) minLng = p.longitude;
+      if (p.longitude > maxLng) maxLng = p.longitude;
+    }
+
+    // 重置相机（包括 pitch 和 bearing）
+    final latPadding = (maxLat - minLat) * 0.1;
+    final lngPadding = (maxLng - minLng) * 0.1;
+
+    final bounds = CoordinateBounds(
+      southwest: Point(
+          coordinates: Position(minLng - lngPadding, minLat - latPadding)),
+      northeast: Point(
+          coordinates: Position(maxLng + lngPadding, maxLat + latPadding)),
+      infiniteBounds: false,
+    );
+
+    final cameraForBounds = await _mapboxMap!.cameraForCoordinateBounds(
+      bounds,
+      MbxEdgeInsets(top: 50, left: 50, bottom: 50, right: 50),
+      null,
+      null,
+      null,
+      null,
+    );
+
+    // 重置 pitch 和 bearing
+    await _mapboxMap!.flyTo(
+      CameraOptions(
+        center: cameraForBounds.center,
+        zoom: cameraForBounds.zoom,
+        pitch: 0, // 恢复水平视角
+        bearing: 0, // 恢复北向
+      ),
+      MapAnimationOptions(duration: 500),
+    );
   }
 
   Future<void> _fitBounds(MapboxMap mapboxMap, double minLat, double maxLat,
