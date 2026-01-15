@@ -6,7 +6,7 @@ import 'package:video_player/video_player.dart';
 import '../models/session_media.dart';
 import '../services/media_gallery_service.dart';
 
-/// 全屏媒体查看器对话框 - 支持滑动浏览所有媒体
+/// 全屏媒体查看器对话框 - 支持滑动浏览所有媒体和筛选功能
 class MediaViewerDialog extends StatefulWidget {
   /// 所有媒体列表（按时间排序）
   final List<SessionMedia> allMedia;
@@ -14,11 +14,22 @@ class MediaViewerDialog extends StatefulWidget {
   /// 初始显示的媒体索引
   final int initialIndex;
 
+  /// 当前选中的媒体ID（用于筛选功能）
+  final Set<String>? selectedIds;
+
+  /// 选择变更回调
+  final ValueChanged<Set<String>>? onSelectionChanged;
+
   const MediaViewerDialog({
     super.key,
     required this.allMedia,
     required this.initialIndex,
+    this.selectedIds,
+    this.onSelectionChanged,
   });
+
+  /// 是否启用筛选模式
+  bool get hasSelectionMode => selectedIds != null && onSelectionChanged != null;
 
   @override
   State<MediaViewerDialog> createState() => _MediaViewerDialogState();
@@ -37,6 +48,10 @@ class _MediaViewerDialogState extends State<MediaViewerDialog> {
   // 缩略图缓存
   final Map<String, Uint8List?> _thumbnailCache = {};
 
+  // 筛选相关状态
+  bool _isSelectionMode = false;
+  late Set<String> _selectedIds;
+
   static const double _thumbnailSize = 60;
   static const double _thumbnailSpacing = 8;
 
@@ -46,6 +61,11 @@ class _MediaViewerDialogState extends State<MediaViewerDialog> {
     _currentIndex = widget.initialIndex;
     _pageController = PageController(initialPage: _currentIndex);
     _thumbnailScrollController = ScrollController();
+
+    // 初始化选中状态
+    _selectedIds = widget.selectedIds != null
+        ? Set.from(widget.selectedIds!)
+        : widget.allMedia.map((m) => m.id).toSet();
 
     // 预加载当前和相邻媒体
     _preloadMedia(_currentIndex);
@@ -132,7 +152,7 @@ class _MediaViewerDialogState extends State<MediaViewerDialog> {
   void _scrollThumbnailToIndex(int index, {bool animate = true}) {
     if (!_thumbnailScrollController.hasClients) return;
 
-    final itemWidth = _thumbnailSize + _thumbnailSpacing;
+    const itemWidth = _thumbnailSize + _thumbnailSpacing;
     final screenWidth = MediaQuery.of(context).size.width;
     final targetOffset = (index * itemWidth) - (screenWidth / 2) + (itemWidth / 2);
     final maxOffset = _thumbnailScrollController.position.maxScrollExtent;
@@ -194,44 +214,14 @@ class _MediaViewerDialogState extends State<MediaViewerDialog> {
               ),
             ),
 
-            // 关闭按钮
+            // 顶部工具栏
             Positioned(
               top: MediaQuery.of(context).padding.top + 16,
+              left: 16,
               right: 16,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.5),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white, size: 28),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ),
-            ),
-
-            // 页码指示器
-            Positioned(
-              top: MediaQuery.of(context).padding.top + 24,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.5),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Text(
-                    '${_currentIndex + 1} / ${widget.allMedia.length}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ),
+              child: _isSelectionMode
+                  ? _buildSelectionToolbar()
+                  : _buildNormalToolbar(),
             ),
 
             // 底部缩略图列表
@@ -241,8 +231,211 @@ class _MediaViewerDialogState extends State<MediaViewerDialog> {
               right: 0,
               child: _buildThumbnailStrip(),
             ),
+
+            // 筛选模式下的确认按钮
+            if (_isSelectionMode)
+              Positioned(
+                bottom: 110 + MediaQuery.of(context).padding.bottom,
+                left: 16,
+                right: 16,
+                child: _buildSelectionActions(),
+              ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// 普通模式工具栏
+  Widget _buildNormalToolbar() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        // 筛选按钮（仅在有筛选功能时显示）
+        if (widget.hasSelectionMode)
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.5),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: IconButton(
+              icon: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  const Icon(Icons.filter_list, color: Colors.white, size: 24),
+                  if (_selectedIds.length < widget.allMedia.length)
+                    Positioned(
+                      right: -6,
+                      top: -6,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(
+                          color: Colors.orange,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          '${_selectedIds.length}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              onPressed: () => setState(() => _isSelectionMode = true),
+              tooltip: '筛选媒体',
+            ),
+          )
+        else
+          const SizedBox(width: 48),
+
+        // 页码指示器
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.5),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Text(
+            '${_currentIndex + 1} / ${widget.allMedia.length}',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+
+        // 关闭按钮
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.5),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: IconButton(
+            icon: const Icon(Icons.close, color: Colors.white, size: 28),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// 筛选模式工具栏
+  Widget _buildSelectionToolbar() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.orange.withOpacity(0.9),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          IconButton(
+            icon: const Icon(Icons.close, color: Colors.white),
+            onPressed: () => setState(() => _isSelectionMode = false),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              '已选 ${_selectedIds.length}/${widget.allMedia.length}',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: _toggleSelectAll,
+            child: Text(
+              _selectedIds.length == widget.allMedia.length ? '取消全选' : '全选',
+              style: const TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 筛选模式操作按钮
+  Widget _buildSelectionActions() {
+    return Row(
+      children: [
+        Expanded(
+          child: ElevatedButton.icon(
+            onPressed: _toggleCurrentSelection,
+            icon: Icon(
+              _selectedIds.contains(widget.allMedia[_currentIndex].id)
+                  ? Icons.check_circle
+                  : Icons.radio_button_unchecked,
+            ),
+            label: Text(
+              _selectedIds.contains(widget.allMedia[_currentIndex].id)
+                  ? '已选中'
+                  : '未选中',
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _selectedIds.contains(widget.allMedia[_currentIndex].id)
+                  ? Colors.orange
+                  : Colors.grey.shade700,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: ElevatedButton(
+            onPressed: _confirmSelection,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+            ),
+            child: const Text('确认筛选'),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// 切换全选
+  void _toggleSelectAll() {
+    setState(() {
+      if (_selectedIds.length == widget.allMedia.length) {
+        _selectedIds.clear();
+      } else {
+        _selectedIds = widget.allMedia.map((m) => m.id).toSet();
+      }
+    });
+  }
+
+  /// 切换当前媒体选中状态
+  void _toggleCurrentSelection() {
+    final currentId = widget.allMedia[_currentIndex].id;
+    setState(() {
+      if (_selectedIds.contains(currentId)) {
+        _selectedIds.remove(currentId);
+      } else {
+        _selectedIds.add(currentId);
+      }
+    });
+  }
+
+  /// 确认筛选
+  void _confirmSelection() {
+    widget.onSelectionChanged?.call(_selectedIds);
+    setState(() => _isSelectionMode = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('已筛选 ${_selectedIds.length} 个媒体'),
+        duration: const Duration(seconds: 1),
       ),
     );
   }
@@ -458,23 +651,37 @@ class _MediaViewerDialogState extends State<MediaViewerDialog> {
   /// 构建单个缩略图项
   Widget _buildThumbnailItem(int index) {
     final media = widget.allMedia[index];
-    final isSelected = index == _currentIndex;
+    final isCurrent = index == _currentIndex;
+    final isMediaSelected = _selectedIds.contains(media.id);
     final thumbnail = _thumbnailCache[media.id];
 
     return GestureDetector(
-      onTap: () => _goToIndex(index),
+      onTap: () {
+        if (_isSelectionMode) {
+          // 筛选模式下，点击切换选中状态
+          setState(() {
+            if (isMediaSelected) {
+              _selectedIds.remove(media.id);
+            } else {
+              _selectedIds.add(media.id);
+            }
+          });
+        } else {
+          _goToIndex(index);
+        }
+      },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         width: _thumbnailSize,
         height: _thumbnailSize,
-        margin: EdgeInsets.only(right: _thumbnailSpacing),
+        margin: const EdgeInsets.only(right: _thumbnailSpacing),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: isSelected ? Colors.orange : Colors.white30,
-            width: isSelected ? 3 : 1,
+            color: isCurrent ? Colors.orange : Colors.white30,
+            width: isCurrent ? 3 : 1,
           ),
-          boxShadow: isSelected
+          boxShadow: isCurrent
               ? [
                   BoxShadow(
                     color: Colors.orange.withOpacity(0.3),
@@ -494,7 +701,7 @@ class _MediaViewerDialogState extends State<MediaViewerDialog> {
                 Image.memory(
                   thumbnail,
                   fit: BoxFit.cover,
-                  color: isSelected ? null : Colors.white.withOpacity(0.7),
+                  color: isCurrent ? null : Colors.white.withOpacity(0.7),
                   colorBlendMode: BlendMode.modulate,
                 )
               else
@@ -528,6 +735,29 @@ class _MediaViewerDialogState extends State<MediaViewerDialog> {
                       size: 12,
                     ),
                   ),
+                ),
+              // 筛选模式选中指示器
+              if (_isSelectionMode)
+                Positioned(
+                  left: 2,
+                  top: 2,
+                  child: Container(
+                    width: 20,
+                    height: 20,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: isMediaSelected ? Colors.orange : Colors.black54,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                    child: isMediaSelected
+                        ? const Icon(Icons.check, color: Colors.white, size: 12)
+                        : null,
+                  ),
+                ),
+              // 未选中遮罩（筛选模式）
+              if (_isSelectionMode && !isMediaSelected)
+                Container(
+                  color: Colors.black.withOpacity(0.5),
                 ),
             ],
           ),

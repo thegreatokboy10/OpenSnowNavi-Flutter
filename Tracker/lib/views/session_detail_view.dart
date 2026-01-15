@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' hide Size;
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:video_player/video_player.dart';
 import '../config/mapbox_config.dart';
 import '../models/session.dart';
 import '../models/location_point.dart';
@@ -37,6 +39,7 @@ class _SessionDetailViewState extends State<SessionDetailView> {
 
   // 媒体标注相关状态
   List<SessionMedia> _mediaItems = [];
+  Set<String> _selectedMediaIds = {}; // 筛选后显示的媒体ID
   bool _isLoadingMedia = false;
   bool _showMediaMarkers = true;
   bool _hasMediaPermission = false;
@@ -58,6 +61,13 @@ class _SessionDetailViewState extends State<SessionDetailView> {
   PointAnnotationManager? _userMarkerManager;
   PointAnnotation? _userMarker;
 
+  // 媒体回放相关
+  Timer? _mediaOrbitTimer;
+  double _orbitAngle = 0;
+  Timer? _photoDisplayTimer;
+  VideoPlayerController? _replayVideoController;
+  File? _currentMediaFile; // 当前媒体文件
+
   @override
   void initState() {
     super.initState();
@@ -69,6 +79,9 @@ class _SessionDetailViewState extends State<SessionDetailView> {
   void dispose() {
     _lineUpdateTimer?.cancel();
     _hideControlsTimer?.cancel();
+    _mediaOrbitTimer?.cancel();
+    _photoDisplayTimer?.cancel();
+    _replayVideoController?.dispose();
     _replayService?.dispose();
     _mediaMarkerManager = null;
     _userMarkerManager = null;
@@ -144,6 +157,9 @@ class _SessionDetailViewState extends State<SessionDetailView> {
         endTime: widget.session.endTime!,
       );
 
+      // 默认全选所有媒体
+      _selectedMediaIds = _mediaItems.map((m) => m.id).toSet();
+
       debugPrint(
           '[SessionDetailView] Found ${_mediaItems.length} media items with GPS');
 
@@ -191,14 +207,40 @@ class _SessionDetailViewState extends State<SessionDetailView> {
                 // 媒体标注开关
                 if (_mediaItems.isNotEmpty)
                   IconButton(
-                    icon: Icon(
-                      _showMediaMarkers
-                          ? Icons.photo_library
-                          : Icons.photo_library_outlined,
-                      color: _showMediaMarkers ? Colors.orange : null,
+                    icon: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Icon(
+                          _showMediaMarkers
+                              ? Icons.photo_library
+                              : Icons.photo_library_outlined,
+                          color: _showMediaMarkers ? Colors.orange : null,
+                        ),
+                        // 显示选中数量徽章
+                        if (_selectedMediaIds.length < _mediaItems.length)
+                          Positioned(
+                            right: -6,
+                            top: -6,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: Colors.orange,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Text(
+                                '${_selectedMediaIds.length}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                     onPressed: _toggleMediaMarkers,
-                    tooltip: _showMediaMarkers ? '隐藏照片' : '显示照片',
+                    tooltip: '显示/隐藏照片',
                   ),
                 // 加载媒体指示器
                 if (_isLoadingMedia)
@@ -232,13 +274,26 @@ class _SessionDetailViewState extends State<SessionDetailView> {
 
   /// 构建回放模式视图
   Widget _buildReplayView() {
-    return GestureDetector(
+    return ListenableBuilder(
+      listenable: _replayService!,
+      builder: (context, _) {
+        final isShowingMedia = _replayService?.isShowingMedia ?? false;
+        final currentMedia = _replayService?.currentShowingMedia;
+
+        return GestureDetector(
       onTap: _onReplayScreenTap,
       behavior: HitTestBehavior.opaque,
       child: Stack(
         children: [
           // 全屏地图
           Positioned.fill(child: _buildMap()),
+
+          // 媒体预览（居中显示，相机绕其旋转）
+          if (isShowingMedia && currentMedia != null)
+            Center(
+              child: _buildMapMediaPreview(currentMedia),
+            ),
+
           // 回放控制面板（带自动隐藏动画）
           AnimatedPositioned(
             duration: const Duration(milliseconds: 300),
@@ -274,7 +329,7 @@ class _SessionDetailViewState extends State<SessionDetailView> {
             ),
           ),
           // 点击提示（控件隐藏时显示）
-          if (!_showReplayControls)
+          if (!_showReplayControls && !isShowingMedia)
             Positioned(
               bottom: 20 + MediaQuery.of(context).padding.bottom,
               left: 0,
@@ -296,6 +351,140 @@ class _SessionDetailViewState extends State<SessionDetailView> {
         ],
       ),
     );
+      },
+    );
+  }
+
+  /// 构建地图上的媒体预览（居中显示）
+  Widget _buildMapMediaPreview(SessionMedia media) {
+    // 计算预览尺寸（屏幕宽度的60%，保持媒体比例）
+    final screenWidth = MediaQuery.of(context).size.width;
+    final previewWidth = screenWidth * 0.6;
+    final previewHeight = previewWidth * 4 / 3; // 默认4:3比例
+
+    return Container(
+      width: previewWidth,
+      height: previewHeight,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white, width: 3),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.5),
+            blurRadius: 20,
+            spreadRadius: 5,
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(9),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // 媒体内容
+            _buildMediaContent(media),
+
+            // 跳过按钮
+            Positioned(
+              top: 8,
+              right: 8,
+              child: GestureDetector(
+                onTap: _finishMediaOrbit,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.7),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.skip_next, color: Colors.white, size: 20),
+                      SizedBox(width: 4),
+                      Text('跳过', style: TextStyle(color: Colors.white, fontSize: 14)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // 视频进度条
+            if (media.type == MediaType.video && _replayVideoController != null)
+              Positioned(
+                left: 16,
+                right: 16,
+                bottom: 16,
+                child: VideoProgressIndicator(
+                  _replayVideoController!,
+                  allowScrubbing: false,
+                  colors: const VideoProgressColors(
+                    playedColor: Colors.orange,
+                    bufferedColor: Colors.white24,
+                    backgroundColor: Colors.white12,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 构建媒体内容（照片或视频）
+  Widget _buildMediaContent(SessionMedia media) {
+    if (media.type == MediaType.video) {
+      // 视频播放
+      final controller = _replayVideoController;
+      if (controller != null && controller.value.isInitialized) {
+        return FittedBox(
+          fit: BoxFit.cover,
+          child: SizedBox(
+            width: controller.value.size.width,
+            height: controller.value.size.height,
+            child: VideoPlayer(controller),
+          ),
+        );
+      }
+      // 视频加载中
+      return Container(
+        color: Colors.black,
+        child: const Center(
+          child: CircularProgressIndicator(color: Colors.orange),
+        ),
+      );
+    } else {
+      // 照片显示
+      if (_currentMediaFile != null) {
+        return Image.file(
+          _currentMediaFile!,
+          fit: BoxFit.cover,
+        );
+      }
+      // 照片加载中，显示缩略图
+      return FutureBuilder<Uint8List?>(
+        future: _loadMediaThumbnail(media),
+        builder: (context, snapshot) {
+          if (snapshot.hasData && snapshot.data != null) {
+            return Image.memory(snapshot.data!, fit: BoxFit.cover);
+          }
+          return Container(
+            color: Colors.grey.shade800,
+            child: const Center(
+              child: CircularProgressIndicator(color: Colors.orange),
+            ),
+          );
+        },
+      );
+    }
+  }
+
+  /// 加载媒体缩略图
+  Future<Uint8List?> _loadMediaThumbnail(SessionMedia media) async {
+    if (media.thumbnailData != null) {
+      return media.thumbnailData;
+    }
+    final mediaService = MediaGalleryService();
+    return mediaService.getThumbnail(media.id, size: 300);
   }
 
   /// 回放屏幕点击事件
@@ -461,18 +650,18 @@ class _SessionDetailViewState extends State<SessionDetailView> {
 
   /// 计算每个位置的媒体数量（用于显示数量徽章）
   /// 返回: Map<媒体ID, 该位置的媒体数量>
-  Map<String, int> _calculateLocationCounts() {
+  Map<String, int> _calculateLocationCounts(List<SessionMedia> mediaList) {
     const double threshold = 0.00001; // 约1米的经纬度差异
     final counts = <String, int>{};
 
-    for (int i = 0; i < _mediaItems.length; i++) {
-      final media = _mediaItems[i];
+    for (int i = 0; i < mediaList.length; i++) {
+      final media = mediaList[i];
       int count = 1;
 
       // 检查有多少其他媒体在相同位置
-      for (int j = 0; j < _mediaItems.length; j++) {
+      for (int j = 0; j < mediaList.length; j++) {
         if (i == j) continue;
-        final other = _mediaItems[j];
+        final other = mediaList[j];
         if ((media.latitude - other.latitude).abs() < threshold &&
             (media.longitude - other.longitude).abs() < threshold) {
           count++;
@@ -489,11 +678,21 @@ class _SessionDetailViewState extends State<SessionDetailView> {
   Future<void> _addMediaMarkers(MapboxMap mapboxMap) async {
     if (_mediaItems.isEmpty) return;
 
+    // 过滤出选中的媒体
+    final selectedMedia = _mediaItems
+        .where((m) => _selectedMediaIds.contains(m.id))
+        .toList();
+
+    if (selectedMedia.isEmpty) {
+      await _removeMediaMarkers();
+      return;
+    }
+
     // 清理现有的媒体标注管理器
     await _removeMediaMarkers();
 
-    // 计算每个位置的媒体数量
-    final locationCounts = _calculateLocationCounts();
+    // 计算每个位置的媒体数量（只计算选中的）
+    final locationCounts = _calculateLocationCounts(selectedMedia);
 
     // 创建新的标注管理器
     _mediaMarkerManager =
@@ -513,9 +712,9 @@ class _SessionDetailViewState extends State<SessionDetailView> {
       },
     );
 
-    // 为每个媒体创建标注
+    // 为每个选中的媒体创建标注
     final mediaService = MediaGalleryService();
-    for (final media in _mediaItems) {
+    for (final media in selectedMedia) {
       // 获取缩略图
       Uint8List? thumbnail = media.thumbnailData;
       thumbnail ??= await mediaService.getThumbnail(media.id, size: 150);
@@ -574,7 +773,7 @@ class _SessionDetailViewState extends State<SessionDetailView> {
     _mediaAnnotationMap.clear();
   }
 
-  /// 显示媒体查看器
+  /// 显示媒体查看器（带筛选功能）
   void _showMediaViewer(SessionMedia media) {
     // 找到当前媒体在列表中的索引
     final index = _mediaItems.indexWhere((m) => m.id == media.id);
@@ -584,8 +783,20 @@ class _SessionDetailViewState extends State<SessionDetailView> {
       builder: (context) => MediaViewerDialog(
         allMedia: _mediaItems,
         initialIndex: index >= 0 ? index : 0,
+        selectedIds: _selectedMediaIds,
+        onSelectionChanged: _onMediaSelectionChanged,
       ),
     );
+  }
+
+  /// 媒体筛选变更回调
+  Future<void> _onMediaSelectionChanged(Set<String> newSelection) async {
+    setState(() => _selectedMediaIds = newSelection);
+
+    // 刷新媒体标注
+    if (_showMediaMarkers && _mapboxMap != null) {
+      await _addMediaMarkers(_mapboxMap!);
+    }
   }
 
   /// 切换媒体标注显示/隐藏
@@ -607,8 +818,17 @@ class _SessionDetailViewState extends State<SessionDetailView> {
   Future<void> _startReplay() async {
     if (_points.isEmpty || _replayService == null) return;
 
+    // 加载保存的配置
+    await _replayService!.loadSavedConfig();
+
     // 处理轨迹
     await _replayService!.processTrack(_points);
+
+    // 设置回放媒体（使用筛选后的媒体）
+    final selectedMedia = _mediaItems
+        .where((m) => _selectedMediaIds.contains(m.id))
+        .toList();
+    _replayService!.setMediaForReplay(selectedMedia);
 
     if (_replayService!.processedPoints.isEmpty) {
       if (mounted) {
@@ -661,6 +881,10 @@ class _SessionDetailViewState extends State<SessionDetailView> {
     _lineUpdateTimer = null;
     _hideControlsTimer?.cancel();
     _hideControlsTimer = null;
+    _mediaOrbitTimer?.cancel();
+    _mediaOrbitTimer = null;
+    _photoDisplayTimer?.cancel();
+    _photoDisplayTimer = null;
     _replayService?.removeListener(_onReplayUpdate);
     _replayService?.stop();
 
@@ -683,6 +907,20 @@ class _SessionDetailViewState extends State<SessionDetailView> {
   void _onReplayUpdate() {
     final point = _replayService!.currentPoint;
     if (point != null && _isReplayMode && _mapboxMap != null) {
+      // 检查是否正在展示媒体
+      if (_replayService!.isShowingMedia) {
+        return; // 展示媒体时不更新相机
+      }
+
+      // 检查是否到达媒体位置
+      final media = _replayService!.checkMediaAtProgress(
+        _replayService!.currentProgress,
+      );
+      if (media != null) {
+        _startMediaOrbit(media);
+        return;
+      }
+
       _updateReplayCamera(point);
       _updateUserMarkerPosition(point);
     }
@@ -899,13 +1137,17 @@ class _SessionDetailViewState extends State<SessionDetailView> {
       final initialPoint = _replayService?.currentPoint;
       if (initialPoint == null) return;
 
-      // 创建用户标注（滑雪者图标）
+      // 生成滑雪者图标
+      final iconData = await MediaMarkerIconGenerator.generateUserMarkerIcon(
+        size: 60,
+      );
+
+      // 创建用户标注
       _userMarker = await _userMarkerManager!.create(
         PointAnnotationOptions(
           geometry: initialPoint.point,
-          textField: '🏂', // 滑雪者 emoji
-          textSize: 32.0,
-          textOffset: [0, -0.5],
+          image: iconData,
+          iconSize: 1.0,
           iconAnchor: IconAnchor.CENTER,
         ),
       );
@@ -937,6 +1179,150 @@ class _SessionDetailViewState extends State<SessionDetailView> {
       _userMarkerManager = null;
       _userMarker = null;
     }
+  }
+
+  // ==================== 媒体环绕动画 ====================
+
+  /// 开始媒体环绕展示
+  Future<void> _startMediaOrbit(SessionMedia media) async {
+    debugPrint('[SessionDetailView] Starting orbit for media: ${media.id}');
+
+    // 暂停回放
+    _replayService!.startShowingMedia(media);
+    _orbitAngle = _lastCameraBearing; // 从当前角度开始
+
+    // 显示控件
+    setState(() => _showReplayControls = true);
+    _hideControlsTimer?.cancel();
+
+    // 加载媒体文件
+    await _loadMediaForReplay(media);
+
+    // 开始环绕动画
+    _mediaOrbitTimer?.cancel();
+    _mediaOrbitTimer = Timer.periodic(
+      const Duration(milliseconds: 50), // 20fps
+      (timer) => _updateMediaOrbit(media),
+    );
+
+    // 处理照片/视频
+    if (media.type == MediaType.photo) {
+      // 照片：固定展示时长后自动继续
+      final displaySeconds = _replayService!.config.photoDisplayDuration;
+      _photoDisplayTimer?.cancel();
+      _photoDisplayTimer = Timer(
+        Duration(seconds: displaySeconds),
+        () => _finishMediaOrbit(),
+      );
+    } else {
+      // 视频：自动播放，播放完成后继续
+      if (_replayVideoController != null) {
+        _replayVideoController!.addListener(_onVideoPlaybackChanged);
+        _replayVideoController!.play();
+      }
+    }
+  }
+
+  /// 加载媒体文件用于回放展示
+  Future<void> _loadMediaForReplay(SessionMedia media) async {
+    // 清理之前的视频控制器
+    _replayVideoController?.removeListener(_onVideoPlaybackChanged);
+    _replayVideoController?.dispose();
+    _replayVideoController = null;
+    _currentMediaFile = null;
+
+    final mediaService = MediaGalleryService();
+
+    if (media.type == MediaType.video) {
+      // 加载视频文件
+      final file = await mediaService.getOriginFile(media.id);
+      if (file != null) {
+        _currentMediaFile = file;
+        _replayVideoController = VideoPlayerController.file(file);
+        await _replayVideoController!.initialize();
+        await _replayVideoController!.setLooping(false);
+        if (mounted) setState(() {});
+      }
+    } else {
+      // 加载图片文件
+      final file = await mediaService.getMediaFile(media.id);
+      _currentMediaFile = file;
+      if (mounted) setState(() {});
+    }
+  }
+
+  /// 视频播放状态监听
+  void _onVideoPlaybackChanged() {
+    final controller = _replayVideoController;
+    if (controller == null) return;
+
+    // 检查视频是否播放完成
+    if (controller.value.isInitialized &&
+        controller.value.position >= controller.value.duration &&
+        !controller.value.isPlaying) {
+      debugPrint('[SessionDetailView] Video playback finished');
+      _finishMediaOrbit();
+    }
+  }
+
+  /// 更新环绕动画
+  Future<void> _updateMediaOrbit(SessionMedia media) async {
+    if (_mapboxMap == null) return;
+
+    // 计算环绕速度
+    int displaySeconds;
+    if (media.type == MediaType.photo) {
+      displaySeconds = _replayService!.config.photoDisplayDuration;
+    } else {
+      // 视频根据实际时长环绕
+      final videoDuration = _replayVideoController?.value.duration;
+      displaySeconds = videoDuration?.inSeconds ?? 10;
+    }
+    final degreesPerFrame = 360.0 / (displaySeconds * 20); // 20fps
+
+    _orbitAngle = (_orbitAngle + degreesPerFrame) % 360;
+
+    try {
+      await _mapboxMap!.flyTo(
+        CameraOptions(
+          center: media.point,
+          zoom: 17.0, // 更近的缩放级别
+          pitch: 60.0, // 更倾斜的视角
+          bearing: _orbitAngle,
+        ),
+        MapAnimationOptions(duration: 50),
+      );
+    } catch (e) {
+      debugPrint('[SessionDetailView] Error updating orbit: $e');
+    }
+  }
+
+  /// 结束媒体环绕展示
+  void _finishMediaOrbit() {
+    debugPrint('[SessionDetailView] Finishing media orbit');
+
+    _mediaOrbitTimer?.cancel();
+    _mediaOrbitTimer = null;
+    _photoDisplayTimer?.cancel();
+    _photoDisplayTimer = null;
+
+    // 停止视频播放并清理
+    _replayVideoController?.removeListener(_onVideoPlaybackChanged);
+    _replayVideoController?.pause();
+    _replayVideoController?.dispose();
+    _replayVideoController = null;
+    _currentMediaFile = null;
+
+    // 恢复上次的相机方向
+    _lastCameraBearing = _orbitAngle;
+
+    // 继续回放
+    _replayService?.finishShowingMedia();
+
+    // 重新启动自动隐藏定时器
+    _resetHideControlsTimer();
+
+    if (mounted) setState(() {});
   }
 
   Future<void> _fitBounds(MapboxMap mapboxMap, double minLat, double maxLat,

@@ -169,4 +169,81 @@ class MediaMarkerIconGenerator {
     path.close();
     canvas.drawPath(path, paint);
   }
+
+  /// 生成用户位置标记图标（滑雪者）
+  /// [size] 图标尺寸
+  static Future<Uint8List> generateUserMarkerIcon({
+    double size = 60,
+  }) async {
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    final paint = Paint();
+
+    final center = Offset(size / 2, size / 2);
+    final radius = size / 2 - 4;
+
+    // 1. 绘制阴影
+    paint.color = Colors.black.withOpacity(0.3);
+    canvas.drawCircle(Offset(center.dx + 2, center.dy + 3), radius, paint);
+
+    // 2. 绘制外圈（白色边框）
+    paint.color = Colors.white;
+    paint.style = PaintingStyle.fill;
+    canvas.drawCircle(center, radius, paint);
+
+    // 3. 绘制内圈（橙色背景）
+    paint.color = Colors.orange;
+    canvas.drawCircle(center, radius - 3, paint);
+
+    // 4. 绘制滑雪者图标
+    _drawSkierIcon(canvas, center, radius * 0.6);
+
+    final picture = recorder.endRecording();
+    final img = await picture.toImage(size.toInt(), size.toInt());
+    final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
+    return byteData!.buffer.asUint8List();
+  }
+
+  /// 绘制滑雪者图标
+  static void _drawSkierIcon(Canvas canvas, Offset center, double size) {
+    final paint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = size * 0.15
+      ..strokeCap = StrokeCap.round;
+
+    // 简化的滑雪者形状
+    // 头部
+    final headRadius = size * 0.2;
+    final headCenter = Offset(center.dx, center.dy - size * 0.35);
+    canvas.drawCircle(headCenter, headRadius, paint..style = PaintingStyle.fill);
+
+    // 身体（倾斜的线）
+    paint.style = PaintingStyle.stroke;
+    canvas.drawLine(
+      Offset(center.dx - size * 0.1, center.dy - size * 0.15),
+      Offset(center.dx + size * 0.15, center.dy + size * 0.25),
+      paint,
+    );
+
+    // 滑雪杆
+    canvas.drawLine(
+      Offset(center.dx - size * 0.3, center.dy - size * 0.3),
+      Offset(center.dx + size * 0.1, center.dy + size * 0.1),
+      paint..strokeWidth = size * 0.08,
+    );
+    canvas.drawLine(
+      Offset(center.dx + size * 0.35, center.dy - size * 0.15),
+      Offset(center.dx - size * 0.05, center.dy + size * 0.2),
+      paint,
+    );
+
+    // 滑雪板
+    paint.strokeWidth = size * 0.12;
+    canvas.drawLine(
+      Offset(center.dx - size * 0.25, center.dy + size * 0.4),
+      Offset(center.dx + size * 0.4, center.dy + size * 0.3),
+      paint,
+    );
+  }
 }

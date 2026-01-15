@@ -384,28 +384,111 @@ class _ReplaySettingsSheetState extends State<_ReplaySettingsSheet> {
               },
             ),
 
+            const Divider(color: Colors.white24),
+            const SizedBox(height: 8),
+
+            // 媒体播放设置
+            const Text(
+              '媒体播放',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // 回放时自动展示媒体开关
+            SwitchListTile(
+              title: const Text(
+                '回放时展示照片/视频',
+                style: TextStyle(color: Colors.white70, fontSize: 14),
+              ),
+              subtitle: const Text(
+                '轨迹经过媒体位置时自动环绕展示',
+                style: TextStyle(color: Colors.white38, fontSize: 12),
+              ),
+              value: _config.showMediaDuringReplay,
+              activeColor: Colors.orange,
+              contentPadding: EdgeInsets.zero,
+              onChanged: (value) {
+                setState(() {
+                  _config = _config.copyWith(showMediaDuringReplay: value);
+                });
+                _applyConfig();
+              },
+            ),
+
+            // 照片展示时长
+            if (_config.showMediaDuringReplay)
+              _buildSliderSetting(
+                label: '照片展示时长',
+                value: _config.photoDisplayDuration.toDouble(),
+                min: 1,
+                max: 10,
+                divisions: 9,
+                unit: '秒',
+                onChanged: (value) {
+                  setState(() {
+                    _config = _config.copyWith(
+                      photoDisplayDuration: value.toInt(),
+                    );
+                  });
+                  _applyConfig();
+                },
+              ),
+
             const SizedBox(height: 16),
 
-            // 关闭按钮
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+            // 保存和完成按钮
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _saveConfig,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.orange,
+                      side: const BorderSide(color: Colors.orange),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text('保存设置'),
                   ),
                 ),
-                child: const Text('完成'),
-              ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text('完成'),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _saveConfig() async {
+    await _config.save();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('设置已保存'),
+          duration: Duration(seconds: 1),
+        ),
+      );
+    }
   }
 
   Widget _buildPresetChip(String label, ReplayConfig preset) {
