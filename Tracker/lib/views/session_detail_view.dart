@@ -370,22 +370,32 @@ class _SessionDetailViewState extends State<SessionDetailView> {
               child: Container(color: Colors.black),
             ),
 
-          // 导出模式：底部遮罩（底部安全区域）
+          // 导出模式：底部遮罩（底部安全区域的3倍高度）
           if (_isExportMode)
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              height: MediaQuery.of(context).padding.bottom,
-              child: Container(color: Colors.black),
+            Builder(
+              builder: (context) {
+                final bottomMaskHeight = MediaQuery.of(context).padding.bottom * 3;
+                return Positioned(
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  height: bottomMaskHeight,
+                  child: Container(color: Colors.black),
+                );
+              },
             ),
 
-          // 导出模式：水印
+          // 导出模式：水印（在底部遮罩上方）
           if (_isExportMode)
-            Positioned(
-              right: 16,
-              bottom: MediaQuery.of(context).padding.bottom + 16,
-              child: _buildExportWatermark(),
+            Builder(
+              builder: (context) {
+                final bottomMaskHeight = MediaQuery.of(context).padding.bottom * 3;
+                return Positioned(
+                  right: 16,
+                  bottom: bottomMaskHeight + 16,
+                  child: _buildExportWatermark(),
+                );
+              },
             ),
         ],
       ),
@@ -1286,6 +1296,9 @@ class _SessionDetailViewState extends State<SessionDetailView> {
   Future<void> _startMediaOrbit(SessionMedia media) async {
     debugPrint('[SessionDetailView] Starting orbit for media: ${media.id}');
 
+    // 确保在暂停回放前更新一次轨迹线，保持已回放轨迹的显示
+    await _updateReplayTrackLine();
+
     // 暂停回放
     _replayService!.startShowingMedia(media);
     _orbitAngle = _lastCameraBearing; // 从当前角度开始
@@ -1427,7 +1440,7 @@ class _SessionDetailViewState extends State<SessionDetailView> {
   }
 
   /// 结束媒体环绕展示
-  void _finishMediaOrbit() {
+  Future<void> _finishMediaOrbit() async {
     debugPrint('[SessionDetailView] Finishing media orbit');
 
     _mediaOrbitTimer?.cancel();
@@ -1445,6 +1458,9 @@ class _SessionDetailViewState extends State<SessionDetailView> {
 
     // 恢复上次的相机方向
     _lastCameraBearing = _orbitAngle;
+
+    // 确保轨迹线保持显示
+    await _updateReplayTrackLine();
 
     // 继续回放
     _replayService?.finishShowingMedia();
@@ -1483,6 +1499,9 @@ class _SessionDetailViewState extends State<SessionDetailView> {
 
     // 重置回放到开头
     _replayService!.stop();
+
+    // 清空轨迹线（从头开始）
+    await _updateReplayTrackLine();
 
     // 设置预估时长
     _exportService!.setEstimatedDuration(_replayService!.config.totalDuration);
@@ -1585,38 +1604,31 @@ class _SessionDetailViewState extends State<SessionDetailView> {
   /// 构建导出水印
   Widget _buildExportWatermark() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.5),
+        color: Colors.black.withOpacity(0.4),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Logo 图标（使用滤色处理）
+          // Logo 图标
           ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: ColorFiltered(
-              colorFilter: const ColorFilter.mode(
-                Colors.white,
-                BlendMode.srcIn,
-              ),
-              child: Image.asset(
-                'assets/img/snownavi_logo.jpg',
-                width: 24,
-                height: 24,
-                color: Colors.white,
-                colorBlendMode: BlendMode.srcIn,
-              ),
+            borderRadius: BorderRadius.circular(4),
+            child: Image.asset(
+              'assets/img/snownavi_logo.jpg',
+              width: 20,
+              height: 20,
+              fit: BoxFit.cover,
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 6),
           const Text(
             'SnowNavi',
             style: TextStyle(
               color: Colors.white,
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
               shadows: [
                 Shadow(
                   color: Colors.black,
