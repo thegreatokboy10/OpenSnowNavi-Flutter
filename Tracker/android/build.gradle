@@ -5,6 +5,30 @@ allprojects {
     }
 }
 
+subprojects { subproject ->
+    // Provide flutter extension for plugins that expect it (except app module)
+    if (subproject.name != 'app') {
+        subproject.ext {
+            flutter = [
+                compileSdkVersion: 35,
+                minSdkVersion: 21,
+                targetSdkVersion: 35,
+                ndkVersion: "27.0.12077973"
+            ]
+        }
+    }
+
+    afterEvaluate { project ->
+        if (project.hasProperty('android')) {
+            project.android {
+                if (namespace == null) {
+                    namespace project.group
+                }
+            }
+        }
+    }
+}
+
 rootProject.buildDir = "../build"
 subprojects {
     project.buildDir = "${rootProject.buildDir}/${project.name}"
