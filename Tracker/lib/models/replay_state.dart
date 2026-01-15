@@ -47,7 +47,7 @@ class ReplayConfig {
     this.bearingSmoothingFactor = 0.4,
     this.lineUpdateIntervalMs = 100,
     this.cameraUpdateIntervalMs = 33,
-    this.showMediaDuringReplay = false,
+    this.showMediaDuringReplay = true,
     this.photoDisplayDuration = 3,
   });
 

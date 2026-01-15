@@ -297,8 +297,10 @@ class TrackReplayService extends ChangeNotifier {
   void play() {
     if (_processedPoints.isEmpty) return;
 
-    if (_playbackState == ReplayPlaybackState.finished) {
+    if (_playbackState == ReplayPlaybackState.finished ||
+        _playbackState == ReplayPlaybackState.idle) {
       _currentProgress = 0;
+      _resetMediaState(); // 重置媒体状态
     }
 
     _playbackState = ReplayPlaybackState.playing;

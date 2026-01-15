@@ -67,6 +67,7 @@ class _SessionDetailViewState extends State<SessionDetailView> {
   Timer? _photoDisplayTimer;
   VideoPlayerController? _replayVideoController;
   File? _currentMediaFile; // 当前媒体文件
+  Offset? _mediaScreenPosition; // 媒体在屏幕上的位置
 
   @override
   void initState() {
@@ -288,11 +289,9 @@ class _SessionDetailViewState extends State<SessionDetailView> {
           // 全屏地图
           Positioned.fill(child: _buildMap()),
 
-          // 媒体预览（居中显示，相机绕其旋转）
-          if (isShowingMedia && currentMedia != null)
-            Center(
-              child: _buildMapMediaPreview(currentMedia),
-            ),
+          // 媒体预览（定位到GPS坐标上方，悬浮效果）
+          if (isShowingMedia && currentMedia != null && _mediaScreenPosition != null)
+            _buildPositionedMediaPreview(currentMedia),
 
           // 回放控制面板（带自动隐藏动画）
           AnimatedPositioned(
@@ -355,76 +354,136 @@ class _SessionDetailViewState extends State<SessionDetailView> {
     );
   }
 
-  /// 构建地图上的媒体预览（居中显示）
-  Widget _buildMapMediaPreview(SessionMedia media) {
-    // 计算预览尺寸（屏幕宽度的60%，保持媒体比例）
-    final screenWidth = MediaQuery.of(context).size.width;
-    final previewWidth = screenWidth * 0.6;
+  /// 构建定位到GPS坐标上方的媒体预览
+  Widget _buildPositionedMediaPreview(SessionMedia media) {
+    final screenSize = MediaQuery.of(context).size;
+    final position = _mediaScreenPosition!;
+
+    // 计算预览尺寸（屏幕宽度的50%，保持媒体比例）
+    final previewWidth = screenSize.width * 0.5;
     final previewHeight = previewWidth * 4 / 3; // 默认4:3比例
 
-    return Container(
-      width: previewWidth,
-      height: previewHeight,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white, width: 3),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.5),
-            blurRadius: 20,
-            spreadRadius: 5,
+    // 计算悬浮窗位置：在GPS坐标点上方，留出一定间距
+    const markerOffset = 30.0; // 标记点到悬浮窗的间距
+    const connectorHeight = 20.0; // 连接线高度
+
+    // 悬浮窗底部对齐到标记点上方
+    double left = position.dx - previewWidth / 2;
+    double top = position.dy - previewHeight - markerOffset - connectorHeight;
+
+    // 确保不超出屏幕边界
+    final padding = MediaQuery.of(context).padding;
+    left = left.clamp(8.0, screenSize.width - previewWidth - 8);
+    top = top.clamp(padding.top + 8, screenSize.height - previewHeight - padding.bottom - 8);
+
+    // 计算连接线的位置（从悬浮窗底部中心到GPS坐标点）
+    final connectorStartX = left + previewWidth / 2;
+    final connectorStartY = top + previewHeight;
+    final connectorEndX = position.dx;
+    final connectorEndY = position.dy - markerOffset / 2;
+
+    return Stack(
+      children: [
+        // 连接线（从悬浮窗到标记点）
+        CustomPaint(
+          size: screenSize,
+          painter: _ConnectorPainter(
+            start: Offset(connectorStartX, connectorStartY),
+            end: Offset(connectorEndX, connectorEndY),
           ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(9),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            // 媒体内容
-            _buildMediaContent(media),
-
-            // 跳过按钮
-            Positioned(
-              top: 8,
-              right: 8,
-              child: GestureDetector(
-                onTap: _finishMediaOrbit,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.7),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.skip_next, color: Colors.white, size: 20),
-                      SizedBox(width: 4),
-                      Text('跳过', style: TextStyle(color: Colors.white, fontSize: 14)),
-                    ],
-                  ),
+        ),
+        // 标记点
+        Positioned(
+          left: position.dx - 8,
+          top: position.dy - 8,
+          child: Container(
+            width: 16,
+            height: 16,
+            decoration: BoxDecoration(
+              color: Colors.orange,
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 2),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.5),
+                  blurRadius: 4,
                 ),
-              ),
+              ],
             ),
+          ),
+        ),
+        // 悬浮媒体预览
+        Positioned(
+          left: left,
+          top: top,
+          child: _buildMapMediaPreview(media, previewWidth, previewHeight),
+        ),
+      ],
+    );
+  }
 
-            // 视频进度条
-            if (media.type == MediaType.video && _replayVideoController != null)
+  /// 构建地图上的媒体预览
+  Widget _buildMapMediaPreview(SessionMedia media, double previewWidth, double previewHeight) {
+    return Material(
+      elevation: 8,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: previewWidth,
+        height: previewHeight,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white, width: 3),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(9),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // 媒体内容
+              _buildMediaContent(media),
+
+              // 跳过按钮
               Positioned(
-                left: 16,
-                right: 16,
-                bottom: 16,
-                child: VideoProgressIndicator(
-                  _replayVideoController!,
-                  allowScrubbing: false,
-                  colors: const VideoProgressColors(
-                    playedColor: Colors.orange,
-                    bufferedColor: Colors.white24,
-                    backgroundColor: Colors.white12,
+                top: 8,
+                right: 8,
+                child: GestureDetector(
+                  onTap: _finishMediaOrbit,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.7),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.skip_next, color: Colors.white, size: 20),
+                        SizedBox(width: 4),
+                        Text('跳过', style: TextStyle(color: Colors.white, fontSize: 14)),
+                      ],
+                    ),
                   ),
                 ),
               ),
-          ],
+
+              // 视频进度条
+              if (media.type == MediaType.video && _replayVideoController != null)
+                Positioned(
+                  left: 16,
+                  right: 16,
+                  bottom: 16,
+                  child: VideoProgressIndicator(
+                    _replayVideoController!,
+                    allowScrubbing: false,
+                    colors: const VideoProgressColors(
+                      playedColor: Colors.orange,
+                      bufferedColor: Colors.white24,
+                      backgroundColor: Colors.white12,
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -1191,6 +1250,9 @@ class _SessionDetailViewState extends State<SessionDetailView> {
     _replayService!.startShowingMedia(media);
     _orbitAngle = _lastCameraBearing; // 从当前角度开始
 
+    // 初始化屏幕位置
+    await _updateMediaScreenPosition(media);
+
     // 显示控件
     setState(() => _showReplayControls = true);
     _hideControlsTimer?.cancel();
@@ -1292,8 +1354,27 @@ class _SessionDetailViewState extends State<SessionDetailView> {
         ),
         MapAnimationOptions(duration: 50),
       );
+
+      // 更新媒体在屏幕上的位置
+      await _updateMediaScreenPosition(media);
     } catch (e) {
       debugPrint('[SessionDetailView] Error updating orbit: $e');
+    }
+  }
+
+  /// 更新媒体在屏幕上的位置
+  Future<void> _updateMediaScreenPosition(SessionMedia media) async {
+    if (_mapboxMap == null) return;
+
+    try {
+      final screenCoord = await _mapboxMap!.pixelForCoordinate(media.point);
+      if (mounted) {
+        setState(() {
+          _mediaScreenPosition = Offset(screenCoord.x, screenCoord.y);
+        });
+      }
+    } catch (e) {
+      // 忽略错误
     }
   }
 
@@ -1312,6 +1393,7 @@ class _SessionDetailViewState extends State<SessionDetailView> {
     _replayVideoController?.dispose();
     _replayVideoController = null;
     _currentMediaFile = null;
+    _mediaScreenPosition = null;
 
     // 恢复上次的相机方向
     _lastCameraBearing = _orbitAngle;
@@ -1445,5 +1527,42 @@ class _SessionDetailViewState extends State<SessionDetailView> {
         ],
       ),
     );
+  }
+}
+
+/// 连接线绘制器 - 从悬浮窗到标记点的连接线
+class _ConnectorPainter extends CustomPainter {
+  final Offset start;
+  final Offset end;
+
+  _ConnectorPainter({required this.start, required this.end});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke;
+
+    // 绘制连接线
+    final path = Path()
+      ..moveTo(start.dx, start.dy)
+      ..lineTo(end.dx, end.dy);
+
+    canvas.drawPath(path, paint);
+
+    // 在连接线上画阴影效果
+    final shadowPaint = Paint()
+      ..color = Colors.black.withOpacity(0.3)
+      ..strokeWidth = 4
+      ..style = PaintingStyle.stroke;
+
+    canvas.drawPath(path, shadowPaint);
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(_ConnectorPainter oldDelegate) {
+    return oldDelegate.start != start || oldDelegate.end != end;
   }
 }
