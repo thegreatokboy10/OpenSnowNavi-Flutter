@@ -33,7 +33,7 @@
 	<key>NSMotionUsageDescription</key>
 	<string>SnowNavi Tracker uses motion sensors to enhance tracking accuracy.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>SnowNavi Tracker needs access to your photo library to save and share track screenshots.</string>
+	<string>SnowNavi Tracker needs access to your photo library to display photos and videos taken during your ski sessions on the track map.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UIBackgroundModes</key>

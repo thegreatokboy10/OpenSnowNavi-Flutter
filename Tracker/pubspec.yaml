@@ -81,6 +81,12 @@ dependencies:
   url_launcher: ^6.3.1
   archive: ^4.0.7
 
+  # Photo/Video gallery access
+  photo_manager: ^3.6.0
+
+  # Video player
+  video_player: ^2.9.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
