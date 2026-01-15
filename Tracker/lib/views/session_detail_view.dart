@@ -1331,16 +1331,9 @@ class _SessionDetailViewState extends State<SessionDetailView> {
   Future<void> _updateMediaOrbit(SessionMedia media) async {
     if (_mapboxMap == null) return;
 
-    // 计算环绕速度
-    int displaySeconds;
-    if (media.type == MediaType.photo) {
-      displaySeconds = _replayService!.config.photoDisplayDuration;
-    } else {
-      // 视频根据实际时长环绕
-      final videoDuration = _replayVideoController?.value.duration;
-      displaySeconds = videoDuration?.inSeconds ?? 10;
-    }
-    final degreesPerFrame = 360.0 / (displaySeconds * 20); // 20fps
+    // 使用固定的环绕速度：10秒完成360度，与媒体类型和时长无关
+    const orbitDurationSeconds = 10;
+    const degreesPerFrame = 360.0 / (orbitDurationSeconds * 20); // 20fps
 
     _orbitAngle = (_orbitAngle + degreesPerFrame) % 360;
 

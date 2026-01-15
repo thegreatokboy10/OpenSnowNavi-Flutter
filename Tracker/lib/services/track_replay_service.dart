@@ -350,7 +350,8 @@ class TrackReplayService extends ChangeNotifier {
   }
 
   /// 设置回放时要展示的媒体
-  /// 根据媒体的GPS位置，计算它们在轨迹上的进度位置
+  /// 根据媒体的拍摄时间和GPS位置，计算它们在轨迹上的进度位置
+  /// 优先匹配时间，确保起点和终点相同时不会错误匹配
   void setMediaForReplay(List<SessionMedia> mediaItems) {
     if (_processedPoints.isEmpty || mediaItems.isEmpty) {
       _mediaReplayList = [];
@@ -360,12 +361,56 @@ class TrackReplayService extends ChangeNotifier {
     final mediaList = <MediaReplayInfo>[];
 
     for (final media in mediaItems) {
-      // 找到轨迹上距离媒体最近的点
+      // 方法1: 优先按时间匹配 - 找到时间最接近的轨迹点
+      int bestTimeMatchIndex = -1;
+      int minTimeDiff = 0x7FFFFFFF; // max int
+
+      for (int i = 0; i < _processedPoints.length; i++) {
+        final point = _processedPoints[i];
+        final timeDiff = media.captureTime.difference(point.originalTimestamp).inSeconds.abs();
+
+        if (timeDiff < minTimeDiff) {
+          minTimeDiff = timeDiff;
+          bestTimeMatchIndex = i;
+        }
+      }
+
+      // 检查时间匹配点的GPS距离是否合理（200米内）
+      if (bestTimeMatchIndex >= 0) {
+        final timeMatchPoint = _processedPoints[bestTimeMatchIndex];
+        final distanceAtTimeMatch = ReplayPoint.haversineDistance(
+          media.latitude,
+          media.longitude,
+          timeMatchPoint.latitude,
+          timeMatchPoint.longitude,
+        );
+
+        // 如果时间匹配点距离合理，使用该点
+        if (distanceAtTimeMatch <= 200) {
+          final progress = timeMatchPoint.cumulativeDistance / _totalDistance;
+          mediaList.add(MediaReplayInfo(
+            media: media,
+            progress: progress,
+            distanceToTrack: distanceAtTimeMatch,
+          ));
+          debugPrint(
+              '[TrackReplayService] Media matched by time: timeDiff=${minTimeDiff}s, distance=${distanceAtTimeMatch.toStringAsFixed(0)}m, progress=${(progress * 100).toStringAsFixed(1)}%');
+          continue;
+        }
+      }
+
+      // 方法2: 时间匹配失败，回退到GPS距离匹配
+      // 但要求时间差在合理范围内（10分钟）避免错误匹配
       double minDistance = double.infinity;
       double progressAtClosest = 0;
 
       for (int i = 0; i < _processedPoints.length; i++) {
         final point = _processedPoints[i];
+        final timeDiff = media.captureTime.difference(point.originalTimestamp).inSeconds.abs();
+
+        // 时间差超过10分钟的点不考虑
+        if (timeDiff > 600) continue;
+
         final distance = ReplayPoint.haversineDistance(
           media.latitude,
           media.longitude,
@@ -386,6 +431,8 @@ class TrackReplayService extends ChangeNotifier {
           progress: progressAtClosest,
           distanceToTrack: minDistance,
         ));
+        debugPrint(
+            '[TrackReplayService] Media matched by GPS: distance=${minDistance.toStringAsFixed(0)}m, progress=${(progressAtClosest * 100).toStringAsFixed(1)}%');
       }
     }
 
