@@ -49,6 +49,15 @@ class _SessionDetailViewState extends State<SessionDetailView> {
   Timer? _lineUpdateTimer;
   double _lastCameraBearing = 0;
 
+  // 回放 UI 自动隐藏
+  bool _showReplayControls = true;
+  Timer? _hideControlsTimer;
+  static const _autoHideDelay = Duration(seconds: 3);
+
+  // 用户位置标注
+  PointAnnotationManager? _userMarkerManager;
+  PointAnnotation? _userMarker;
+
   @override
   void initState() {
     super.initState();
@@ -59,8 +68,10 @@ class _SessionDetailViewState extends State<SessionDetailView> {
   @override
   void dispose() {
     _lineUpdateTimer?.cancel();
+    _hideControlsTimer?.cancel();
     _replayService?.dispose();
     _mediaMarkerManager = null;
+    _userMarkerManager = null;
     super.dispose();
   }
 
@@ -221,37 +232,98 @@ class _SessionDetailViewState extends State<SessionDetailView> {
 
   /// 构建回放模式视图
   Widget _buildReplayView() {
-    return Stack(
-      children: [
-        // 全屏地图
-        Positioned.fill(child: _buildMap()),
-        // 回放控制面板
-        Positioned(
-          left: 16,
-          right: 16,
-          bottom: 32 + MediaQuery.of(context).padding.bottom,
-          child: TrackReplayController(
-            replayService: _replayService!,
-            onClose: _exitReplay,
-          ),
-        ),
-        // 安全区域内的返回按钮
-        Positioned(
-          top: MediaQuery.of(context).padding.top + 16,
-          left: 16,
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.5),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.white),
-              onPressed: _exitReplay,
+    return GestureDetector(
+      onTap: _onReplayScreenTap,
+      behavior: HitTestBehavior.opaque,
+      child: Stack(
+        children: [
+          // 全屏地图
+          Positioned.fill(child: _buildMap()),
+          // 回放控制面板（带自动隐藏动画）
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            left: 16,
+            right: 16,
+            bottom: _showReplayControls
+                ? 32 + MediaQuery.of(context).padding.bottom
+                : -200, // 隐藏时滑出屏幕
+            child: TrackReplayController(
+              replayService: _replayService!,
+              onClose: _exitReplay,
+              onTap: _onReplayControlInteraction,
             ),
           ),
-        ),
-      ],
+          // 安全区域内的返回按钮（带自动隐藏动画）
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            top: _showReplayControls
+                ? MediaQuery.of(context).padding.top + 16
+                : -60, // 隐藏时滑出屏幕
+            left: 16,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.5),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: _exitReplay,
+              ),
+            ),
+          ),
+          // 点击提示（控件隐藏时显示）
+          if (!_showReplayControls)
+            Positioned(
+              bottom: 20 + MediaQuery.of(context).padding.bottom,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.4),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Text(
+                    '点击屏幕显示控制面板',
+                    style: TextStyle(color: Colors.white70, fontSize: 12),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
+  }
+
+  /// 回放屏幕点击事件
+  void _onReplayScreenTap() {
+    if (!_showReplayControls) {
+      _showControlsTemporarily();
+    }
+  }
+
+  /// 回放控件交互事件
+  void _onReplayControlInteraction() {
+    _showControlsTemporarily();
+  }
+
+  /// 临时显示控件
+  void _showControlsTemporarily() {
+    setState(() => _showReplayControls = true);
+    _resetHideControlsTimer();
+  }
+
+  /// 重置自动隐藏定时器
+  void _resetHideControlsTimer() {
+    _hideControlsTimer?.cancel();
+    _hideControlsTimer = Timer(_autoHideDelay, () {
+      if (mounted && _isReplayMode) {
+        setState(() => _showReplayControls = false);
+      }
+    });
   }
 
   MapboxMap? _mapboxMap;
@@ -547,7 +619,10 @@ class _SessionDetailViewState extends State<SessionDetailView> {
       return;
     }
 
-    setState(() => _isReplayMode = true);
+    setState(() {
+      _isReplayMode = true;
+      _showReplayControls = true;
+    });
 
     // 等待地图准备好
     await Future.delayed(const Duration(milliseconds: 100));
@@ -560,6 +635,9 @@ class _SessionDetailViewState extends State<SessionDetailView> {
       // 初始化回放轨迹图层
       await _initReplayTrackLayers();
 
+      // 初始化用户标注
+      await _initUserMarker();
+
       // 监听回放更新
       _replayService!.addListener(_onReplayUpdate);
 
@@ -568,6 +646,9 @@ class _SessionDetailViewState extends State<SessionDetailView> {
         Duration(milliseconds: _replayService!.config.lineUpdateIntervalMs),
         (_) => _updateReplayTrackLine(),
       );
+
+      // 启动自动隐藏定时器
+      _resetHideControlsTimer();
 
       // 开始播放
       _replayService!.play();
@@ -578,10 +659,13 @@ class _SessionDetailViewState extends State<SessionDetailView> {
   Future<void> _exitReplay() async {
     _lineUpdateTimer?.cancel();
     _lineUpdateTimer = null;
+    _hideControlsTimer?.cancel();
+    _hideControlsTimer = null;
     _replayService?.removeListener(_onReplayUpdate);
     _replayService?.stop();
 
     if (_mapboxMap != null) {
+      await _removeUserMarker();
       await _removeReplayTrackLayers();
       await _showStaticTrack();
       await _resetCameraToOverview();
@@ -600,11 +684,16 @@ class _SessionDetailViewState extends State<SessionDetailView> {
     final point = _replayService!.currentPoint;
     if (point != null && _isReplayMode && _mapboxMap != null) {
       _updateReplayCamera(point);
+      _updateUserMarkerPosition(point);
     }
 
     // 检查是否结束
     if (_replayService!.playbackState == ReplayPlaybackState.finished) {
-      // 回放结束，可以选择自动退出或停留在结束状态
+      // 回放结束，显示控件
+      if (!_showReplayControls) {
+        setState(() => _showReplayControls = true);
+      }
+      _hideControlsTimer?.cancel();
     }
   }
 
@@ -614,11 +703,24 @@ class _SessionDetailViewState extends State<SessionDetailView> {
 
     final config = _replayService!.config;
 
-    // 平滑方向变化（指数移动平均）
+    // 计算目标方向差
     final targetBearing = point.bearing as double;
-    final bearingDiff = ((targetBearing - _lastCameraBearing + 540) % 360) - 180;
+    double bearingDiff = ((targetBearing - _lastCameraBearing + 540) % 360) - 180;
+
+    // 限制最大角速度（每帧最多转动的角度）
+    // 基于更新间隔计算合理的最大角速度
+    // 假设最大转速为 90°/秒
+    const maxDegreesPerSecond = 90.0;
+    final maxDeltaPerFrame = maxDegreesPerSecond * config.cameraUpdateIntervalMs / 1000;
+
+    // 应用角速度限制
+    if (bearingDiff.abs() > maxDeltaPerFrame) {
+      bearingDiff = bearingDiff.sign * maxDeltaPerFrame;
+    }
+
+    // 应用平滑系数
     _lastCameraBearing =
-        (_lastCameraBearing + bearingDiff * config.bearingSmoothingFactor) % 360;
+        (_lastCameraBearing + bearingDiff * config.bearingSmoothingFactor + 360) % 360;
 
     await _mapboxMap!.flyTo(
       CameraOptions(
@@ -781,6 +883,60 @@ class _SessionDetailViewState extends State<SessionDetailView> {
       ),
       MapAnimationOptions(duration: 500),
     );
+  }
+
+  // ==================== 用户标注 ====================
+
+  /// 初始化用户位置标注
+  Future<void> _initUserMarker() async {
+    if (_mapboxMap == null) return;
+
+    try {
+      _userMarkerManager =
+          await _mapboxMap!.annotations.createPointAnnotationManager();
+
+      // 获取初始位置
+      final initialPoint = _replayService?.currentPoint;
+      if (initialPoint == null) return;
+
+      // 创建用户标注（滑雪者图标）
+      _userMarker = await _userMarkerManager!.create(
+        PointAnnotationOptions(
+          geometry: initialPoint.point,
+          textField: '🏂', // 滑雪者 emoji
+          textSize: 32.0,
+          textOffset: [0, -0.5],
+          iconAnchor: IconAnchor.CENTER,
+        ),
+      );
+    } catch (e) {
+      debugPrint('[SessionDetailView] Error creating user marker: $e');
+    }
+  }
+
+  /// 更新用户标注位置
+  Future<void> _updateUserMarkerPosition(dynamic point) async {
+    if (_userMarker == null || _userMarkerManager == null) return;
+
+    try {
+      _userMarker!.geometry = point.point;
+      await _userMarkerManager!.update(_userMarker!);
+    } catch (e) {
+      // 忽略更新错误，避免刷屏
+    }
+  }
+
+  /// 移除用户标注
+  Future<void> _removeUserMarker() async {
+    if (_userMarkerManager != null && _mapboxMap != null) {
+      try {
+        await _mapboxMap!.annotations.removeAnnotationManager(_userMarkerManager!);
+      } catch (e) {
+        debugPrint('[SessionDetailView] Error removing user marker: $e');
+      }
+      _userMarkerManager = null;
+      _userMarker = null;
+    }
   }
 
   Future<void> _fitBounds(MapboxMap mapboxMap, double minLat, double maxLat,

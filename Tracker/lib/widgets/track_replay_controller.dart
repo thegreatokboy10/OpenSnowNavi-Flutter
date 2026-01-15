@@ -6,127 +6,146 @@ import '../services/track_replay_service.dart';
 class TrackReplayController extends StatelessWidget {
   final TrackReplayService replayService;
   final VoidCallback? onClose;
+  final VoidCallback? onTap; // 用于通知父组件用户交互
 
   const TrackReplayController({
     super.key,
     required this.replayService,
     this.onClose,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: replayService,
-      builder: (context, _) {
-        final state = replayService.playbackState;
-        final progress = replayService.currentProgress;
-        final point = replayService.currentPoint;
+    return GestureDetector(
+      onTap: onTap, // 触发显示控制面板
+      behavior: HitTestBehavior.opaque,
+      child: ListenableBuilder(
+        listenable: replayService,
+        builder: (context, _) {
+          final state = replayService.playbackState;
+          final progress = replayService.currentProgress;
+          final point = replayService.currentPoint;
 
-        return Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.75),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // 标题栏
-              Row(
-                children: [
-                  const Icon(Icons.play_circle, color: Colors.orange, size: 24),
-                  const SizedBox(width: 8),
-                  const Text(
-                    '3D 回放',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
+          return Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.75),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 标题栏
+                Row(
+                  children: [
+                    const Icon(Icons.play_circle, color: Colors.orange, size: 24),
+                    const SizedBox(width: 8),
+                    const Text(
+                      '3D 回放',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
                     ),
-                  ),
-                  const Spacer(),
-                  if (onClose != null)
+                    const Spacer(),
+                    // 设置按钮
                     IconButton(
-                      icon: const Icon(Icons.close, color: Colors.white),
-                      onPressed: onClose,
+                      icon: const Icon(Icons.tune, color: Colors.white70),
+                      onPressed: () => _showSettingsDialog(context),
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
+                      tooltip: '回放设置',
                     ),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              // 进度条
-              SliderTheme(
-                data: const SliderThemeData(
-                  trackHeight: 4,
-                  thumbShape: RoundSliderThumbShape(enabledThumbRadius: 8),
-                  overlayShape: RoundSliderOverlayShape(overlayRadius: 16),
-                  activeTrackColor: Colors.orange,
-                  inactiveTrackColor: Colors.white24,
-                  thumbColor: Colors.orange,
+                    const SizedBox(width: 8),
+                    if (onClose != null)
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.white),
+                        onPressed: onClose,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                  ],
                 ),
-                child: Slider(
-                  value: progress,
-                  onChanged: (value) => replayService.seekTo(value),
-                ),
-              ),
+                const SizedBox(height: 12),
 
-              // 距离和进度信息
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    _formatDistance(replayService.totalDistance * progress),
-                    style: const TextStyle(color: Colors.white70, fontSize: 12),
+                // 进度条
+                SliderTheme(
+                  data: const SliderThemeData(
+                    trackHeight: 4,
+                    thumbShape: RoundSliderThumbShape(enabledThumbRadius: 8),
+                    overlayShape: RoundSliderOverlayShape(overlayRadius: 16),
+                    activeTrackColor: Colors.orange,
+                    inactiveTrackColor: Colors.white24,
+                    thumbColor: Colors.orange,
                   ),
-                  Text(
-                    '${(progress * 100).toStringAsFixed(0)}%',
-                    style: const TextStyle(color: Colors.white, fontSize: 14),
-                  ),
-                  Text(
-                    _formatDistance(replayService.totalDistance),
-                    style: const TextStyle(color: Colors.white70, fontSize: 12),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              // 播放控制按钮
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // 速度选择
-                  _buildSpeedButton(context),
-                  const SizedBox(width: 24),
-
-                  // 主播放/暂停按钮
-                  _buildPlayButton(state),
-                  const SizedBox(width: 24),
-
-                  // 重播按钮
-                  IconButton(
-                    icon: const Icon(Icons.replay, color: Colors.white),
-                    onPressed: () {
-                      replayService.stop();
-                      replayService.play();
+                  child: Slider(
+                    value: progress,
+                    onChanged: (value) {
+                      onTap?.call();
+                      replayService.seekTo(value);
                     },
                   ),
-                ],
-              ),
-
-              // 当前高度信息
-              if (point != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  '高度: ${point.altitude.toStringAsFixed(0)}m',
-                  style: const TextStyle(color: Colors.white54, fontSize: 11),
                 ),
+
+                // 距离和进度信息
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      _formatDistance(replayService.totalDistance * progress),
+                      style: const TextStyle(color: Colors.white70, fontSize: 12),
+                    ),
+                    Text(
+                      '${(progress * 100).toStringAsFixed(0)}%',
+                      style: const TextStyle(color: Colors.white, fontSize: 14),
+                    ),
+                    Text(
+                      _formatDistance(replayService.totalDistance),
+                      style: const TextStyle(color: Colors.white70, fontSize: 12),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // 播放控制按钮
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // 速度选择
+                    _buildSpeedButton(context),
+                    const SizedBox(width: 24),
+
+                    // 主播放/暂停按钮
+                    _buildPlayButton(state),
+                    const SizedBox(width: 24),
+
+                    // 重播按钮
+                    IconButton(
+                      icon: const Icon(Icons.replay, color: Colors.white),
+                      onPressed: () {
+                        onTap?.call();
+                        replayService.stop();
+                        replayService.play();
+                      },
+                    ),
+                  ],
+                ),
+
+                // 当前高度信息
+                if (point != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    '高度: ${point.altitude.toStringAsFixed(0)}m',
+                    style: const TextStyle(color: Colors.white54, fontSize: 11),
+                  ),
+                ],
               ],
-            ],
-          ),
-        );
-      },
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -143,7 +162,14 @@ class TrackReplayController extends StatelessWidget {
           color: Colors.white,
           size: 32,
         ),
-        onPressed: isPlaying ? replayService.pause : replayService.play,
+        onPressed: () {
+          onTap?.call();
+          if (isPlaying) {
+            replayService.pause();
+          } else {
+            replayService.play();
+          }
+        },
       ),
     );
   }
@@ -156,6 +182,7 @@ class TrackReplayController extends StatelessWidget {
         : (duration <= 30 ? '1x' : '0.5x');
 
     return PopupMenuButton<ReplayConfig>(
+      onOpened: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
@@ -182,10 +209,280 @@ class TrackReplayController extends StatelessWidget {
     );
   }
 
+  void _showSettingsDialog(BuildContext context) {
+    onTap?.call();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => _ReplaySettingsSheet(
+        replayService: replayService,
+      ),
+    );
+  }
+
   String _formatDistance(double meters) {
     if (meters >= 1000) {
       return '${(meters / 1000).toStringAsFixed(2)} km';
     }
     return '${meters.toStringAsFixed(0)} m';
+  }
+}
+
+/// 回放设置面板
+class _ReplaySettingsSheet extends StatefulWidget {
+  final TrackReplayService replayService;
+
+  const _ReplaySettingsSheet({required this.replayService});
+
+  @override
+  State<_ReplaySettingsSheet> createState() => _ReplaySettingsSheetState();
+}
+
+class _ReplaySettingsSheetState extends State<_ReplaySettingsSheet> {
+  late ReplayConfig _config;
+
+  @override
+  void initState() {
+    super.initState();
+    _config = widget.replayService.config;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade900,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 标题
+            Row(
+              children: [
+                const Icon(Icons.tune, color: Colors.orange),
+                const SizedBox(width: 8),
+                const Text(
+                  '回放设置',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Spacer(),
+                TextButton(
+                  onPressed: () {
+                    setState(() => _config = const ReplayConfig());
+                    _applyConfig();
+                  },
+                  child: const Text('重置'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // 预设选择
+            const Text('预设', style: TextStyle(color: Colors.white70)),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                _buildPresetChip('快速', ReplayConfig.fast),
+                const SizedBox(width: 8),
+                _buildPresetChip('标准', ReplayConfig.normal),
+                const SizedBox(width: 8),
+                _buildPresetChip('慢速', ReplayConfig.scenic),
+              ],
+            ),
+            const SizedBox(height: 20),
+
+            // 回放时长
+            _buildSliderSetting(
+              label: '回放时长',
+              value: _config.totalDuration.inSeconds.toDouble(),
+              min: 10,
+              max: 120,
+              divisions: 22,
+              unit: '秒',
+              onChanged: (value) {
+                setState(() {
+                  _config = _config.copyWith(
+                    totalDuration: Duration(seconds: value.toInt()),
+                  );
+                });
+                _applyConfig();
+              },
+            ),
+
+            // 相机缩放
+            _buildSliderSetting(
+              label: '相机缩放',
+              value: _config.cameraZoom,
+              min: 10,
+              max: 20,
+              divisions: 20,
+              unit: '',
+              onChanged: (value) {
+                setState(() {
+                  _config = _config.copyWith(cameraZoom: value);
+                });
+                _applyConfig();
+              },
+            ),
+
+            // 相机倾斜
+            _buildSliderSetting(
+              label: '相机倾斜',
+              value: _config.cameraPitch,
+              min: 0,
+              max: 80,
+              divisions: 16,
+              unit: '°',
+              onChanged: (value) {
+                setState(() {
+                  _config = _config.copyWith(cameraPitch: value);
+                });
+                _applyConfig();
+              },
+            ),
+
+            // 前瞻点数
+            _buildSliderSetting(
+              label: '前瞻点数',
+              value: _config.lookAheadPoints.toDouble(),
+              min: 1,
+              max: 20,
+              divisions: 19,
+              unit: '点',
+              onChanged: (value) {
+                setState(() {
+                  _config = _config.copyWith(lookAheadPoints: value.toInt());
+                });
+                _applyConfig();
+              },
+            ),
+
+            // 方向平滑系数
+            _buildSliderSetting(
+              label: '方向平滑',
+              value: _config.bearingSmoothingFactor,
+              min: 0.01,
+              max: 1.0,
+              divisions: 99,
+              unit: '',
+              valueFormatter: (v) => v.toStringAsFixed(2),
+              onChanged: (value) {
+                setState(() {
+                  _config = _config.copyWith(bearingSmoothingFactor: value);
+                });
+                _applyConfig();
+              },
+            ),
+
+            const SizedBox(height: 16),
+
+            // 关闭按钮
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text('完成'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPresetChip(String label, ReplayConfig preset) {
+    final isSelected = _config.totalDuration == preset.totalDuration &&
+        _config.cameraPitch == preset.cameraPitch;
+
+    return ChoiceChip(
+      label: Text(label),
+      selected: isSelected,
+      selectedColor: Colors.orange,
+      backgroundColor: Colors.grey.shade800,
+      labelStyle: TextStyle(
+        color: isSelected ? Colors.white : Colors.white70,
+      ),
+      onSelected: (selected) {
+        if (selected) {
+          setState(() => _config = preset);
+          _applyConfig();
+        }
+      },
+    );
+  }
+
+  Widget _buildSliderSetting({
+    required String label,
+    required double value,
+    required double min,
+    required double max,
+    required int divisions,
+    required String unit,
+    required ValueChanged<double> onChanged,
+    String Function(double)? valueFormatter,
+  }) {
+    final displayValue = valueFormatter?.call(value) ??
+        (value == value.roundToDouble()
+            ? value.toInt().toString()
+            : value.toStringAsFixed(1));
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(label, style: const TextStyle(color: Colors.white70)),
+              Text(
+                '$displayValue$unit',
+                style: const TextStyle(
+                  color: Colors.orange,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          SliderTheme(
+            data: SliderThemeData(
+              activeTrackColor: Colors.orange,
+              inactiveTrackColor: Colors.grey.shade700,
+              thumbColor: Colors.orange,
+              overlayColor: Colors.orange.withOpacity(0.2),
+            ),
+            child: Slider(
+              value: value.clamp(min, max),
+              min: min,
+              max: max,
+              divisions: divisions,
+              onChanged: onChanged,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _applyConfig() {
+    widget.replayService.setConfig(_config);
   }
 }

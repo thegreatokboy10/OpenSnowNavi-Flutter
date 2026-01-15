@@ -188,6 +188,7 @@ class TrackReplayService extends ChangeNotifier {
   }
 
   /// 计算累计距离和前瞻方向
+  /// 使用加权平均的多点前瞻来获得平滑的方向
   List<ReplayPoint> _calculateDistancesAndBearings(List<LocationPoint> points) {
     if (points.isEmpty) return [];
 
@@ -205,14 +206,8 @@ class TrackReplayService extends ChangeNotifier {
         );
       }
 
-      // 计算到前瞻点的方向
-      final lookAhead = math.min(i + _config.lookAheadPoints, points.length - 1);
-      final bearing = ReplayPoint.calculateBearing(
-        points[i].latitude,
-        points[i].longitude,
-        points[lookAhead].latitude,
-        points[lookAhead].longitude,
-      );
+      // 使用加权平均的多点前瞻计算方向
+      final bearing = _calculateWeightedBearing(points, i);
 
       result.add(ReplayPoint(
         latitude: points[i].latitude,
@@ -223,7 +218,64 @@ class TrackReplayService extends ChangeNotifier {
         originalTimestamp: points[i].timestamp,
       ));
     }
+
     return result;
+  }
+
+  /// 使用加权平均计算前瞻方向
+  /// 距离较远的点权重更大，以获得更稳定的方向
+  double _calculateWeightedBearing(List<LocationPoint> points, int currentIndex) {
+    final lookAheadCount = _config.lookAheadPoints;
+    final maxLookAhead = math.min(currentIndex + lookAheadCount, points.length - 1);
+
+    if (currentIndex >= maxLookAhead) {
+      // 最后几个点，使用上一个点的方向
+      return currentIndex > 0
+          ? ReplayPoint.calculateBearing(
+              points[currentIndex - 1].latitude,
+              points[currentIndex - 1].longitude,
+              points[currentIndex].latitude,
+              points[currentIndex].longitude,
+            )
+          : 0;
+    }
+
+    // 计算多个前瞻点的加权平均方向
+    double sinSum = 0;
+    double cosSum = 0;
+    double totalWeight = 0;
+
+    for (int j = currentIndex + 1; j <= maxLookAhead; j++) {
+      final distance = ReplayPoint.haversineDistance(
+        points[currentIndex].latitude,
+        points[currentIndex].longitude,
+        points[j].latitude,
+        points[j].longitude,
+      );
+
+      // 距离越远权重越大（因为方向更稳定）
+      // 但距离太近的点权重也不能太低
+      final weight = math.max(distance, 5.0);
+
+      final bearing = ReplayPoint.calculateBearing(
+        points[currentIndex].latitude,
+        points[currentIndex].longitude,
+        points[j].latitude,
+        points[j].longitude,
+      );
+
+      // 使用向量法计算平均角度
+      final radians = bearing * math.pi / 180;
+      sinSum += math.sin(radians) * weight;
+      cosSum += math.cos(radians) * weight;
+      totalWeight += weight;
+    }
+
+    if (totalWeight == 0) return 0;
+
+    // 从向量和计算平均角度
+    final avgRadians = math.atan2(sinSum / totalWeight, cosSum / totalWeight);
+    return (avgRadians * 180 / math.pi + 360) % 360;
   }
 
   /// 开始或恢复播放
