@@ -381,13 +381,46 @@ class TrackReplayService extends ChangeNotifier {
   }
 
   /// 跳转到指定进度（0.0 - 1.0）
+  /// 跳转后自动继续播放，并跳过当前位置的媒体
   void seekTo(double progress) {
     _currentProgress = progress.clamp(0.0, 1.0);
-    if (_playbackState == ReplayPlaybackState.playing) {
-      _playStartTime = DateTime.now();
-      _playStartProgress = _currentProgress;
+
+    // 如果正在展示媒体，需要先退出媒体展示状态
+    if (_playbackState == ReplayPlaybackState.showingMedia) {
+      _currentShowingMedia = null;
+      _isShowingMedia = false;
     }
+
+    // 跳过当前位置附近的媒体，避免跳转后立即触发媒体展示
+    _skipMediaAtProgress(_currentProgress);
+
+    // 跳转后自动继续播放
+    _playbackState = ReplayPlaybackState.playing;
+    _playStartTime = DateTime.now();
+    _playStartProgress = _currentProgress;
+
+    // 确保动画定时器在运行
+    _animationTimer?.cancel();
+    _animationTimer = Timer.periodic(
+      Duration(milliseconds: _config.cameraUpdateIntervalMs),
+      _onAnimationTick,
+    );
+
     notifyListeners();
+  }
+
+  /// 跳过指定进度位置附近的媒体
+  void _skipMediaAtProgress(double progress) {
+    // 跳过所有在当前进度之前或附近的媒体
+    while (_currentMediaIndex < _mediaReplayList.length) {
+      final mediaInfo = _mediaReplayList[_currentMediaIndex];
+      // 如果媒体位置在当前进度之前或非常接近（2%以内），跳过
+      if (mediaInfo.progress <= progress + 0.02) {
+        _currentMediaIndex++;
+      } else {
+        break;
+      }
+    }
   }
 
   /// 更新配置
@@ -548,6 +581,33 @@ class TrackReplayService extends ChangeNotifier {
     _currentMediaIndex++; // 移动到下一个媒体
 
     // 恢复播放
+    if (_currentProgress < 1.0) {
+      _playbackState = ReplayPlaybackState.playing;
+      _playStartTime = DateTime.now();
+      _playStartProgress = _currentProgress;
+
+      _animationTimer?.cancel();
+      _animationTimer = Timer.periodic(
+        Duration(milliseconds: _config.cameraUpdateIntervalMs),
+        _onAnimationTick,
+      );
+    } else {
+      _playbackState = ReplayPlaybackState.finished;
+    }
+
+    notifyListeners();
+  }
+
+  /// 跳过当前媒体，继续轨迹回放
+  /// 用于用户主动跳过媒体展示
+  void skipCurrentMedia() {
+    if (!_isShowingMedia) return;
+
+    _currentShowingMedia = null;
+    _isShowingMedia = false;
+    _currentMediaIndex++; // 跳过当前媒体
+
+    // 继续播放
     if (_currentProgress < 1.0) {
       _playbackState = ReplayPlaybackState.playing;
       _playStartTime = DateTime.now();

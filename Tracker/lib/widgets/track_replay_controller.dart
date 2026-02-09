@@ -1,5 +1,7 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../models/replay_state.dart';
+import '../models/replay_point.dart';
 import '../services/track_replay_service.dart';
 
 /// 轨迹回放控制面板
@@ -8,6 +10,7 @@ class TrackReplayController extends StatelessWidget {
   final VoidCallback? onClose;
   final VoidCallback? onTap; // 用于通知父组件用户交互
   final VoidCallback? onExport; // 导出视频按钮回调
+  final VoidCallback? onSeekWhileShowingMedia; // 展示媒体时拖动进度条的回调
 
   const TrackReplayController({
     super.key,
@@ -15,6 +18,7 @@ class TrackReplayController extends StatelessWidget {
     this.onClose,
     this.onTap,
     this.onExport,
+    this.onSeekWhileShowingMedia,
   });
 
   @override
@@ -41,7 +45,8 @@ class TrackReplayController extends StatelessWidget {
                 // 标题栏
                 Row(
                   children: [
-                    const Icon(Icons.play_circle, color: Colors.orange, size: 24),
+                    const Icon(Icons.play_circle,
+                        color: Colors.orange, size: 24),
                     const SizedBox(width: 8),
                     const Text(
                       '3D 回放',
@@ -55,7 +60,8 @@ class TrackReplayController extends StatelessWidget {
                     // 导出视频按钮
                     if (onExport != null)
                       IconButton(
-                        icon: const Icon(Icons.ios_share, color: Colors.white70),
+                        icon:
+                            const Icon(Icons.ios_share, color: Colors.white70),
                         onPressed: () {
                           onTap?.call();
                           onExport?.call();
@@ -85,24 +91,20 @@ class TrackReplayController extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
 
-                // 进度条
-                SliderTheme(
-                  data: const SliderThemeData(
-                    trackHeight: 4,
-                    thumbShape: RoundSliderThumbShape(enabledThumbRadius: 8),
-                    overlayShape: RoundSliderOverlayShape(overlayRadius: 16),
-                    activeTrackColor: Colors.orange,
-                    inactiveTrackColor: Colors.white24,
-                    thumbColor: Colors.orange,
-                  ),
-                  child: Slider(
-                    value: progress,
-                    onChanged: (value) {
+                // 海拔折线图
+                if (replayService.processedPoints.isNotEmpty)
+                  _ElevationChart(
+                    points: replayService.processedPoints,
+                    progress: progress,
+                    onSeek: (value) {
                       onTap?.call();
+                      // 如果正在展示媒体，先退出媒体展示
+                      if (replayService.isShowingMedia) {
+                        onSeekWhileShowingMedia?.call();
+                      }
                       replayService.seekTo(value);
                     },
                   ),
-                ),
 
                 // 距离和进度信息
                 Row(
@@ -110,7 +112,8 @@ class TrackReplayController extends StatelessWidget {
                   children: [
                     Text(
                       _formatDistance(replayService.totalDistance * progress),
-                      style: const TextStyle(color: Colors.white70, fontSize: 12),
+                      style:
+                          const TextStyle(color: Colors.white70, fontSize: 12),
                     ),
                     Text(
                       '${(progress * 100).toStringAsFixed(0)}%',
@@ -118,7 +121,8 @@ class TrackReplayController extends StatelessWidget {
                     ),
                     Text(
                       _formatDistance(replayService.totalDistance),
-                      style: const TextStyle(color: Colors.white70, fontSize: 12),
+                      style:
+                          const TextStyle(color: Colors.white70, fontSize: 12),
                     ),
                   ],
                 ),
@@ -166,6 +170,8 @@ class TrackReplayController extends StatelessWidget {
 
   Widget _buildPlayButton(ReplayPlaybackState state) {
     final isPlaying = state == ReplayPlaybackState.playing;
+    final isShowingMedia = state == ReplayPlaybackState.showingMedia;
+
     return Container(
       decoration: const BoxDecoration(
         shape: BoxShape.circle,
@@ -173,13 +179,20 @@ class TrackReplayController extends StatelessWidget {
       ),
       child: IconButton(
         icon: Icon(
-          isPlaying ? Icons.pause : Icons.play_arrow,
+          // 展示媒体时显示跳过图标
+          isShowingMedia
+              ? Icons.skip_next
+              : (isPlaying ? Icons.pause : Icons.play_arrow),
           color: Colors.white,
           size: 32,
         ),
         onPressed: () {
           onTap?.call();
-          if (isPlaying) {
+          if (isShowingMedia) {
+            // 展示媒体时点击等同于跳过
+            onSeekWhileShowingMedia?.call();
+            replayService.skipCurrentMedia();
+          } else if (isPlaying) {
             replayService.pause();
           } else {
             replayService.play();
@@ -192,9 +205,7 @@ class TrackReplayController extends StatelessWidget {
   Widget _buildSpeedButton(BuildContext context) {
     final config = replayService.config;
     final duration = config.totalDuration.inSeconds;
-    final label = duration <= 15
-        ? '2x'
-        : (duration <= 30 ? '1x' : '0.5x');
+    final label = duration <= 15 ? '2x' : (duration <= 30 ? '1x' : '0.5x');
 
     return PopupMenuButton<ReplayConfig>(
       onOpened: onTap,
@@ -582,5 +593,168 @@ class _ReplaySettingsSheetState extends State<_ReplaySettingsSheet> {
 
   void _applyConfig() {
     widget.replayService.setConfig(_config);
+  }
+}
+
+/// 海拔折线图组件
+class _ElevationChart extends StatelessWidget {
+  final List<ReplayPoint> points;
+  final double progress;
+  final ValueChanged<double> onSeek;
+
+  const _ElevationChart({
+    required this.points,
+    required this.progress,
+    required this.onSeek,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (details) => _handleTap(details, context),
+      onHorizontalDragUpdate: (details) => _handleDrag(details, context),
+      child: SizedBox(
+        height: 60,
+        child: CustomPaint(
+          size: const Size(double.infinity, 60),
+          painter: _ElevationChartPainter(
+            points: points,
+            progress: progress,
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _handleTap(TapDownDetails details, BuildContext context) {
+    final box = context.findRenderObject() as RenderBox;
+    final localX = details.localPosition.dx;
+    final progress = (localX / box.size.width).clamp(0.0, 1.0);
+    onSeek(progress);
+  }
+
+  void _handleDrag(DragUpdateDetails details, BuildContext context) {
+    final box = context.findRenderObject() as RenderBox;
+    final localX = details.localPosition.dx;
+    final progress = (localX / box.size.width).clamp(0.0, 1.0);
+    onSeek(progress);
+  }
+}
+
+/// 海拔折线图绘制器
+class _ElevationChartPainter extends CustomPainter {
+  final List<ReplayPoint> points;
+  final double progress;
+
+  _ElevationChartPainter({
+    required this.points,
+    required this.progress,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (points.isEmpty) return;
+
+    // 计算海拔范围
+    double minAlt = double.infinity;
+    double maxAlt = double.negativeInfinity;
+    for (final p in points) {
+      if (p.altitude < minAlt) minAlt = p.altitude;
+      if (p.altitude > maxAlt) maxAlt = p.altitude;
+    }
+
+    // 确保有最小范围
+    final altRange = math.max(maxAlt - minAlt, 50.0);
+    final padding = altRange * 0.1;
+    minAlt -= padding;
+    maxAlt += padding;
+
+    final totalDistance = points.last.cumulativeDistance;
+    if (totalDistance == 0) return;
+
+    // 绘制渐变填充
+    final fillPath = Path();
+    final linePath = Path();
+
+    for (int i = 0; i < points.length; i++) {
+      final p = points[i];
+      final x = (p.cumulativeDistance / totalDistance) * size.width;
+      final y = size.height -
+          ((p.altitude - minAlt) / (maxAlt - minAlt)) * size.height;
+
+      if (i == 0) {
+        fillPath.moveTo(x, size.height);
+        fillPath.lineTo(x, y);
+        linePath.moveTo(x, y);
+      } else {
+        fillPath.lineTo(x, y);
+        linePath.lineTo(x, y);
+      }
+    }
+
+    // 闭合填充路径
+    fillPath.lineTo(size.width, size.height);
+    fillPath.close();
+
+    // 绘制渐变填充
+    final fillPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          Colors.orange.withOpacity(0.4),
+          Colors.orange.withOpacity(0.1),
+        ],
+      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
+    canvas.drawPath(fillPath, fillPaint);
+
+    // 绘制折线
+    final linePaint = Paint()
+      ..color = Colors.orange
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke;
+    canvas.drawPath(linePath, linePaint);
+
+    // 绘制当前位置指示器
+    final indicatorX = progress * size.width;
+
+    // 垂直指示线
+    final indicatorLinePaint = Paint()
+      ..color = Colors.white
+      ..strokeWidth = 2;
+    canvas.drawLine(
+      Offset(indicatorX, 0),
+      Offset(indicatorX, size.height),
+      indicatorLinePaint,
+    );
+
+    // 当前海拔点
+    final currentDistance = progress * totalDistance;
+    double currentAlt = points.first.altitude;
+    for (int i = 0; i < points.length - 1; i++) {
+      if (points[i + 1].cumulativeDistance >= currentDistance) {
+        final t = (currentDistance - points[i].cumulativeDistance) /
+            (points[i + 1].cumulativeDistance - points[i].cumulativeDistance);
+        currentAlt = points[i].altitude +
+            (points[i + 1].altitude - points[i].altitude) * t;
+        break;
+      }
+    }
+    final currentY =
+        size.height - ((currentAlt - minAlt) / (maxAlt - minAlt)) * size.height;
+
+    // 绘制当前位置圆点
+    final dotPaint = Paint()..color = Colors.white;
+    canvas.drawCircle(Offset(indicatorX, currentY), 5, dotPaint);
+    final dotBorderPaint = Paint()
+      ..color = Colors.orange
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+    canvas.drawCircle(Offset(indicatorX, currentY), 5, dotBorderPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _ElevationChartPainter oldDelegate) {
+    return oldDelegate.progress != progress || oldDelegate.points != points;
   }
 }

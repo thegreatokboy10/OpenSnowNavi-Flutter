@@ -319,6 +319,7 @@ class _SessionDetailViewState extends State<SessionDetailView> {
                     onClose: _exitReplay,
                     onTap: _onReplayControlInteraction,
                     onExport: _showExportDialog,
+                    onSeekWhileShowingMedia: _cancelMediaOrbit,
                   ),
                 ),
               // 安全区域内的返回按钮（带自动隐藏动画，导出模式时隐藏）
@@ -1458,6 +1459,31 @@ class _SessionDetailViewState extends State<SessionDetailView> {
     } catch (e) {
       // 忽略错误
     }
+  }
+
+  /// 取消媒体展示（用于拖动进度条时）
+  /// 与 _finishMediaOrbit 不同，这个方法不会调用 finishShowingMedia
+  /// 因为 seekTo 会处理状态变更
+  void _cancelMediaOrbit() {
+    debugPrint('[SessionDetailView] Cancelling media orbit for seek');
+
+    _mediaOrbitTimer?.cancel();
+    _mediaOrbitTimer = null;
+    _photoDisplayTimer?.cancel();
+    _photoDisplayTimer = null;
+
+    // 停止视频播放并清理
+    _replayVideoController?.removeListener(_onVideoPlaybackChanged);
+    _replayVideoController?.pause();
+    _replayVideoController?.dispose();
+    _replayVideoController = null;
+    _currentMediaFile = null;
+    _mediaScreenPosition = null;
+
+    // 恢复上次的相机方向
+    _lastCameraBearing = _orbitAngle;
+
+    if (mounted) setState(() {});
   }
 
   /// 结束媒体环绕展示
