@@ -192,9 +192,9 @@ class SessionManager extends ChangeNotifier {
     _currentSession?.state = SessionState.recording;
     await _db.updateSession(_currentSession!);
 
-    // 开始位置追踪
+    // 切换到后台追踪模式（启用后台位置更新）
     _locationService.resetAutoPauseState();
-    await _locationService.startTracking();
+    await _locationService.startTracking(backgroundMode: true);
     _motionService.startTracking();
 
     // 清除中断 session 引用
@@ -263,11 +263,12 @@ class SessionManager extends ChangeNotifier {
   }
 
   /// 请求位置权限并开始监听 GPS（用于信号强度指示）
+  /// 使用前台模式，不启用后台位置追踪，省电
   Future<bool> requestPermission() async {
     final granted = await _locationService.requestPermission();
     if (granted) {
-      // 立即开始监听 GPS 信号以获取信号强度
-      await _locationService.startTracking();
+      // 使用前台模式监听 GPS 信号（不启用后台追踪，省电）
+      await _locationService.startTracking(backgroundMode: false);
     }
     return granted;
   }
@@ -295,8 +296,9 @@ class SessionManager extends ChangeNotifier {
     _isRecording = true;
     _isPaused = false;
 
-    // Location tracking 已经在 requestPermission 中启动，这里只需重置状态
+    // 切换到后台追踪模式（启用后台位置更新）
     _locationService.resetAutoPauseState();
+    await _locationService.startTracking(backgroundMode: true);
     _motionService.startTracking();
 
     notifyListeners();
@@ -330,7 +332,6 @@ class SessionManager extends ChangeNotifier {
   Future<void> stopSession() async {
     if (!_isRecording) return;
 
-    _locationService.stopTracking();
     _motionService.stopTracking();
 
     // 计算最终暂停时长
@@ -355,6 +356,9 @@ class SessionManager extends ChangeNotifier {
     _isPaused = false;
     _currentSession = null;
     _currentTrackPoints.clear(); // 清空轨迹点列表
+
+    // 切换回前台追踪模式（不启用后台位置更新，省电）
+    await _locationService.startTracking(backgroundMode: false);
 
     notifyListeners();
   }

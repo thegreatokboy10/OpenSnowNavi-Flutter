@@ -49,9 +49,18 @@ class LocationService {
   GpsSignalStrength _signalStrength = GpsSignalStrength.none;
   double _currentHeading = 0; // 从 compass 获取的真实 heading
 
+  /// 是否处于后台追踪模式（录制轨迹时使用）
+  bool _isBackgroundMode = false;
+
   LocationUpdateCallback? onLocationUpdate;
   // Heading 更新回调，用于实时更新 UI
   void Function(double heading)? onHeadingUpdate;
+
+  /// 是否正在追踪
+  bool get isTracking => _positionSubscription != null;
+
+  /// 是否处于后台追踪模式
+  bool get isBackgroundMode => _isBackgroundMode;
 
   /// 请求位置权限
   Future<bool> requestPermission() async {
@@ -75,25 +84,88 @@ class LocationService {
     return true;
   }
 
+  /// 检查是否有 "Always" 后台位置权限
+  Future<bool> hasAlwaysPermission() async {
+    final permission = await Geolocator.checkPermission();
+    return permission == LocationPermission.always;
+  }
+
+  /// 请求 "Always" 后台位置权限
+  /// 返回是否成功获取权限
+  Future<bool> requestAlwaysPermission() async {
+    final permission = await Geolocator.checkPermission();
+
+    // 如果已经是 always，直接返回 true
+    if (permission == LocationPermission.always) {
+      return true;
+    }
+
+    // 如果是 whileInUse，需要引导用户去设置中开启 always
+    if (permission == LocationPermission.whileInUse) {
+      // 无法直接请求升级到 always，需要用户手动去设置
+      return false;
+    }
+
+    // 如果还没有权限，先请求基本权限
+    if (permission == LocationPermission.denied) {
+      final newPermission = await Geolocator.requestPermission();
+      return newPermission == LocationPermission.always;
+    }
+
+    return false;
+  }
+
   /// 开始追踪
-  Future<void> startTracking() async {
+  /// [backgroundMode] - 是否启用后台追踪模式（录制轨迹时使用）
+  /// 前台模式：不启用后台位置更新，省电
+  /// 后台模式：启用后台位置更新，用于录制轨迹
+  Future<void> startTracking({bool backgroundMode = false}) async {
+    // 如果已经在追踪，且模式相同，则不重复启动
+    if (_positionSubscription != null && _isBackgroundMode == backgroundMode) {
+      return;
+    }
+
+    // 如果模式不同，先停止当前追踪
+    if (_positionSubscription != null) {
+      await _positionSubscription?.cancel();
+      _positionSubscription = null;
+    }
+
+    _isBackgroundMode = backgroundMode;
     _isAutoPaused = false;
     _lowSpeedStartTime = null;
     _highSpeedStartTime = null;
 
-    // 使用 Apple 平台特定设置来确保后台位置追踪稳定
-    // allowBackgroundLocationUpdates: 允许后台位置更新
-    // pauseLocationUpdatesAutomatically: 禁止系统自动暂停位置更新
-    // showBackgroundLocationIndicator: 显示后台位置指示器（蓝条）
-    // activityType: 设置为 fitness 以获得更好的位置追踪
-    final locationSettings = AppleSettings(
-      accuracy: LocationAccuracy.bestForNavigation,
-      distanceFilter: 1,
-      activityType: ActivityType.fitness,
-      pauseLocationUpdatesAutomatically: false,
-      allowBackgroundLocationUpdates: true,
-      showBackgroundLocationIndicator: true,
-    );
+    LocationSettings locationSettings;
+
+    if (backgroundMode) {
+      // 后台模式：用于录制轨迹，启用后台位置更新
+      // 使用 Apple 平台特定设置来确保后台位置追踪稳定
+      // allowBackgroundLocationUpdates: 允许后台位置更新
+      // pauseLocationUpdatesAutomatically: 禁止系统自动暂停位置更新
+      // showBackgroundLocationIndicator: 显示后台位置指示器（蓝条）
+      // activityType: 设置为 fitness 以获得更好的位置追踪
+      locationSettings = AppleSettings(
+        accuracy: LocationAccuracy.bestForNavigation,
+        distanceFilter: 1,
+        activityType: ActivityType.fitness,
+        pauseLocationUpdatesAutomatically: false,
+        allowBackgroundLocationUpdates: true,
+        showBackgroundLocationIndicator: true,
+      );
+      debugPrint('[LocationService] Started background tracking mode');
+    } else {
+      // 前台模式：仅用于显示当前位置和信号强度，不启用后台更新
+      locationSettings = AppleSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 10, // 更大的距离过滤，减少更新频率
+        activityType: ActivityType.other,
+        pauseLocationUpdatesAutomatically: true, // 允许系统自动暂停
+        allowBackgroundLocationUpdates: false, // 不允许后台更新
+        showBackgroundLocationIndicator: false,
+      );
+      debugPrint('[LocationService] Started foreground tracking mode');
+    }
 
     _positionSubscription = Geolocator.getPositionStream(
       locationSettings: locationSettings,
@@ -103,8 +175,8 @@ class LocationService {
       _signalStrength = GpsSignalStrength.none;
     }).listen(_handlePosition);
 
-    // 启动 compass 订阅来获取真实的 heading
-    _compassSubscription = FlutterCompass.events?.listen((event) {
+    // 启动 compass 订阅来获取真实的 heading（如果还没启动）
+    _compassSubscription ??= FlutterCompass.events?.listen((event) {
       if (event.heading != null) {
         _currentHeading = event.heading!;
         // 通知 heading 更新，实时刷新 UI

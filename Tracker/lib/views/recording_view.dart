@@ -25,6 +25,9 @@ class _RecordingViewState extends State<RecordingView> {
   Point? _lastMapCenter;
   PolylineAnnotationManager? _trackLineManager; // 用于绘制实时轨迹
   int _lastDrawnPointCount = 0; // 上次绘制的轨迹点数量
+  bool _timerInitialized = false; // 防止重复初始化计时器
+
+  final _locationService = LocationService();
 
   @override
   void initState() {
@@ -40,17 +43,50 @@ class _RecordingViewState extends State<RecordingView> {
 
   /// 检查录制状态，如果正在录制则启动计时器
   void _checkRecordingState(SessionManager manager) {
-    if (manager.isRecording && _timer == null) {
-      // 恢复计时器，计算已过时间
-      if (manager.currentSession != null) {
-        _elapsed = DateTime.now().difference(manager.currentSession!.startTime);
-      }
-      _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-        if (!manager.isPaused) {
-          setState(() {
-            _elapsed += const Duration(seconds: 1);
-          });
+    if (manager.isRecording) {
+      // 只有在计时器未初始化时才启动
+      if (!_timerInitialized) {
+        _timerInitialized = true;
+        // 恢复计时器，计算已过时间
+        if (manager.currentSession != null) {
+          _elapsed =
+              DateTime.now().difference(manager.currentSession!.startTime);
         }
+        _startTimerInternal(manager);
+      }
+    } else {
+      // 如果不在录制状态，确保计时器停止
+      if (_timerInitialized) {
+        _stopTimerInternal();
+      }
+    }
+  }
+
+  /// 内部启动计时器（不重置 elapsed）
+  void _startTimerInternal(SessionManager manager) {
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      // 检查是否还在录制
+      if (!manager.isRecording) {
+        _stopTimerInternal();
+        return;
+      }
+      if (!manager.isPaused && mounted) {
+        setState(() {
+          _elapsed += const Duration(seconds: 1);
+        });
+      }
+    });
+  }
+
+  /// 内部停止计时器
+  void _stopTimerInternal() {
+    _timer?.cancel();
+    _timer = null;
+    _timerInitialized = false;
+    if (mounted) {
+      setState(() {
+        _elapsed = Duration.zero;
       });
     }
   }
@@ -58,6 +94,7 @@ class _RecordingViewState extends State<RecordingView> {
   @override
   void dispose() {
     _timer?.cancel();
+    _timer = null;
     context.read<SessionManager>().removeListener(_onPositionUpdate);
     _cleanupTrackLine();
     super.dispose();
@@ -128,23 +165,14 @@ class _RecordingViewState extends State<RecordingView> {
   }
 
   void _startTimer() {
+    final manager = context.read<SessionManager>();
     _elapsed = Duration.zero;
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      final manager = context.read<SessionManager>();
-      if (!manager.isPaused) {
-        setState(() {
-          _elapsed += const Duration(seconds: 1);
-        });
-      }
-    });
+    _timerInitialized = true;
+    _startTimerInternal(manager);
   }
 
   void _stopTimer() {
-    _timer?.cancel();
-    _timer = null;
-    setState(() {
-      _elapsed = Duration.zero;
-    });
+    _stopTimerInternal();
   }
 
   String _formatDuration(Duration d) {
@@ -515,13 +543,52 @@ class _RecordingViewState extends State<RecordingView> {
     );
   }
 
+  /// 检查后台位置权限并开始录制
+  Future<void> _checkPermissionAndStartRecording(SessionManager manager) async {
+    // 检查是否有 Always 权限
+    final hasAlways = await _locationService.hasAlwaysPermission();
+
+    if (!hasAlways) {
+      // 没有 Always 权限，显示提示对话框
+      if (!mounted) return;
+      final shouldOpenSettings = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('需要后台位置权限'),
+          content: const Text(
+            '为了在后台持续记录您的滑雪轨迹，请在系统设置中将位置权限设置为"始终"。\n\n'
+            '如果不授权，当应用进入后台时可能无法正常记录轨迹。',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('稍后再说'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('去设置'),
+            ),
+          ],
+        ),
+      );
+
+      if (shouldOpenSettings == true) {
+        // 打开系统设置
+        await geo.Geolocator.openAppSettings();
+        return; // 用户去设置了，不自动开始录制
+      }
+      // 用户选择稍后再说，继续录制（可能在后台时无法正常工作）
+    }
+
+    // 开始录制
+    await manager.startSession();
+    _startTimer();
+  }
+
   Widget _buildControlButtons(SessionManager manager) {
     if (!manager.isRecording) {
       return ElevatedButton.icon(
-        onPressed: () async {
-          await manager.startSession();
-          _startTimer();
-        },
+        onPressed: () => _checkPermissionAndStartRecording(manager),
         icon: const Icon(Icons.play_arrow, size: 32),
         label: const Text('Start', style: TextStyle(fontSize: 20)),
         style: ElevatedButton.styleFrom(
