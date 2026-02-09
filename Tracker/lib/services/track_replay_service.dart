@@ -140,7 +140,8 @@ class TrackReplayService extends ChangeNotifier {
 
     // 步骤 3: 移动平均平滑
     final smoothed = _applySmoothing(cleaned, smoothingWindow);
-    debugPrint('[TrackReplayService] After smoothing: ${smoothed.length} points');
+    debugPrint(
+        '[TrackReplayService] After smoothing: ${smoothed.length} points');
 
     // 步骤 4 & 5: 计算累计距离和方向
     _processedPoints = _calculateDistancesAndBearings(smoothed);
@@ -283,9 +284,11 @@ class TrackReplayService extends ChangeNotifier {
 
   /// 使用加权平均计算前瞻方向
   /// 距离较远的点权重更大，以获得更稳定的方向
-  double _calculateWeightedBearing(List<LocationPoint> points, int currentIndex) {
+  double _calculateWeightedBearing(
+      List<LocationPoint> points, int currentIndex) {
     final lookAheadCount = _config.lookAheadPoints;
-    final maxLookAhead = math.min(currentIndex + lookAheadCount, points.length - 1);
+    final maxLookAhead =
+        math.min(currentIndex + lookAheadCount, points.length - 1);
 
     if (currentIndex >= maxLookAhead) {
       // 最后几个点，使用上一个点的方向
@@ -411,7 +414,10 @@ class TrackReplayService extends ChangeNotifier {
 
       for (int i = 0; i < _processedPoints.length; i++) {
         final point = _processedPoints[i];
-        final timeDiff = media.captureTime.difference(point.originalTimestamp).inSeconds.abs();
+        final timeDiff = media.captureTime
+            .difference(point.originalTimestamp)
+            .inSeconds
+            .abs();
 
         if (timeDiff < minTimeDiff) {
           minTimeDiff = timeDiff;
@@ -450,7 +456,10 @@ class TrackReplayService extends ChangeNotifier {
 
       for (int i = 0; i < _processedPoints.length; i++) {
         final point = _processedPoints[i];
-        final timeDiff = media.captureTime.difference(point.originalTimestamp).inSeconds.abs();
+        final timeDiff = media.captureTime
+            .difference(point.originalTimestamp)
+            .inSeconds
+            .abs();
 
         // 时间差超过10分钟的点不考虑
         if (timeDiff > 600) continue;
@@ -490,6 +499,7 @@ class TrackReplayService extends ChangeNotifier {
   }
 
   /// 检查是否到达媒体位置，返回需要展示的媒体
+  /// 当进度到达或超过媒体位置时展示媒体，不会跳跃
   SessionMedia? checkMediaAtProgress(double progress) {
     // 导出模式下跳过媒体
     if (shouldSkipMediaInExport) {
@@ -504,14 +514,15 @@ class TrackReplayService extends ChangeNotifier {
     while (_currentMediaIndex < _mediaReplayList.length) {
       final mediaInfo = _mediaReplayList[_currentMediaIndex];
 
-      // 如果已经过了这个媒体，跳过
-      if (progress > mediaInfo.progress + 0.01) {
+      // 如果已经过了这个媒体较远，跳过
+      if (progress > mediaInfo.progress + 0.02) {
         _currentMediaIndex++;
         continue;
       }
 
-      // 如果到达媒体位置（±1%进度内）
-      if ((progress - mediaInfo.progress).abs() <= 0.01) {
+      // 如果到达或刚刚超过媒体位置，展示媒体
+      // 使用较小的阈值（0.5%）确保轨迹位置接近媒体位置
+      if (progress >= mediaInfo.progress - 0.005) {
         return mediaInfo.media;
       }
 

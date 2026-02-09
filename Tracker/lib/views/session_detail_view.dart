@@ -291,115 +291,120 @@ class _SessionDetailViewState extends State<SessionDetailView> {
         final currentMedia = _replayService?.currentShowingMedia;
 
         return GestureDetector(
-      onTap: _onReplayScreenTap,
-      behavior: HitTestBehavior.opaque,
-      child: Stack(
-        children: [
-          // 全屏地图
-          Positioned.fill(child: _buildMap()),
+          onTap: _onReplayScreenTap,
+          behavior: HitTestBehavior.opaque,
+          child: Stack(
+            children: [
+              // 全屏地图
+              Positioned.fill(child: _buildMap()),
 
-          // 媒体预览（定位到GPS坐标上方，悬浮效果）
-          if (isShowingMedia && currentMedia != null && _mediaScreenPosition != null)
-            _buildPositionedMediaPreview(currentMedia),
+              // 媒体预览（定位到GPS坐标上方，悬浮效果）
+              if (isShowingMedia &&
+                  currentMedia != null &&
+                  _mediaScreenPosition != null)
+                _buildPositionedMediaPreview(currentMedia),
 
-          // 回放控制面板（带自动隐藏动画，导出模式时隐藏）
-          if (!_isExportMode)
-            AnimatedPositioned(
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeInOut,
-              left: 16,
-              right: 16,
-              bottom: _showReplayControls
-                  ? 32 + MediaQuery.of(context).padding.bottom
-                  : -200, // 隐藏时滑出屏幕
-              child: TrackReplayController(
-                replayService: _replayService!,
-                onClose: _exitReplay,
-                onTap: _onReplayControlInteraction,
-                onExport: _showExportDialog,
-              ),
-            ),
-          // 安全区域内的返回按钮（带自动隐藏动画，导出模式时隐藏）
-          if (!_isExportMode)
-            AnimatedPositioned(
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeInOut,
-              top: _showReplayControls
-                  ? MediaQuery.of(context).padding.top + 16
-                  : -60, // 隐藏时滑出屏幕
-              left: 16,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.5),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: IconButton(
-                  icon: const Icon(Icons.arrow_back, color: Colors.white),
-                  onPressed: _exitReplay,
-                ),
-              ),
-            ),
-          // 点击提示（控件隐藏时显示，非导出模式）
-          if (!_showReplayControls && !isShowingMedia && !_isExportMode)
-            Positioned(
-              bottom: 20 + MediaQuery.of(context).padding.bottom,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.4),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Text(
-                    '点击屏幕显示控制面板',
-                    style: TextStyle(color: Colors.white70, fontSize: 12),
+              // 回放控制面板（带自动隐藏动画，导出模式时隐藏）
+              if (!_isExportMode)
+                AnimatedPositioned(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                  left: 16,
+                  right: 16,
+                  bottom: _showReplayControls
+                      ? 32 + MediaQuery.of(context).padding.bottom
+                      : -200, // 隐藏时滑出屏幕
+                  child: TrackReplayController(
+                    replayService: _replayService!,
+                    onClose: _exitReplay,
+                    onTap: _onReplayControlInteraction,
+                    onExport: _showExportDialog,
                   ),
                 ),
-              ),
-            ),
-
-          // 导出模式：顶部遮罩（刘海区域）
-          if (_isExportMode)
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              height: MediaQuery.of(context).padding.top,
-              child: Container(color: Colors.black),
-            ),
-
-          // 导出模式：底部遮罩（底部安全区域的3倍高度）
-          if (_isExportMode)
-            Builder(
-              builder: (context) {
-                final bottomMaskHeight = MediaQuery.of(context).padding.bottom * 3;
-                return Positioned(
-                  bottom: 0,
+              // 安全区域内的返回按钮（带自动隐藏动画，导出模式时隐藏）
+              if (!_isExportMode)
+                AnimatedPositioned(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                  top: _showReplayControls
+                      ? MediaQuery.of(context).padding.top + 16
+                      : -60, // 隐藏时滑出屏幕
+                  left: 16,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: IconButton(
+                      icon: const Icon(Icons.arrow_back, color: Colors.white),
+                      onPressed: _exitReplay,
+                    ),
+                  ),
+                ),
+              // 点击提示（控件隐藏时显示，非导出模式）
+              if (!_showReplayControls && !isShowingMedia && !_isExportMode)
+                Positioned(
+                  bottom: 20 + MediaQuery.of(context).padding.bottom,
                   left: 0,
                   right: 0,
-                  height: bottomMaskHeight,
-                  child: Container(color: Colors.black),
-                );
-              },
-            ),
+                  child: Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.4),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Text(
+                        '点击屏幕显示控制面板',
+                        style: TextStyle(color: Colors.white70, fontSize: 12),
+                      ),
+                    ),
+                  ),
+                ),
 
-          // 导出模式：水印（在底部遮罩上方）
-          if (_isExportMode)
-            Builder(
-              builder: (context) {
-                final bottomMaskHeight = MediaQuery.of(context).padding.bottom * 3;
-                return Positioned(
-                  right: 16,
-                  bottom: bottomMaskHeight + 16,
-                  child: _buildExportWatermark(),
-                );
-              },
-            ),
-        ],
-      ),
-    );
+              // 导出模式：顶部遮罩（刘海区域）
+              if (_isExportMode)
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: MediaQuery.of(context).padding.top,
+                  child: Container(color: Colors.black),
+                ),
+
+              // 导出模式：底部遮罩（底部安全区域的3倍高度）
+              if (_isExportMode)
+                Builder(
+                  builder: (context) {
+                    final bottomMaskHeight =
+                        MediaQuery.of(context).padding.bottom * 3;
+                    return Positioned(
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      height: bottomMaskHeight,
+                      child: Container(color: Colors.black),
+                    );
+                  },
+                ),
+
+              // 导出模式：水印（在底部遮罩上方）
+              if (_isExportMode)
+                Builder(
+                  builder: (context) {
+                    final bottomMaskHeight =
+                        MediaQuery.of(context).padding.bottom * 3;
+                    return Positioned(
+                      right: 16,
+                      bottom: bottomMaskHeight + 16,
+                      child: _buildExportWatermark(),
+                    );
+                  },
+                ),
+            ],
+          ),
+        );
       },
     );
   }
@@ -424,7 +429,8 @@ class _SessionDetailViewState extends State<SessionDetailView> {
     // 确保不超出屏幕边界
     final padding = MediaQuery.of(context).padding;
     left = left.clamp(8.0, screenSize.width - previewWidth - 8);
-    top = top.clamp(padding.top + 8, screenSize.height - previewHeight - padding.bottom - 8);
+    top = top.clamp(padding.top + 8,
+        screenSize.height - previewHeight - padding.bottom - 8);
 
     // 计算连接线的位置（从悬浮窗底部中心到GPS坐标点）
     final connectorStartX = left + previewWidth / 2;
@@ -473,7 +479,8 @@ class _SessionDetailViewState extends State<SessionDetailView> {
   }
 
   /// 构建地图上的媒体预览
-  Widget _buildMapMediaPreview(SessionMedia media, double previewWidth, double previewHeight) {
+  Widget _buildMapMediaPreview(
+      SessionMedia media, double previewWidth, double previewHeight) {
     return Material(
       elevation: 8,
       borderRadius: BorderRadius.circular(12),
@@ -499,7 +506,8 @@ class _SessionDetailViewState extends State<SessionDetailView> {
                 child: GestureDetector(
                   onTap: _finishMediaOrbit,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       color: Colors.black.withOpacity(0.7),
                       borderRadius: BorderRadius.circular(20),
@@ -509,7 +517,9 @@ class _SessionDetailViewState extends State<SessionDetailView> {
                       children: [
                         Icon(Icons.skip_next, color: Colors.white, size: 20),
                         SizedBox(width: 4),
-                        Text('跳过', style: TextStyle(color: Colors.white, fontSize: 14)),
+                        Text('跳过',
+                            style:
+                                TextStyle(color: Colors.white, fontSize: 14)),
                       ],
                     ),
                   ),
@@ -517,7 +527,8 @@ class _SessionDetailViewState extends State<SessionDetailView> {
               ),
 
               // 视频进度条
-              if (media.type == MediaType.video && _replayVideoController != null)
+              if (media.type == MediaType.video &&
+                  _replayVideoController != null)
                 Positioned(
                   left: 16,
                   right: 16,
@@ -788,9 +799,8 @@ class _SessionDetailViewState extends State<SessionDetailView> {
     if (_mediaItems.isEmpty) return;
 
     // 过滤出选中的媒体
-    final selectedMedia = _mediaItems
-        .where((m) => _selectedMediaIds.contains(m.id))
-        .toList();
+    final selectedMedia =
+        _mediaItems.where((m) => _selectedMediaIds.contains(m.id)).toList();
 
     if (selectedMedia.isEmpty) {
       await _removeMediaMarkers();
@@ -934,9 +944,8 @@ class _SessionDetailViewState extends State<SessionDetailView> {
     await _replayService!.processTrack(_points);
 
     // 设置回放媒体（使用筛选后的媒体）
-    final selectedMedia = _mediaItems
-        .where((m) => _selectedMediaIds.contains(m.id))
-        .toList();
+    final selectedMedia =
+        _mediaItems.where((m) => _selectedMediaIds.contains(m.id)).toList();
     _replayService!.setMediaForReplay(selectedMedia);
 
     if (_replayService!.processedPoints.isEmpty) {
@@ -994,6 +1003,14 @@ class _SessionDetailViewState extends State<SessionDetailView> {
     _mediaOrbitTimer = null;
     _photoDisplayTimer?.cancel();
     _photoDisplayTimer = null;
+
+    // 停止并清理视频控制器
+    _replayVideoController?.removeListener(_onVideoPlaybackChanged);
+    _replayVideoController?.pause();
+    _replayVideoController?.dispose();
+    _replayVideoController = null;
+    _currentMediaFile = null;
+
     _replayService?.removeListener(_onReplayUpdate);
     _replayService?.stop();
 
@@ -1052,13 +1069,15 @@ class _SessionDetailViewState extends State<SessionDetailView> {
 
     // 计算目标方向差
     final targetBearing = point.bearing as double;
-    double bearingDiff = ((targetBearing - _lastCameraBearing + 540) % 360) - 180;
+    double bearingDiff =
+        ((targetBearing - _lastCameraBearing + 540) % 360) - 180;
 
     // 限制最大角速度（每帧最多转动的角度）
     // 基于更新间隔计算合理的最大角速度
     // 假设最大转速为 90°/秒
     const maxDegreesPerSecond = 90.0;
-    final maxDeltaPerFrame = maxDegreesPerSecond * config.cameraUpdateIntervalMs / 1000;
+    final maxDeltaPerFrame =
+        maxDegreesPerSecond * config.cameraUpdateIntervalMs / 1000;
 
     // 应用角速度限制
     if (bearingDiff.abs() > maxDeltaPerFrame) {
@@ -1066,8 +1085,10 @@ class _SessionDetailViewState extends State<SessionDetailView> {
     }
 
     // 应用平滑系数
-    _lastCameraBearing =
-        (_lastCameraBearing + bearingDiff * config.bearingSmoothingFactor + 360) % 360;
+    _lastCameraBearing = (_lastCameraBearing +
+            bearingDiff * config.bearingSmoothingFactor +
+            360) %
+        360;
 
     await _mapboxMap!.flyTo(
       CameraOptions(
@@ -1138,8 +1159,7 @@ class _SessionDetailViewState extends State<SessionDetailView> {
 
     try {
       // 更新 source 数据
-      final source =
-          await _mapboxMap!.style.getSource('replay-track-source');
+      final source = await _mapboxMap!.style.getSource('replay-track-source');
       if (source is GeoJsonSource) {
         await source.updateGeoJSON(geoJson);
       }
@@ -1281,7 +1301,8 @@ class _SessionDetailViewState extends State<SessionDetailView> {
   Future<void> _removeUserMarker() async {
     if (_userMarkerManager != null && _mapboxMap != null) {
       try {
-        await _mapboxMap!.annotations.removeAnnotationManager(_userMarkerManager!);
+        await _mapboxMap!.annotations
+            .removeAnnotationManager(_userMarkerManager!);
       } catch (e) {
         debugPrint('[SessionDetailView] Error removing user marker: $e');
       }

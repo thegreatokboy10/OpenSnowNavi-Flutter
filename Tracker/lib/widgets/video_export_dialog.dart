@@ -167,18 +167,30 @@ class _VideoExportSettingsSheetState extends State<_VideoExportSettingsSheet> {
 
                   const SizedBox(height: 16),
 
-                  // 视频质量
-                  const Text(
-                    '视频质量',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
+                  // 音频录制提示
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.mic, size: 20, color: Colors.blue),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            '需要麦克风权限才能录制视频中的声音',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.blue,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  _buildQualityOption(VideoQuality.standard, '标准 (720p)'),
-                  _buildQualityOption(VideoQuality.high, '高清 (1080p)'),
                 ],
               ),
             ),
@@ -236,23 +248,6 @@ class _VideoExportSettingsSheetState extends State<_VideoExportSettingsSheet> {
         subtitle,
         style: const TextStyle(fontSize: 12, color: Colors.black54),
       ),
-      dense: true,
-      contentPadding: EdgeInsets.zero,
-    );
-  }
-
-  Widget _buildQualityOption(VideoQuality quality, String title) {
-    return RadioListTile<VideoQuality>(
-      value: quality,
-      groupValue: _config.quality,
-      onChanged: (value) {
-        if (value != null) {
-          setState(() {
-            _config = _config.copyWith(quality: value);
-          });
-        }
-      },
-      title: Text(title),
       dense: true,
       contentPadding: EdgeInsets.zero,
     );
@@ -355,7 +350,8 @@ class _VideoExportRecordingOverlayState
             GestureDetector(
               onTap: widget.onCancel,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(16),
