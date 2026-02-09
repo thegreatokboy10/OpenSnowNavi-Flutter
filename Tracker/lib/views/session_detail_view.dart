@@ -1102,42 +1102,85 @@ class _SessionDetailViewState extends State<SessionDetailView> {
     );
   }
 
+  // 渐变透明度定义（5段，从透明到不透明）
+  static const _gradientOpacities = [0.7, 0.75, 0.9, 0.95, 1.0];
+
   /// 初始化回放轨迹图层
   Future<void> _initReplayTrackLayers() async {
     if (_mapboxMap == null) return;
 
     try {
-      // 添加 GeoJSON source（初始为空）
+      // 添加灰色轨迹 source
       await _mapboxMap!.style.addSource(
         GeoJsonSource(
-          id: 'replay-track-source',
+          id: 'replay-track-gray-source',
           data: '{"type":"FeatureCollection","features":[]}',
         ),
       );
 
-      // 添加轨迹外边框（更宽、更深的颜色）
+      // 添加灰色轨迹外边框（带透明度，让走过的部分看起来很淡）
       await _mapboxMap!.style.addLayer(
         LineLayer(
-          id: 'replay-track-outline-layer',
-          sourceId: 'replay-track-source',
-          lineColor: 0xFFCC6600, // 深橙色
+          id: 'replay-track-gray-outline-layer',
+          sourceId: 'replay-track-gray-source',
+          lineColor: 0xFF555555, // 深灰色边框
           lineWidth: 6.0,
+          lineOpacity: 0.3, // 透明度
           lineCap: LineCap.ROUND,
           lineJoin: LineJoin.ROUND,
         ),
       );
 
-      // 添加主轨迹层
+      // 添加灰色轨迹主层（带透明度）
       await _mapboxMap!.style.addLayer(
         LineLayer(
-          id: 'replay-track-layer',
-          sourceId: 'replay-track-source',
-          lineColor: Colors.orange.value,
+          id: 'replay-track-gray-layer',
+          sourceId: 'replay-track-gray-source',
+          lineColor: 0xFF888888, // 灰色
           lineWidth: 4.0,
+          lineOpacity: 0.4, // 透明度
           lineCap: LineCap.ROUND,
           lineJoin: LineJoin.ROUND,
         ),
       );
+
+      // 添加渐变轨迹的多个 source 和 layer（5段，都是橙色，通过透明度过渡）
+      for (int i = 0; i < 5; i++) {
+        await _mapboxMap!.style.addSource(
+          GeoJsonSource(
+            id: 'replay-track-gradient-source-$i',
+            data: '{"type":"FeatureCollection","features":[]}',
+          ),
+        );
+
+        final opacity = _gradientOpacities[i];
+
+        // 外边框（深橙色，带透明度）
+        await _mapboxMap!.style.addLayer(
+          LineLayer(
+            id: 'replay-track-gradient-outline-layer-$i',
+            sourceId: 'replay-track-gradient-source-$i',
+            lineColor: 0xFFCC6600, // 深橙色
+            lineWidth: 6.0,
+            lineOpacity: opacity,
+            lineCap: LineCap.ROUND,
+            lineJoin: LineJoin.ROUND,
+          ),
+        );
+
+        // 主层（橙色，带透明度）
+        await _mapboxMap!.style.addLayer(
+          LineLayer(
+            id: 'replay-track-gradient-layer-$i',
+            sourceId: 'replay-track-gradient-source-$i',
+            lineColor: 0xFFFF9800, // 橙色
+            lineWidth: 4.0,
+            lineOpacity: opacity,
+            lineCap: LineCap.ROUND,
+            lineJoin: LineJoin.ROUND,
+          ),
+        );
+      }
     } catch (e) {
       debugPrint('[SessionDetailView] Error initializing replay layers: $e');
     }
@@ -1147,22 +1190,50 @@ class _SessionDetailViewState extends State<SessionDetailView> {
   Future<void> _updateReplayTrackLine() async {
     if (_mapboxMap == null || _replayService == null) return;
 
-    final coordinates = _replayService!.visibleTrackCoordinates;
-    if (coordinates.length < 2) return;
-
-    final geoJson = jsonEncode({
-      'type': 'Feature',
-      'geometry': {
-        'type': 'LineString',
-        'coordinates': coordinates.map((p) => [p.lng, p.lat]).toList(),
-      },
-    });
+    final segments =
+        _replayService!.getSegmentedTrackCoordinates(gradientDistance: 200.0);
 
     try {
-      // 更新 source 数据
-      final source = await _mapboxMap!.style.getSource('replay-track-source');
-      if (source is GeoJsonSource) {
-        await source.updateGeoJSON(geoJson);
+      // 更新灰色轨迹
+      if (segments.grayPart.length >= 2) {
+        final grayGeoJson = jsonEncode({
+          'type': 'Feature',
+          'geometry': {
+            'type': 'LineString',
+            'coordinates':
+                segments.grayPart.map((p) => [p.lng, p.lat]).toList(),
+          },
+        });
+        final graySource =
+            await _mapboxMap!.style.getSource('replay-track-gray-source');
+        if (graySource is GeoJsonSource) {
+          await graySource.updateGeoJSON(grayGeoJson);
+        }
+      }
+
+      // 更新渐变轨迹的各段
+      for (int i = 0; i < 5; i++) {
+        String gradientGeoJson;
+        if (i < segments.gradientParts.length &&
+            segments.gradientParts[i].length >= 2) {
+          gradientGeoJson = jsonEncode({
+            'type': 'Feature',
+            'geometry': {
+              'type': 'LineString',
+              'coordinates':
+                  segments.gradientParts[i].map((p) => [p.lng, p.lat]).toList(),
+            },
+          });
+        } else {
+          // 空的 GeoJSON
+          gradientGeoJson = '{"type":"FeatureCollection","features":[]}';
+        }
+
+        final source = await _mapboxMap!.style
+            .getSource('replay-track-gradient-source-$i');
+        if (source is GeoJsonSource) {
+          await source.updateGeoJSON(gradientGeoJson);
+        }
       }
     } catch (e) {
       debugPrint('[SessionDetailView] Error updating replay track: $e');
@@ -1174,9 +1245,21 @@ class _SessionDetailViewState extends State<SessionDetailView> {
     if (_mapboxMap == null) return;
 
     try {
-      await _mapboxMap!.style.removeStyleLayer('replay-track-layer');
-      await _mapboxMap!.style.removeStyleLayer('replay-track-outline-layer');
-      await _mapboxMap!.style.removeStyleSource('replay-track-source');
+      // 移除灰色轨迹图层
+      await _mapboxMap!.style.removeStyleLayer('replay-track-gray-layer');
+      await _mapboxMap!.style
+          .removeStyleLayer('replay-track-gray-outline-layer');
+      await _mapboxMap!.style.removeStyleSource('replay-track-gray-source');
+
+      // 移除渐变轨迹图层
+      for (int i = 0; i < 5; i++) {
+        await _mapboxMap!.style
+            .removeStyleLayer('replay-track-gradient-layer-$i');
+        await _mapboxMap!.style
+            .removeStyleLayer('replay-track-gradient-outline-layer-$i');
+        await _mapboxMap!.style
+            .removeStyleSource('replay-track-gradient-source-$i');
+      }
     } catch (e) {
       debugPrint('[SessionDetailView] Error removing replay layers: $e');
     }

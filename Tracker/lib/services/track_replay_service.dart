@@ -108,6 +108,77 @@ class TrackReplayService extends ChangeNotifier {
     return coords;
   }
 
+  /// 获取分段轨迹坐标，用于渐变效果
+  /// 返回：(灰色部分坐标, 渐变部分坐标列表)
+  /// 渐变部分分成多段，每段颜色从灰色渐变到橙色
+  /// [gradientDistance] 渐变区域的距离（米），默认100米
+  ({List<Position> grayPart, List<List<Position>> gradientParts})
+      getSegmentedTrackCoordinates({double gradientDistance = 100.0}) {
+    if (_processedPoints.isEmpty) {
+      return (grayPart: [], gradientParts: []);
+    }
+
+    final targetDistance = _totalDistance * _currentProgress;
+    final gradientStartDistance =
+        (targetDistance - gradientDistance).clamp(0.0, targetDistance);
+
+    final grayCoords = <Position>[];
+    final gradientCoords = <Position>[];
+
+    for (final point in _processedPoints) {
+      if (point.cumulativeDistance > targetDistance) break;
+
+      final pos = Position(point.longitude, point.latitude);
+
+      if (point.cumulativeDistance <= gradientStartDistance) {
+        // 灰色部分
+        grayCoords.add(pos);
+      } else {
+        // 渐变部分
+        // 如果灰色部分刚结束，添加最后一个灰色点作为渐变起点
+        if (gradientCoords.isEmpty && grayCoords.isNotEmpty) {
+          gradientCoords.add(grayCoords.last);
+        }
+        gradientCoords.add(pos);
+      }
+    }
+
+    // 将渐变部分分成多段（用于模拟渐变效果）
+    const segmentCount = 5; // 分成5段
+    final gradientParts = <List<Position>>[];
+
+    if (gradientCoords.length >= 2) {
+      final totalGradientPoints = gradientCoords.length;
+      final pointsPerSegment = (totalGradientPoints / segmentCount).ceil();
+
+      for (int i = 0; i < segmentCount; i++) {
+        final startIdx = i * pointsPerSegment;
+        if (startIdx >= totalGradientPoints) break;
+
+        final endIdx =
+            ((i + 1) * pointsPerSegment).clamp(0, totalGradientPoints);
+        if (startIdx >= endIdx) break;
+
+        // 每段需要包含前一段的最后一个点以保持连续
+        final segmentStart = i == 0 ? startIdx : startIdx;
+        final segment = gradientCoords.sublist(segmentStart, endIdx);
+
+        // 确保段与段之间连接
+        if (i > 0 &&
+            gradientParts.isNotEmpty &&
+            gradientParts.last.isNotEmpty) {
+          segment.insert(0, gradientParts.last.last);
+        }
+
+        if (segment.length >= 2) {
+          gradientParts.add(segment);
+        }
+      }
+    }
+
+    return (grayPart: grayCoords, gradientParts: gradientParts);
+  }
+
   /// 处理原始轨迹点为回放点
   ///
   /// 处理步骤：
