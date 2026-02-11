@@ -1,5 +1,6 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../config/ski_resorts.dart';
 import '../services/offline_cache_service.dart';
 import '../services/offline_route_service.dart';
@@ -50,9 +51,10 @@ class _OfflineMapManagerState extends State<OfflineMapManager>
     _cacheService.onDownloadComplete = (resortKey) {
       if (mounted) {
         setState(() {});
+        final l10n = S.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${_getResortName(resortKey)} 离线地图下载完成'),
+            content: Text(l10n.offlineMapDownloaded(_getResortName(resortKey))),
             backgroundColor: Colors.green,
           ),
         );
@@ -62,9 +64,10 @@ class _OfflineMapManagerState extends State<OfflineMapManager>
     _cacheService.onDownloadError = (resortKey, error) {
       if (mounted) {
         setState(() {});
+        final l10n = S.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('下载失败: $error'),
+            content: Text(l10n.downloadFailed(error)),
             backgroundColor: Colors.red,
           ),
         );
@@ -88,19 +91,20 @@ class _OfflineMapManagerState extends State<OfflineMapManager>
   }
 
   Future<void> _deleteResort(String resortKey) async {
+    final l10n = S.of(context)!;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('删除离线地图'),
-        content: Text('确定要删除 ${_getResortName(resortKey)} 的离线地图吗？'),
+        title: Text(l10n.deleteOfflineMap),
+        content: Text(l10n.deleteOfflineMapConfirm(_getResortName(resortKey))),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('删除', style: TextStyle(color: Colors.red)),
+            child: Text(l10n.delete, style: const TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -114,6 +118,7 @@ class _OfflineMapManagerState extends State<OfflineMapManager>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = S.of(context)!;
     if (!_isInitialized) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -131,11 +136,11 @@ class _OfflineMapManagerState extends State<OfflineMapManager>
                 children: [
                   const Icon(Icons.download_for_offline, color: Colors.blue),
                   const SizedBox(width: 8),
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      '离线数据管理',
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      l10n.offlineDataManagement,
+                      style: const TextStyle(
+                          fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                   ),
                   if (widget.onClose != null)
@@ -152,9 +157,9 @@ class _OfflineMapManagerState extends State<OfflineMapManager>
               labelColor: Colors.blue,
               unselectedLabelColor: Colors.grey,
               indicatorColor: Colors.blue,
-              tabs: const [
-                Tab(text: '离线地图'),
-                Tab(text: '导航数据'),
+              tabs: [
+                Tab(text: l10n.offlineMaps),
+                Tab(text: l10n.navigationData),
               ],
             ),
             // Tab 内容
@@ -175,6 +180,7 @@ class _OfflineMapManagerState extends State<OfflineMapManager>
 
   /// 离线地图 Tab
   Widget _buildMapTab() {
+    final l10n = S.of(context)!;
     final cachedResorts = _cacheService.getCachedResorts();
 
     return Column(
@@ -183,7 +189,7 @@ class _OfflineMapManagerState extends State<OfflineMapManager>
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Text(
-            '下载雪场地图后，可在无网络时查看地图',
+            l10n.downloadMapsForOffline,
             style: TextStyle(fontSize: 12, color: Colors.grey[600]),
           ),
         ),
@@ -217,6 +223,7 @@ class _OfflineMapManagerState extends State<OfflineMapManager>
     required bool isDownloading,
     double? progress,
   }) {
+    final l10n = S.of(context)!;
     final resort = SkiResorts.list[resortKey]!;
     final names = resort['name'] as Map<String, dynamic>;
     final country = resort['country'] as String;
@@ -227,7 +234,7 @@ class _OfflineMapManagerState extends State<OfflineMapManager>
       title: Text(names['cn'] ?? names['en'] ?? resortKey),
       subtitle: isDownloading && progress != null
           ? LinearProgressIndicator(value: progress)
-          : Text(isCached ? '已下载' : '未下载'),
+          : Text(isCached ? l10n.downloaded : l10n.notDownloaded),
       trailing: isDownloading
           ? const SizedBox(
               width: 24,
@@ -238,25 +245,26 @@ class _OfflineMapManagerState extends State<OfflineMapManager>
               ? IconButton(
                   icon: const Icon(Icons.delete_outline, color: Colors.red),
                   onPressed: () => _deleteResort(resortKey),
-                  tooltip: '删除',
+                  tooltip: l10n.delete,
                 )
               : IconButton(
                   icon: const Icon(Icons.download, color: Colors.blue),
                   onPressed: () => _downloadResort(resortKey),
-                  tooltip: '下载',
+                  tooltip: l10n.download,
                 ),
     );
   }
 
   /// 导航数据 Tab
   Widget _buildNavigationTab() {
+    final l10n = S.of(context)!;
     return Column(
       children: [
         // 说明文字
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Text(
-            '导入雪场导航数据后，可使用离线路线规划',
+            l10n.importNavDataForOffline,
             style: TextStyle(fontSize: 12, color: Colors.grey[600]),
           ),
         ),
@@ -268,7 +276,7 @@ class _OfflineMapManagerState extends State<OfflineMapManager>
             child: OutlinedButton.icon(
               onPressed: _importNavigationFile,
               icon: const Icon(Icons.add),
-              label: const Text('导入导航文件'),
+              label: Text(l10n.importNavFile),
             ),
           ),
         ),
@@ -286,12 +294,12 @@ class _OfflineMapManagerState extends State<OfflineMapManager>
                             size: 48, color: Colors.grey[400]),
                         const SizedBox(height: 8),
                         Text(
-                          '暂无导航数据',
+                          l10n.noNavigationData,
                           style: TextStyle(color: Colors.grey[600]),
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '点击上方按钮导入 .sqlite 文件',
+                          l10n.clickToImportSqlite,
                           style:
                               TextStyle(fontSize: 12, color: Colors.grey[500]),
                         ),
@@ -312,6 +320,7 @@ class _OfflineMapManagerState extends State<OfflineMapManager>
   }
 
   Widget _buildNavFileItem(String resortKey, String displayName) {
+    final l10n = S.of(context)!;
     final resort = SkiResorts.list[resortKey];
     String title = displayName;
     String? subtitle;
@@ -334,12 +343,13 @@ class _OfflineMapManagerState extends State<OfflineMapManager>
       trailing: IconButton(
         icon: const Icon(Icons.delete_outline, color: Colors.red),
         onPressed: () => _deleteNavFile(resortKey, displayName),
-        tooltip: '删除',
+        tooltip: l10n.delete,
       ),
     );
   }
 
   Future<void> _importNavigationFile() async {
+    final l10n = S.of(context)!;
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.any,
@@ -350,13 +360,13 @@ class _OfflineMapManagerState extends State<OfflineMapManager>
 
       final file = result.files.first;
       if (file.path == null) {
-        _showError('无法访问文件');
+        _showError(l10n.cannotAccessFile);
         return;
       }
 
       // 检查文件扩展名
       if (!file.name.endsWith('.sqlite')) {
-        _showError('请选择 .sqlite 格式的导航文件');
+        _showError(l10n.pleaseSelectSqliteFile);
         return;
       }
 
@@ -376,25 +386,26 @@ class _OfflineMapManagerState extends State<OfflineMapManager>
         setState(() {});
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('导航数据导入成功'),
+            SnackBar(
+              content: Text(l10n.navDataImportSuccess),
               backgroundColor: Colors.green,
             ),
           );
         }
       } else {
-        _showError('导入失败，文件可能无效');
+        _showError(l10n.importFailed);
       }
     } catch (e) {
-      _showError('导入失败: $e');
+      _showError('${l10n.importFailed}: $e');
     }
   }
 
   Future<String?> _showResortSelectionDialog(String fileName) async {
+    final l10n = S.of(context)!;
     return showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('选择关联雪场'),
+        title: Text(l10n.selectResortForNavFile),
         content: SizedBox(
           width: double.maxFinite,
           height: 300,
@@ -422,7 +433,7 @@ class _OfflineMapManagerState extends State<OfflineMapManager>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
         ],
       ),
@@ -430,19 +441,20 @@ class _OfflineMapManagerState extends State<OfflineMapManager>
   }
 
   Future<void> _deleteNavFile(String resortKey, String displayName) async {
+    final l10n = S.of(context)!;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('删除导航数据'),
-        content: Text('确定要删除 "$displayName" 吗？'),
+        title: Text(l10n.deleteNavData),
+        content: Text(l10n.deleteNavDataConfirm(displayName)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('删除', style: TextStyle(color: Colors.red)),
+            child: Text(l10n.delete, style: const TextStyle(color: Colors.red)),
           ),
         ],
       ),

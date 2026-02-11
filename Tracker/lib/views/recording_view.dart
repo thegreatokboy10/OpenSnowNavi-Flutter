@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import 'package:geolocator/geolocator.dart' as geo;
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' hide Size;
 import 'package:provider/provider.dart';
@@ -393,6 +394,7 @@ class _RecordingViewState extends State<RecordingView> {
   }
 
   Widget _buildGpsSignalIndicator(SessionManager manager) {
+    final l10n = S.of(context)!;
     final signal = manager.gpsSignalStrength;
     Color color;
     String text;
@@ -401,27 +403,27 @@ class _RecordingViewState extends State<RecordingView> {
     switch (signal) {
       case GpsSignalStrength.none:
         color = Colors.grey;
-        text = 'No GPS';
+        text = l10n.gpsNoSignal;
         bars = 0;
         break;
       case GpsSignalStrength.weak:
         color = Colors.red;
-        text = 'Weak';
+        text = l10n.gpsWeak;
         bars = 1;
         break;
       case GpsSignalStrength.fair:
         color = Colors.orange;
-        text = 'Fair';
+        text = l10n.gpsFair;
         bars = 2;
         break;
       case GpsSignalStrength.good:
         color = Colors.lightGreen;
-        text = 'Good';
+        text = l10n.gpsGood;
         bars = 3;
         break;
       case GpsSignalStrength.excellent:
         color = Colors.green;
-        text = 'Excellent';
+        text = l10n.gpsExcellent;
         bars = 4;
         break;
     }
@@ -460,21 +462,22 @@ class _RecordingViewState extends State<RecordingView> {
   }
 
   Widget _buildStatusBadge(SessionManager manager) {
+    final l10n = S.of(context)!;
     Color color;
     String text;
 
     if (!manager.isRecording) {
       color = Colors.grey;
-      text = 'Ready';
+      text = l10n.statusReady;
     } else if (manager.isPaused) {
       color = Colors.orange;
-      text = 'Paused';
+      text = l10n.statusPaused;
     } else if (manager.isAutoPaused) {
       color = Colors.yellow.shade700;
-      text = 'Auto-Paused';
+      text = l10n.statusAutoPaused;
     } else {
       color = Colors.green;
-      text = 'Recording';
+      text = l10n.statusRecording;
     }
 
     return Container(
@@ -520,15 +523,16 @@ class _RecordingViewState extends State<RecordingView> {
   }
 
   Widget _buildLiveStats(SessionManager manager) {
+    final l10n = S.of(context)!;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
-        _buildStatItem('Distance',
+        _buildStatItem(l10n.distance,
             '${(manager.totalDistance / 1000).toStringAsFixed(2)} km'),
-        _buildStatItem(
-            'Max Speed', '${(manager.maxSpeed * 3.6).toStringAsFixed(1)} km/h'),
-        _buildStatItem(
-            'Elevation', '+${manager.elevationGain.toStringAsFixed(0)} m'),
+        _buildStatItem(l10n.maxSpeed,
+            '${(manager.maxSpeed * 3.6).toStringAsFixed(1)} km/h'),
+        _buildStatItem(l10n.elevationGain,
+            '+${manager.elevationGain.toStringAsFixed(0)} m'),
       ],
     );
   }
@@ -545,6 +549,7 @@ class _RecordingViewState extends State<RecordingView> {
 
   /// 检查后台位置权限并开始录制
   Future<void> _checkPermissionAndStartRecording(SessionManager manager) async {
+    final l10n = S.of(context)!;
     // 检查是否有 Always 权限
     final hasAlways = await _locationService.hasAlwaysPermission();
 
@@ -554,19 +559,16 @@ class _RecordingViewState extends State<RecordingView> {
       final shouldOpenSettings = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: const Text('需要后台位置权限'),
-          content: const Text(
-            '为了在后台持续记录您的滑雪轨迹，请在系统设置中将位置权限设置为"始终"。\n\n'
-            '如果不授权，当应用进入后台时可能无法正常记录轨迹。',
-          ),
+          title: Text(l10n.permissionRequired),
+          content: Text(l10n.alwaysLocationPermission),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('稍后再说'),
+              child: Text(l10n.later),
             ),
             TextButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('去设置'),
+              child: Text(l10n.goToSettings),
             ),
           ],
         ),
@@ -586,11 +588,12 @@ class _RecordingViewState extends State<RecordingView> {
   }
 
   Widget _buildControlButtons(SessionManager manager) {
+    final l10n = S.of(context)!;
     if (!manager.isRecording) {
       return ElevatedButton.icon(
         onPressed: () => _checkPermissionAndStartRecording(manager),
         icon: const Icon(Icons.play_arrow, size: 32),
-        label: const Text('Start', style: TextStyle(fontSize: 20)),
+        label: Text(l10n.start, style: const TextStyle(fontSize: 20)),
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.green,
           foregroundColor: Colors.white,
@@ -614,7 +617,7 @@ class _RecordingViewState extends State<RecordingView> {
           },
           icon:
               Icon(manager.isPaused ? Icons.play_arrow : Icons.pause, size: 28),
-          label: Text(manager.isPaused ? 'Resume' : 'Pause',
+          label: Text(manager.isPaused ? l10n.resume : l10n.pause,
               style: const TextStyle(fontSize: 16)),
           style: ElevatedButton.styleFrom(
             backgroundColor: manager.isPaused ? Colors.green : Colors.orange,
@@ -630,16 +633,15 @@ class _RecordingViewState extends State<RecordingView> {
             final confirm = await showDialog<bool>(
               context: context,
               builder: (ctx) => AlertDialog(
-                title: const Text('Stop Recording?'),
-                content:
-                    const Text('Are you sure you want to stop this session?'),
+                title: Text(l10n.stopRecordingTitle),
+                content: Text(l10n.stopRecordingMessage),
                 actions: [
                   TextButton(
                       onPressed: () => Navigator.pop(ctx, false),
-                      child: const Text('Cancel')),
+                      child: Text(l10n.cancel)),
                   TextButton(
                       onPressed: () => Navigator.pop(ctx, true),
-                      child: const Text('Stop')),
+                      child: Text(l10n.stop)),
                 ],
               ),
             );
@@ -649,7 +651,7 @@ class _RecordingViewState extends State<RecordingView> {
             }
           },
           icon: const Icon(Icons.stop, size: 28),
-          label: const Text('Stop', style: TextStyle(fontSize: 16)),
+          label: Text(l10n.stop, style: const TextStyle(fontSize: 16)),
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.red,
             foregroundColor: Colors.white,

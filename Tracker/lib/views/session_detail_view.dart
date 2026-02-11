@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' hide Size;
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -187,13 +188,15 @@ class _SessionDetailViewState extends State<SessionDetailView> {
   }
 
   Future<void> _exportGPX() async {
+    final l10n = S.of(context)!;
     final path = await GPXExporter.exportToFile(widget.session, _points);
     if (path != null) {
-      await Share.shareXFiles([XFile(path)], text: 'Ski Session GPX');
+      await Share.shareXFiles([XFile(path)], text: l10n.shareGpxText);
     } else {
       if (mounted) {
+        final l10n = S.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to export GPX')),
+          SnackBar(content: Text(l10n.failedToExportGPX)),
         );
       }
     }
@@ -201,18 +204,19 @@ class _SessionDetailViewState extends State<SessionDetailView> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = S.of(context)!;
     return Scaffold(
       appBar: _isReplayMode
           ? null // 回放模式隐藏导航栏
           : AppBar(
-              title: const Text('Session Details'),
+              title: Text(l10n.sessionDetails),
               actions: [
                 // 3D 回放按钮
                 if (_points.length >= 2)
                   IconButton(
                     icon: const Icon(Icons.play_circle_outline),
                     onPressed: _startReplay,
-                    tooltip: '3D 回放',
+                    tooltip: l10n.replay3D,
                   ),
                 // 媒体标注开关
                 if (_mediaItems.isNotEmpty)
@@ -250,7 +254,7 @@ class _SessionDetailViewState extends State<SessionDetailView> {
                       ],
                     ),
                     onPressed: _toggleMediaMarkers,
-                    tooltip: '显示/隐藏照片',
+                    tooltip: l10n.showHidePhotos,
                   ),
                 // 加载媒体指示器
                 if (_isLoadingMedia)
@@ -265,7 +269,7 @@ class _SessionDetailViewState extends State<SessionDetailView> {
                 IconButton(
                   icon: const Icon(Icons.share),
                   onPressed: _points.isEmpty ? null : _exportGPX,
-                  tooltip: 'Export GPX',
+                  tooltip: l10n.exportGPX,
                 ),
               ],
             ),
@@ -356,9 +360,10 @@ class _SessionDetailViewState extends State<SessionDetailView> {
                         color: Colors.black.withOpacity(0.4),
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      child: const Text(
-                        '点击屏幕显示控制面板',
-                        style: TextStyle(color: Colors.white70, fontSize: 12),
+                      child: Text(
+                        S.of(context)!.tapToShowControls,
+                        style: const TextStyle(
+                            color: Colors.white70, fontSize: 12),
                       ),
                     ),
                   ),
@@ -513,14 +518,15 @@ class _SessionDetailViewState extends State<SessionDetailView> {
                       color: Colors.black.withOpacity(0.7),
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.skip_next, color: Colors.white, size: 20),
-                        SizedBox(width: 4),
-                        Text('跳过',
-                            style:
-                                TextStyle(color: Colors.white, fontSize: 14)),
+                        const Icon(Icons.skip_next,
+                            color: Colors.white, size: 20),
+                        const SizedBox(width: 4),
+                        Text(S.of(context)!.skip,
+                            style: const TextStyle(
+                                color: Colors.white, fontSize: 14)),
                       ],
                     ),
                   ),
@@ -642,7 +648,7 @@ class _SessionDetailViewState extends State<SessionDetailView> {
     if (_points.isEmpty) {
       return Container(
         color: Colors.grey.shade200,
-        child: const Center(child: Text('No track data')),
+        child: Center(child: Text(S.of(context)!.noTrackData)),
       );
     }
 
@@ -951,8 +957,9 @@ class _SessionDetailViewState extends State<SessionDetailView> {
 
     if (_replayService!.processedPoints.isEmpty) {
       if (mounted) {
+        final l10n = S.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('轨迹数据不足，无法回放')),
+          SnackBar(content: Text(l10n.noTrackData)),
         );
       }
       return;
@@ -1665,9 +1672,11 @@ class _SessionDetailViewState extends State<SessionDetailView> {
       _replayService!.exitExportMode();
       setState(() => _isExportMode = false);
       if (mounted) {
+        final l10n = S.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(_exportService!.errorMessage ?? '无法启动录制'),
+            content: Text(
+                _exportService!.errorMessage ?? l10n.unableToStartRecording),
           ),
         );
       }
@@ -1707,6 +1716,7 @@ class _SessionDetailViewState extends State<SessionDetailView> {
     setState(() => _isExportMode = false);
 
     if (outputPath != null && mounted) {
+      final l10n = S.of(context)!;
       // 显示完成对话框
       await VideoExportCompletionDialog.show(
         context,
@@ -1717,7 +1727,7 @@ class _SessionDetailViewState extends State<SessionDetailView> {
             Navigator.pop(context);
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(saved ? '已保存到相册' : '保存失败'),
+                content: Text(saved ? l10n.savedToGallery : l10n.saveFailed),
               ),
             );
           }
@@ -1743,8 +1753,9 @@ class _SessionDetailViewState extends State<SessionDetailView> {
     setState(() => _isExportMode = false);
 
     if (mounted) {
+      final l10n = S.of(context)!;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('已取消导出')),
+        SnackBar(content: Text(l10n.exportCancelled)),
       );
     }
   }
@@ -1827,6 +1838,7 @@ class _SessionDetailViewState extends State<SessionDetailView> {
   Widget _buildStats() {
     if (_stats == null) return const SizedBox();
 
+    final l10n = S.of(context)!;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -1834,11 +1846,11 @@ class _SessionDetailViewState extends State<SessionDetailView> {
           Row(
             children: [
               Expanded(
-                  child: _buildStatCard('Total Duration',
+                  child: _buildStatCard(l10n.totalDuration,
                       _stats!.formattedTotalDuration, Icons.timer)),
               const SizedBox(width: 8),
               Expanded(
-                  child: _buildStatCard('Skiing Duration',
+                  child: _buildStatCard(l10n.skiingDuration,
                       _stats!.formattedSkiingDuration, Icons.downhill_skiing)),
             ],
           ),
@@ -1846,11 +1858,11 @@ class _SessionDetailViewState extends State<SessionDetailView> {
           Row(
             children: [
               Expanded(
-                  child: _buildStatCard('Total Distance',
+                  child: _buildStatCard(l10n.totalDistance,
                       _stats!.formattedTotalDistance, Icons.straighten)),
               const SizedBox(width: 8),
               Expanded(
-                  child: _buildStatCard('Skiing Distance',
+                  child: _buildStatCard(l10n.skiingDistance,
                       _stats!.formattedSkiingDistance, Icons.route)),
             ],
           ),
@@ -1859,10 +1871,10 @@ class _SessionDetailViewState extends State<SessionDetailView> {
             children: [
               Expanded(
                   child: _buildStatCard(
-                      'Max Speed', _stats!.formattedMaxSpeed, Icons.speed)),
+                      l10n.maxSpeed, _stats!.formattedMaxSpeed, Icons.speed)),
               const SizedBox(width: 8),
               Expanded(
-                  child: _buildStatCard('Avg Speed',
+                  child: _buildStatCard(l10n.avgSpeed,
                       _stats!.formattedAverageSpeed, Icons.trending_up)),
             ],
           ),
@@ -1870,11 +1882,11 @@ class _SessionDetailViewState extends State<SessionDetailView> {
           Row(
             children: [
               Expanded(
-                  child: _buildStatCard('Elevation Gain',
+                  child: _buildStatCard(l10n.elevationGain,
                       _stats!.formattedElevationGain, Icons.arrow_upward)),
               const SizedBox(width: 8),
               Expanded(
-                  child: _buildStatCard('Elevation Loss',
+                  child: _buildStatCard(l10n.elevationLoss,
                       _stats!.formattedElevationLoss, Icons.arrow_downward)),
             ],
           ),

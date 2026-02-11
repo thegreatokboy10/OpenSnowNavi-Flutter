@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' show Position;
 import '../config/app_theme.dart';
 
@@ -27,6 +28,7 @@ class POIInfoPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = S.of(context)!;
     return Container(
       margin: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -57,7 +59,7 @@ class POIInfoPanel extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    name ?? '选中位置',
+                    name ?? l10n.selectedLocation,
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 16,
@@ -106,7 +108,7 @@ class POIInfoPanel extends StatelessWidget {
                       child: _buildActionButton(
                         context,
                         icon: Icons.trip_origin,
-                        label: '设为起点',
+                        label: l10n.setOrigin,
                         color: Colors.green,
                         onTap: onSetAsOrigin,
                       ),
@@ -116,7 +118,7 @@ class POIInfoPanel extends StatelessWidget {
                       child: _buildActionButton(
                         context,
                         icon: Icons.location_on,
-                        label: '设为终点',
+                        label: l10n.setDestination,
                         color: Colors.blue,
                         onTap: onSetAsDestination,
                       ),
@@ -129,7 +131,7 @@ class POIInfoPanel extends StatelessWidget {
                   child: _buildActionButton(
                     context,
                     icon: Icons.add_location,
-                    label: '添加为途径点',
+                    label: l10n.addStopover,
                     color: Colors.orange,
                     onTap: onAddAsStopover,
                   ),
@@ -142,7 +144,7 @@ class POIInfoPanel extends StatelessWidget {
                     child: _buildActionButton(
                       context,
                       icon: Icons.star,
-                      label: '添加为集合点',
+                      label: l10n.addAsMeetingPoint,
                       color: AppTheme.meetingPointActiveColor,
                       onTap: onAddAsMeetingPoint!,
                     ),

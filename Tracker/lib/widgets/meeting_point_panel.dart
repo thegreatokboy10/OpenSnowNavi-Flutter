@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../config/app_theme.dart';
 import '../meeting_point/meeting_point_model.dart';
 import '../meeting_point/meeting_point_service.dart';
@@ -65,22 +66,23 @@ class _MeetingPointPanelState extends State<MeetingPointPanel> {
   }
 
   Widget _buildHeader() {
+    final l10n = S.of(context)!;
     return Container(
       padding: const EdgeInsets.all(12.0),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: AppTheme.panelHeaderBackground,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(Icons.star, color: AppTheme.panelHeaderText),
-              SizedBox(width: 8),
+              const Icon(Icons.star, color: AppTheme.panelHeaderText),
+              const SizedBox(width: 8),
               Text(
-                '集合点',
-                style: TextStyle(
+                l10n.meetingPoints,
+                style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: AppTheme.panelHeaderText,
@@ -94,7 +96,7 @@ class _MeetingPointPanelState extends State<MeetingPointPanel> {
                 icon:
                     const Icon(Icons.refresh, color: AppTheme.panelHeaderText),
                 onPressed: _loadPoints,
-                tooltip: '刷新',
+                tooltip: l10n.refresh,
               ),
               IconButton(
                 icon: const Icon(Icons.close, color: AppTheme.panelHeaderText),
@@ -108,6 +110,7 @@ class _MeetingPointPanelState extends State<MeetingPointPanel> {
   }
 
   Widget _buildEmptyState() {
+    final l10n = S.of(context)!;
     return Padding(
       padding: const EdgeInsets.all(32.0),
       child: Column(
@@ -116,13 +119,13 @@ class _MeetingPointPanelState extends State<MeetingPointPanel> {
           const Icon(Icons.star_border, size: 48, color: Colors.grey),
           const SizedBox(height: 16),
           Text(
-            '暂无集合点',
+            l10n.noMeetingPoints,
             style: TextStyle(fontSize: 16, color: Colors.grey[600]),
           ),
           const SizedBox(height: 8),
-          const Text(
-            '在地图上长按可添加集合点',
-            style: TextStyle(fontSize: 14, color: Colors.grey),
+          Text(
+            l10n.longPressToAddMeetingPoint,
+            style: const TextStyle(fontSize: 14, color: Colors.grey),
             textAlign: TextAlign.center,
           ),
         ],
@@ -142,6 +145,7 @@ class _MeetingPointPanelState extends State<MeetingPointPanel> {
   }
 
   Widget _buildPointItem(MeetingPoint point) {
+    final l10n = S.of(context)!;
     return ListTile(
       leading: Icon(
         point.isActive ? Icons.flag : Icons.star,
@@ -158,8 +162,8 @@ class _MeetingPointPanelState extends State<MeetingPointPanel> {
         ),
       ),
       subtitle: Text(
-        '创建者: ${point.creatorNickname}',
-        style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+        l10n.createdBy(point.creatorNickname),
+        style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
       ),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
@@ -171,27 +175,29 @@ class _MeetingPointPanelState extends State<MeetingPointPanel> {
               color: point.isActive ? AppTheme.primaryColor : AppTheme.textHint,
             ),
             onPressed: () => _toggleActive(point),
-            tooltip: point.isActive ? '取消设为当前集合点' : '设为当前集合点',
+            tooltip: point.isActive
+                ? l10n.cancelCurrentMeetingPoint
+                : l10n.setAsCurrentMeetingPoint,
           ),
           // 编辑名称
           IconButton(
             icon:
                 Icon(Icons.edit, color: AppTheme.primaryColor.withOpacity(0.7)),
             onPressed: () => _editPointName(point),
-            tooltip: '编辑名称',
+            tooltip: l10n.editMeetingPointName,
           ),
           // 删除
           IconButton(
             icon:
                 Icon(Icons.delete, color: AppTheme.errorColor.withOpacity(0.7)),
             onPressed: () => _deletePoint(point),
-            tooltip: '删除',
+            tooltip: l10n.delete,
           ),
           // 导航
           IconButton(
-            icon: Icon(Icons.navigation, color: AppTheme.primaryColor),
+            icon: const Icon(Icons.navigation, color: AppTheme.primaryColor),
             onPressed: () => widget.onNavigate?.call(point),
-            tooltip: '导航到此处',
+            tooltip: l10n.navigateToMeetingPoint,
           ),
         ],
       ),
@@ -208,28 +214,29 @@ class _MeetingPointPanelState extends State<MeetingPointPanel> {
   }
 
   Future<void> _editPointName(MeetingPoint point) async {
+    final l10n = S.of(context)!;
     final controller = TextEditingController(text: point.name);
 
     final newName = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('编辑集合点名称'),
+        title: Text(l10n.editMeetingPointName),
         content: TextField(
           controller: controller,
-          decoration: const InputDecoration(
-            labelText: '名称',
-            border: OutlineInputBorder(),
+          decoration: InputDecoration(
+            labelText: l10n.name,
+            border: const OutlineInputBorder(),
           ),
           autofocus: true,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, controller.text),
-            child: const Text('保存'),
+            child: Text(l10n.save),
           ),
         ],
       ),
@@ -241,20 +248,21 @@ class _MeetingPointPanelState extends State<MeetingPointPanel> {
   }
 
   Future<void> _deletePoint(MeetingPoint point) async {
+    final l10n = S.of(context)!;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('删除集合点'),
-        content: Text('确定要删除集合点 "${point.name}" 吗？'),
+        title: Text(l10n.deleteMeetingPoint),
+        content: Text(l10n.deleteMeetingPointConfirm(point.name)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('删除'),
+            child: Text(l10n.delete),
           ),
         ],
       ),

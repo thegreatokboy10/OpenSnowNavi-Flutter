@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import 'package:intl/intl.dart';
 import 'package:video_player/video_player.dart';
 import '../models/session_media.dart';
@@ -398,7 +399,7 @@ class _MediaViewerDialogState extends State<MediaViewerDialog> {
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 12),
             ),
-            child: const Text('确认筛选'),
+            child: Text(S.of(context)!.confirmFilter),
           ),
         ),
       ],
@@ -434,7 +435,7 @@ class _MediaViewerDialogState extends State<MediaViewerDialog> {
     setState(() => _isSelectionMode = false);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('已筛选 ${_selectedIds.length} 个媒体'),
+        content: Text(S.of(context)!.filteredMediaCount(_selectedIds.length)),
         duration: const Duration(seconds: 1),
       ),
     );

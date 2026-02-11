@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../models/replay_state.dart';
 import '../models/replay_point.dart';
 import '../services/track_replay_service.dart';
@@ -217,20 +218,23 @@ class TrackReplayController extends StatelessWidget {
         ),
         child: Text(label, style: const TextStyle(color: Colors.white)),
       ),
-      itemBuilder: (context) => [
-        const PopupMenuItem(
-          value: ReplayConfig.fast,
-          child: Text('快速 (15s)'),
-        ),
-        const PopupMenuItem(
-          value: ReplayConfig.normal,
-          child: Text('标准 (30s)'),
-        ),
-        const PopupMenuItem(
-          value: ReplayConfig.scenic,
-          child: Text('慢速 (45s)'),
-        ),
-      ],
+      itemBuilder: (context) {
+        final l10n = S.of(context)!;
+        return [
+          PopupMenuItem(
+            value: ReplayConfig.fast,
+            child: Text(l10n.speedFast),
+          ),
+          PopupMenuItem(
+            value: ReplayConfig.normal,
+            child: Text(l10n.speedNormal),
+          ),
+          PopupMenuItem(
+            value: ReplayConfig.scenic,
+            child: Text(l10n.speedSlow),
+          ),
+        ];
+      },
       onSelected: (config) => replayService.setConfig(config),
     );
   }
@@ -276,6 +280,7 @@ class _ReplaySettingsSheetState extends State<_ReplaySettingsSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = S.of(context)!;
     return Container(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(20),
@@ -293,9 +298,9 @@ class _ReplaySettingsSheetState extends State<_ReplaySettingsSheet> {
               children: [
                 const Icon(Icons.tune, color: Colors.orange),
                 const SizedBox(width: 8),
-                const Text(
-                  '回放设置',
-                  style: TextStyle(
+                Text(
+                  l10n.replaySettings,
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -307,34 +312,34 @@ class _ReplaySettingsSheetState extends State<_ReplaySettingsSheet> {
                     setState(() => _config = const ReplayConfig());
                     _applyConfig();
                   },
-                  child: const Text('重置'),
+                  child: Text(l10n.reset),
                 ),
               ],
             ),
             const SizedBox(height: 16),
 
             // 预设选择
-            const Text('预设', style: TextStyle(color: Colors.white70)),
+            Text(l10n.presets, style: const TextStyle(color: Colors.white70)),
             const SizedBox(height: 8),
             Row(
               children: [
-                _buildPresetChip('快速', ReplayConfig.fast),
+                _buildPresetChip(l10n.fast, ReplayConfig.fast),
                 const SizedBox(width: 8),
-                _buildPresetChip('标准', ReplayConfig.normal),
+                _buildPresetChip(l10n.normal, ReplayConfig.normal),
                 const SizedBox(width: 8),
-                _buildPresetChip('慢速', ReplayConfig.scenic),
+                _buildPresetChip(l10n.slow, ReplayConfig.scenic),
               ],
             ),
             const SizedBox(height: 20),
 
             // 回放时长
             _buildSliderSetting(
-              label: '回放时长',
+              label: l10n.replayDuration,
               value: _config.totalDuration.inSeconds.toDouble(),
               min: 10,
               max: 120,
               divisions: 22,
-              unit: '秒',
+              unit: l10n.unitSeconds,
               onChanged: (value) {
                 setState(() {
                   _config = _config.copyWith(
@@ -347,7 +352,7 @@ class _ReplaySettingsSheetState extends State<_ReplaySettingsSheet> {
 
             // 相机缩放
             _buildSliderSetting(
-              label: '相机缩放',
+              label: l10n.cameraZoom,
               value: _config.cameraZoom,
               min: 10,
               max: 20,
@@ -363,7 +368,7 @@ class _ReplaySettingsSheetState extends State<_ReplaySettingsSheet> {
 
             // 相机倾斜
             _buildSliderSetting(
-              label: '相机倾斜',
+              label: l10n.cameraTilt,
               value: _config.cameraPitch,
               min: 0,
               max: 80,
@@ -379,12 +384,12 @@ class _ReplaySettingsSheetState extends State<_ReplaySettingsSheet> {
 
             // 前瞻点数
             _buildSliderSetting(
-              label: '前瞻点数',
+              label: l10n.lookAheadPoints,
               value: _config.lookAheadPoints.toDouble(),
               min: 1,
               max: 20,
               divisions: 19,
-              unit: '点',
+              unit: l10n.unitPoints,
               onChanged: (value) {
                 setState(() {
                   _config = _config.copyWith(lookAheadPoints: value.toInt());
@@ -395,7 +400,7 @@ class _ReplaySettingsSheetState extends State<_ReplaySettingsSheet> {
 
             // 方向平滑系数
             _buildSliderSetting(
-              label: '方向平滑',
+              label: l10n.directionSmoothing,
               value: _config.bearingSmoothingFactor,
               min: 0.01,
               max: 1.0,
@@ -414,9 +419,9 @@ class _ReplaySettingsSheetState extends State<_ReplaySettingsSheet> {
             const SizedBox(height: 8),
 
             // 媒体播放设置
-            const Text(
-              '媒体播放',
-              style: TextStyle(
+            Text(
+              l10n.mediaPlayback,
+              style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
               ),
@@ -425,13 +430,13 @@ class _ReplaySettingsSheetState extends State<_ReplaySettingsSheet> {
 
             // 回放时自动展示媒体开关
             SwitchListTile(
-              title: const Text(
-                '回放时展示照片/视频',
-                style: TextStyle(color: Colors.white70, fontSize: 14),
+              title: Text(
+                l10n.showMediaDuringReplay,
+                style: const TextStyle(color: Colors.white70, fontSize: 14),
               ),
-              subtitle: const Text(
-                '轨迹经过媒体位置时自动环绕展示',
-                style: TextStyle(color: Colors.white38, fontSize: 12),
+              subtitle: Text(
+                l10n.showMediaDuringReplayHint,
+                style: const TextStyle(color: Colors.white38, fontSize: 12),
               ),
               value: _config.showMediaDuringReplay,
               activeColor: Colors.orange,
@@ -447,12 +452,12 @@ class _ReplaySettingsSheetState extends State<_ReplaySettingsSheet> {
             // 照片展示时长
             if (_config.showMediaDuringReplay)
               _buildSliderSetting(
-                label: '照片展示时长',
+                label: l10n.photoDuration,
                 value: _config.photoDisplayDuration.toDouble(),
                 min: 1,
                 max: 10,
                 divisions: 9,
-                unit: '秒',
+                unit: l10n.unitSeconds,
                 onChanged: (value) {
                   setState(() {
                     _config = _config.copyWith(
@@ -479,7 +484,7 @@ class _ReplaySettingsSheetState extends State<_ReplaySettingsSheet> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text('保存设置'),
+                    child: Text(l10n.saveSettings),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -494,7 +499,7 @@ class _ReplaySettingsSheetState extends State<_ReplaySettingsSheet> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text('完成'),
+                    child: Text(l10n.done),
                   ),
                 ),
               ],
@@ -509,9 +514,9 @@ class _ReplaySettingsSheetState extends State<_ReplaySettingsSheet> {
     await _config.save();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('设置已保存'),
-          duration: Duration(seconds: 1),
+        SnackBar(
+          content: Text(S.of(context)!.settingsSaved),
+          duration: const Duration(seconds: 1),
         ),
       );
     }

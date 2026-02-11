@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' show Position;
 import '../models/route_planning_state.dart';
 import '../services/route_engine.dart' as re;
@@ -222,6 +223,7 @@ class _RoutePlanningPanelState extends State<RoutePlanningPanel> {
   }
 
   Widget _buildHeader() {
+    final l10n = S.of(context)!;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: const BoxDecoration(
@@ -232,10 +234,10 @@ class _RoutePlanningPanelState extends State<RoutePlanningPanel> {
         children: [
           const Icon(Icons.directions, color: Colors.white),
           const SizedBox(width: 8),
-          const Expanded(
+          Expanded(
             child: Text(
-              '路线规划',
-              style: TextStyle(
+              l10n.routePlanning,
+              style: const TextStyle(
                 color: Colors.white,
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -267,6 +269,7 @@ class _RoutePlanningPanelState extends State<RoutePlanningPanel> {
   }
 
   List<Widget> _buildAllPointTiles() {
+    final l10n = S.of(context)!;
     List<Widget> tiles = [];
 
     // 起点
@@ -275,7 +278,7 @@ class _RoutePlanningPanelState extends State<RoutePlanningPanel> {
       index: 0,
       icon: Icons.trip_origin,
       color: Colors.green,
-      label: '起点',
+      label: l10n.origin,
       point: widget.data.origin,
       isEditing: _editingType == EditingPointType.origin,
       onEdit: () => _startEditing(EditingPointType.origin),
@@ -290,7 +293,7 @@ class _RoutePlanningPanelState extends State<RoutePlanningPanel> {
         index: i + 1,
         icon: Icons.more_vert,
         color: Colors.orange,
-        label: '途径点 ${i + 1}',
+        label: l10n.stopoverNumber(i + 1),
         point: widget.data.stopovers[i],
         isEditing: _editingType == EditingPointType.stopover &&
             _editingStopoverIndex == i,
@@ -307,7 +310,7 @@ class _RoutePlanningPanelState extends State<RoutePlanningPanel> {
       index: destIndex,
       icon: Icons.location_on,
       color: Colors.blue,
-      label: '终点',
+      label: l10n.destination,
       point: widget.data.destination,
       isEditing: _editingType == EditingPointType.destination,
       onEdit: () => _startEditing(EditingPointType.destination),
@@ -331,6 +334,7 @@ class _RoutePlanningPanelState extends State<RoutePlanningPanel> {
     VoidCallback? onRemove,
     int? showNumber,
   }) {
+    final l10n = S.of(context)!;
     return Container(
       key: key,
       decoration: BoxDecoration(
@@ -354,7 +358,7 @@ class _RoutePlanningPanelState extends State<RoutePlanningPanel> {
               )
             : Icon(icon, color: color, size: 24),
         title: Text(
-          point?.name ?? '点击选择$label',
+          point?.name ?? l10n.clickToSelect(label),
           style: TextStyle(
             color: point != null ? Colors.black87 : Colors.grey,
             fontStyle: point != null ? FontStyle.normal : FontStyle.italic,
@@ -383,19 +387,20 @@ class _RoutePlanningPanelState extends State<RoutePlanningPanel> {
   }
 
   Widget _buildSearchSection() {
+    final l10n = S.of(context)!;
     String editingLabel = '';
     switch (_editingType) {
       case EditingPointType.origin:
-        editingLabel = '搜索起点';
+        editingLabel = l10n.searchOrigin;
         break;
       case EditingPointType.destination:
-        editingLabel = '搜索终点';
+        editingLabel = l10n.searchDestination;
         break;
       case EditingPointType.stopover:
-        editingLabel = '搜索途径点 ${_editingStopoverIndex + 1}';
+        editingLabel = l10n.searchStopover(_editingStopoverIndex + 1);
         break;
       case EditingPointType.newStopover:
-        editingLabel = '搜索新途径点';
+        editingLabel = l10n.searchNewStopover;
         break;
       default:
         break;
@@ -426,7 +431,7 @@ class _RoutePlanningPanelState extends State<RoutePlanningPanel> {
                 onPressed: _cancelEditing,
                 style: TextButton.styleFrom(
                     padding: EdgeInsets.zero, minimumSize: const Size(40, 28)),
-                child: const Text('取消', style: TextStyle(fontSize: 12)),
+                child: Text(l10n.cancel, style: const TextStyle(fontSize: 12)),
               ),
             ],
           ),
@@ -435,7 +440,7 @@ class _RoutePlanningPanelState extends State<RoutePlanningPanel> {
             controller: _searchController,
             onChanged: _onSearchChanged,
             decoration: InputDecoration(
-              hintText: '搜索地点',
+              hintText: l10n.searchLocation,
               prefixIcon: const Icon(Icons.search, size: 18),
               filled: true,
               fillColor: Colors.white,
@@ -456,7 +461,8 @@ class _RoutePlanningPanelState extends State<RoutePlanningPanel> {
               _cancelEditing();
             },
             icon: const Icon(Icons.my_location, size: 14),
-            label: const Text('使用当前位置', style: TextStyle(fontSize: 12)),
+            label: Text(l10n.useCurrentLocation,
+                style: const TextStyle(fontSize: 12)),
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               minimumSize: const Size(double.infinity, 32),
@@ -477,7 +483,7 @@ class _RoutePlanningPanelState extends State<RoutePlanningPanel> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    '长按地图可选择任意位置',
+                    l10n.longPressMapToSelect,
                     style: TextStyle(
                       fontSize: 12,
                       color: Colors.blue.shade700,
@@ -525,6 +531,7 @@ class _RoutePlanningPanelState extends State<RoutePlanningPanel> {
   }
 
   Widget _buildAddStopoverButton() {
+    final l10n = S.of(context)!;
     if (_editingType == EditingPointType.newStopover) {
       return const SizedBox.shrink();
     }
@@ -534,7 +541,7 @@ class _RoutePlanningPanelState extends State<RoutePlanningPanel> {
       child: OutlinedButton.icon(
         onPressed: () => _startEditing(EditingPointType.newStopover),
         icon: const Icon(Icons.add_location, size: 16),
-        label: const Text('添加途径点', style: TextStyle(fontSize: 12)),
+        label: Text(l10n.addStopover, style: const TextStyle(fontSize: 12)),
         style: OutlinedButton.styleFrom(
           foregroundColor: Colors.orange,
           side: const BorderSide(color: Colors.orange),
@@ -545,6 +552,7 @@ class _RoutePlanningPanelState extends State<RoutePlanningPanel> {
   }
 
   Widget _buildRouteDetails() {
+    final l10n = S.of(context)!;
     final route = widget.route!;
 
     return Container(
@@ -565,8 +573,8 @@ class _RoutePlanningPanelState extends State<RoutePlanningPanel> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('路线详情',
-                            style: TextStyle(
+                        Text(l10n.routeDetails,
+                            style: const TextStyle(
                                 fontWeight: FontWeight.bold, fontSize: 13)),
                         Text(
                           '${(route.distance / 1000).toStringAsFixed(1)} km • ${(route.duration / 60).toStringAsFixed(0)} min',
@@ -579,7 +587,7 @@ class _RoutePlanningPanelState extends State<RoutePlanningPanel> {
                   // 分享按钮
                   IconButton(
                     icon: const Icon(Icons.share, size: 20),
-                    tooltip: '分享路线',
+                    tooltip: l10n.shareRoute,
                     onPressed: () {
                       RouteFeedbackService.showShareDialog(
                         context: context,
@@ -621,7 +629,7 @@ class _RoutePlanningPanelState extends State<RoutePlanningPanel> {
                               color: Colors.white, fontSize: 9)),
                     ),
                     title: Text(
-                      step.name.isNotEmpty ? step.name : '未命名雪道',
+                      step.name.isNotEmpty ? step.name : l10n.unnamedPiste,
                       style: const TextStyle(
                           fontSize: 12, fontWeight: FontWeight.bold),
                       maxLines: 1,

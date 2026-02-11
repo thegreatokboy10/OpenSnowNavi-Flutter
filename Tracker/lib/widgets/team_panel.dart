@@ -1,6 +1,7 @@
 // 团队管理面板
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../l10n/app_localizations.dart';
 import '../config/app_theme.dart';
 import '../config/team_config.dart';
 import '../member/member_service.dart';
@@ -126,6 +127,7 @@ class _TeamPanelState extends State<TeamPanel> {
   }
 
   Widget _buildHeader() {
+    final l10n = S.of(context)!;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: AppTheme.panelHeaderDecoration,
@@ -133,9 +135,9 @@ class _TeamPanelState extends State<TeamPanel> {
         children: [
           const Icon(Icons.group, color: AppTheme.panelHeaderText),
           const SizedBox(width: 8),
-          const Text(
-            '组队滑雪',
-            style: TextStyle(
+          Text(
+            l10n.teamSkiing,
+            style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: AppTheme.panelHeaderText,
@@ -155,6 +157,7 @@ class _TeamPanelState extends State<TeamPanel> {
   }
 
   Widget _buildNoTeamView() {
+    final l10n = S.of(context)!;
     // 检查是否已登录会员
     if (!_memberService.isLoggedIn) {
       return _buildLoginRequiredView();
@@ -203,13 +206,13 @@ class _TeamPanelState extends State<TeamPanel> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _memberService.currentMember?.name ?? '会员',
+                      _memberService.currentMember?.name ?? l10n.member,
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     Text(
                       _memberService.isSuperAdmin || _memberService.isAdmin
-                          ? '管理员'
-                          : '会员',
+                          ? l10n.admin
+                          : l10n.member,
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey.shade600,
@@ -224,22 +227,23 @@ class _TeamPanelState extends State<TeamPanel> {
 
         // 只有 super_admin 或 admin 可以创建团队
         if (_memberService.isSuperAdmin || _memberService.isAdmin) ...[
-          const Text('创建新团队', style: TextStyle(fontWeight: FontWeight.bold)),
+          Text(l10n.createNewTeam,
+              style: const TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           TextField(
             controller: _teamNameController,
-            decoration: const InputDecoration(
-              labelText: '团队名称',
-              hintText: '例如：SnowNavi',
-              prefixIcon: Icon(Icons.groups),
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l10n.teamName,
+              hintText: l10n.teamNameHint,
+              prefixIcon: const Icon(Icons.groups),
+              border: const OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 8),
           // 团队人数选择
           Row(
             children: [
-              const Text('团队人数: '),
+              Text('${l10n.teamSize}: '),
               const SizedBox(width: 8),
               DropdownButton<int>(
                 value: _maxMembers,
@@ -250,7 +254,7 @@ class _TeamPanelState extends State<TeamPanel> {
                 )
                     .map((n) => DropdownMenuItem(
                           value: n,
-                          child: Text('$n 人'),
+                          child: Text(l10n.teamSizeFormat(n)),
                         ))
                     .toList(),
                 onChanged: (value) {
@@ -265,7 +269,7 @@ class _TeamPanelState extends State<TeamPanel> {
           ElevatedButton.icon(
             onPressed: _createTeam,
             icon: const Icon(Icons.add),
-            label: const Text('创建团队'),
+            label: Text(l10n.createTeam),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.primaryColor,
               foregroundColor: Colors.white,
@@ -277,15 +281,16 @@ class _TeamPanelState extends State<TeamPanel> {
         ],
 
         // 加入团队
-        const Text('加入已有团队', style: TextStyle(fontWeight: FontWeight.bold)),
+        Text(l10n.joinExistingTeam,
+            style: const TextStyle(fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         TextField(
           controller: _teamIdController,
-          decoration: const InputDecoration(
-            labelText: '团队代码',
-            hintText: '输入团队代码',
-            prefixIcon: Icon(Icons.vpn_key),
-            border: OutlineInputBorder(),
+          decoration: InputDecoration(
+            labelText: l10n.teamCode,
+            hintText: l10n.teamCodeHint,
+            prefixIcon: const Icon(Icons.vpn_key),
+            border: const OutlineInputBorder(),
           ),
           textCapitalization: TextCapitalization.characters,
         ),
@@ -293,7 +298,7 @@ class _TeamPanelState extends State<TeamPanel> {
         OutlinedButton.icon(
           onPressed: _joinTeam,
           icon: const Icon(Icons.login),
-          label: const Text('加入团队'),
+          label: Text(l10n.joinTeam),
         ),
       ],
     );
@@ -301,6 +306,7 @@ class _TeamPanelState extends State<TeamPanel> {
 
   /// 未登录时显示的视图
   Widget _buildLoginRequiredView() {
+    final l10n = S.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -319,16 +325,16 @@ class _TeamPanelState extends State<TeamPanel> {
                 color: Colors.orange.shade400,
               ),
               const SizedBox(height: 12),
-              const Text(
-                '需要登录会员',
-                style: TextStyle(
+              Text(
+                l10n.loginRequired,
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               const SizedBox(height: 8),
               Text(
-                '组队滑雪功能需要先登录会员账号',
+                l10n.teamSkiingRequiresLogin,
                 style: TextStyle(
                   color: Colors.grey.shade600,
                 ),
@@ -340,7 +346,7 @@ class _TeamPanelState extends State<TeamPanel> {
                   widget.onNavigateToLogin?.call();
                 },
                 icon: const Icon(Icons.login),
-                label: const Text('前往登录'),
+                label: Text(l10n.goToLogin),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primaryColor,
                   foregroundColor: Colors.white,
@@ -354,8 +360,9 @@ class _TeamPanelState extends State<TeamPanel> {
   }
 
   Future<void> _createTeam() async {
+    final l10n = S.of(context)!;
     if (_teamNameController.text.trim().isEmpty) {
-      setState(() => _errorMessage = '请输入团队名称');
+      setState(() => _errorMessage = l10n.pleaseEnterTeamName);
       return;
     }
 
@@ -371,18 +378,19 @@ class _TeamPanelState extends State<TeamPanel> {
         setState(() => _errorMessage = null);
         widget.onTeamJoined?.call();
       } else {
-        setState(() => _errorMessage = result.error ?? '创建失败');
+        setState(() => _errorMessage = result.error ?? l10n.createFailed);
       }
     } catch (e) {
-      setState(() => _errorMessage = '创建失败: $e');
+      setState(() => _errorMessage = '${l10n.createFailed}: $e');
     } finally {
       setState(() => _isLoading = false);
     }
   }
 
   Future<void> _joinTeam() async {
+    final l10n = S.of(context)!;
     if (_teamIdController.text.trim().isEmpty) {
-      setState(() => _errorMessage = '请输入团队代码');
+      setState(() => _errorMessage = l10n.pleaseEnterTeamCode);
       return;
     }
 
@@ -396,16 +404,17 @@ class _TeamPanelState extends State<TeamPanel> {
         setState(() => _errorMessage = null);
         widget.onTeamJoined?.call();
       } else {
-        setState(() => _errorMessage = result.error ?? '加入失败');
+        setState(() => _errorMessage = result.error ?? l10n.joinFailed);
       }
     } catch (e) {
-      setState(() => _errorMessage = '加入失败: $e');
+      setState(() => _errorMessage = '${l10n.joinFailed}: $e');
     } finally {
       setState(() => _isLoading = false);
     }
   }
 
   Widget _buildTeamView() {
+    final l10n = S.of(context)!;
     final team = _teamService.currentTeam!;
     final isLeader = _teamService.isLeader;
 
@@ -441,7 +450,7 @@ class _TeamPanelState extends State<TeamPanel> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      '${team.members.length}/${team.maxMembers}人',
+                      '${team.members.length}/${team.maxMembers}',
                       style: const TextStyle(fontSize: 12),
                     ),
                   ),
@@ -449,7 +458,7 @@ class _TeamPanelState extends State<TeamPanel> {
               ),
               const SizedBox(height: 4),
               Text(
-                '团队代码: ${team.id}',
+                l10n.teamCodeFormat(team.id),
                 style: TextStyle(color: Colors.grey.shade700),
               ),
             ],
@@ -466,23 +475,24 @@ class _TeamPanelState extends State<TeamPanel> {
                   Clipboard.setData(
                       ClipboardData(text: _teamService.getShareLink()));
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('链接已复制')),
+                    SnackBar(content: Text(l10n.linkCopied)),
                   );
                 },
                 icon: const Icon(Icons.share, size: 18),
-                label: const Text('邀请链接'),
+                label: Text(l10n.inviteLink),
               ),
             ),
             const SizedBox(width: 8),
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: _showMeetingPointsPanel,
-                icon: Icon(Icons.star,
+                icon: const Icon(Icons.star,
                     size: 18, color: AppTheme.meetingPointActiveColor),
-                label: const Text('集合点'),
+                label: Text(l10n.meetingPoints),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppTheme.meetingPointActiveColor,
-                  side: BorderSide(color: AppTheme.meetingPointActiveColor),
+                  side:
+                      const BorderSide(color: AppTheme.meetingPointActiveColor),
                 ),
               ),
             ),
@@ -498,22 +508,22 @@ class _TeamPanelState extends State<TeamPanel> {
           children: [
             Row(
               children: [
-                const Text('团队成员',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
+                Text(l10n.teamMembers,
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
                 const SizedBox(width: 8),
                 IconButton(
                   icon: Icon(Icons.refresh,
                       size: 20, color: Colors.blue.shade600),
-                  tooltip: '刷新成员位置',
+                  tooltip: l10n.refreshMemberLocations,
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
                   onPressed: () async {
                     await _refreshTeam();
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text('已刷新'),
-                            duration: Duration(seconds: 1)),
+                        SnackBar(
+                            content: Text(l10n.refreshed),
+                            duration: const Duration(seconds: 1)),
                       );
                     }
                   },
@@ -523,7 +533,7 @@ class _TeamPanelState extends State<TeamPanel> {
             if (isLeader)
               TextButton(
                 onPressed: _showMaxMembersDialog,
-                child: Text('上限: ${team.maxMembers}人'),
+                child: Text(l10n.membersLimit(team.maxMembers)),
               ),
           ],
         ),
@@ -537,13 +547,15 @@ class _TeamPanelState extends State<TeamPanel> {
         TextButton.icon(
           onPressed: _leaveTeam,
           icon: const Icon(Icons.exit_to_app, color: Colors.red),
-          label: const Text('离开团队', style: TextStyle(color: Colors.red)),
+          label:
+              Text(l10n.leaveTeam, style: const TextStyle(color: Colors.red)),
         ),
       ],
     );
   }
 
   Widget _buildMemberTile(TeamMember member, bool isLeader) {
+    final l10n = S.of(context)!;
     final isMe = member.deviceId == _teamService.effectiveId;
     final isSharingLocation = member.isSharingLocation;
     final isLocationActive = member.isLocationActive;
@@ -558,13 +570,14 @@ class _TeamPanelState extends State<TeamPanel> {
     String statusText;
     Color statusTextColor;
     if (isSharingLocation) {
-      statusText = isLocationActive ? '正在共享位置' : '位置共享中';
+      statusText =
+          isLocationActive ? l10n.sharingLocation : l10n.locationSharingActive;
       statusTextColor = isLocationActive ? Colors.green : Colors.grey;
     } else if (member.shareLocation) {
-      statusText = '位置已过期';
+      statusText = l10n.locationExpired;
       statusTextColor = Colors.grey;
     } else {
-      statusText = '未共享位置';
+      statusText = l10n.notSharingLocation;
       statusTextColor = Colors.grey;
     }
 
@@ -644,9 +657,9 @@ class _TeamPanelState extends State<TeamPanel> {
                           ),
                         ),
                         if (isMe)
-                          const Text(' (我)',
-                              style:
-                                  TextStyle(color: Colors.grey, fontSize: 12)),
+                          Text(' (${l10n.me})',
+                              style: const TextStyle(
+                                  color: Colors.grey, fontSize: 12)),
                         if (member.isLeader)
                           Padding(
                             padding: const EdgeInsets.only(left: 4),
@@ -657,8 +670,8 @@ class _TeamPanelState extends State<TeamPanel> {
                                 color: Colors.amber.shade100,
                                 borderRadius: BorderRadius.circular(10),
                               ),
-                              child: const Text('队长',
-                                  style: TextStyle(
+                              child: Text(l10n.leader,
+                                  style: const TextStyle(
                                       fontSize: 10, color: Colors.amber)),
                             ),
                           ),
@@ -682,7 +695,7 @@ class _TeamPanelState extends State<TeamPanel> {
                   onPressed: () => _showEditNicknameDialog(member.nickname),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
-                  tooltip: '修改昵称',
+                  tooltip: l10n.editNickname,
                 ),
               if (isLeader)
                 IconButton(
@@ -691,7 +704,7 @@ class _TeamPanelState extends State<TeamPanel> {
                   onPressed: () => _removeMember(member),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
-                  tooltip: '移除成员',
+                  tooltip: l10n.removeMember,
                 ),
             ],
           ),
@@ -706,7 +719,8 @@ class _TeamPanelState extends State<TeamPanel> {
                         ? AppTheme.toggleActiveColor
                         : Colors.grey),
                 const SizedBox(width: 6),
-                const Text('共享我的位置', style: TextStyle(fontSize: 13)),
+                Text(l10n.shareMyLocation,
+                    style: const TextStyle(fontSize: 13)),
                 const Spacer(),
                 SizedBox(
                   height: 24,
@@ -747,13 +761,14 @@ class _TeamPanelState extends State<TeamPanel> {
   }
 
   void _showMaxMembersDialog() {
+    final l10n = S.of(context)!;
     final team = _teamService.currentTeam!;
     int newMax = team.maxMembers;
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('设置成员上限'),
+        title: Text(l10n.setMembersLimit),
         content: StatefulBuilder(
           builder: (context, setDialogState) => Column(
             mainAxisSize: MainAxisSize.min,
@@ -763,27 +778,27 @@ class _TeamPanelState extends State<TeamPanel> {
                 min: team.members.length.toDouble(),
                 max: TeamConfig.maxMaxMembers.toDouble(),
                 divisions: TeamConfig.maxMaxMembers - team.members.length,
-                label: '$newMax人',
+                label: l10n.teamSizeFormat(newMax),
                 onChanged: (v) => setDialogState(() => newMax = v.toInt()),
               ),
-              Text('$newMax人'),
+              Text(l10n.teamSizeFormat(newMax)),
             ],
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () {
               Navigator.pop(ctx);
               // 后端 API 暂不支持直接修改 maxSize
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('此功能暂不可用')),
+                SnackBar(content: Text(l10n.featureNotAvailable)),
               );
             },
-            child: const Text('确定'),
+            child: Text(l10n.confirm),
           ),
         ],
       ),
@@ -791,19 +806,21 @@ class _TeamPanelState extends State<TeamPanel> {
   }
 
   Future<void> _leaveTeam() async {
+    final l10n = S.of(context)!;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('离开团队'),
-        content: const Text('确定要离开当前团队吗？'),
+        title: Text(l10n.leaveTeam),
+        content: Text(l10n.leaveTeamConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('确定', style: TextStyle(color: Colors.red)),
+            child:
+                Text(l10n.confirm, style: const TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -817,24 +834,25 @@ class _TeamPanelState extends State<TeamPanel> {
   }
 
   Future<void> _showEditNicknameDialog(String currentNickname) async {
+    final l10n = S.of(context)!;
     final controller = TextEditingController(text: currentNickname);
 
     final newNickname = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('修改昵称'),
+        title: Text(l10n.editNickname),
         content: TextField(
           controller: controller,
-          decoration: const InputDecoration(
-            labelText: '新昵称',
-            hintText: '输入新的昵称',
+          decoration: InputDecoration(
+            labelText: l10n.newNickname,
+            hintText: l10n.enterNewNickname,
           ),
           autofocus: true,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () {
@@ -843,7 +861,7 @@ class _TeamPanelState extends State<TeamPanel> {
                 Navigator.pop(ctx, name);
               }
             },
-            child: const Text('确定'),
+            child: Text(l10n.confirm),
           ),
         ],
       ),
@@ -856,26 +874,28 @@ class _TeamPanelState extends State<TeamPanel> {
       if (success && mounted) {
         setState(() {});
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('昵称已更新')),
+          SnackBar(content: Text(l10n.nicknameUpdated)),
         );
       }
     }
   }
 
   Future<void> _removeMember(TeamMember member) async {
+    final l10n = S.of(context)!;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('移除成员'),
-        content: Text('确定要将 ${member.nickname} 移出团队吗？'),
+        title: Text(l10n.removeMember),
+        content: Text(l10n.removeMemberConfirm(member.nickname)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('确定', style: TextStyle(color: Colors.red)),
+            child:
+                Text(l10n.confirm, style: const TextStyle(color: Colors.red)),
           ),
         ],
       ),

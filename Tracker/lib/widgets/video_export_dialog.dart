@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../models/video_export_config.dart';
 import '../services/video_export_service.dart';
 
@@ -65,6 +66,7 @@ class _VideoExportSettingsSheetState extends State<_VideoExportSettingsSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = S.of(context)!;
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
@@ -84,9 +86,9 @@ class _VideoExportSettingsSheetState extends State<_VideoExportSettingsSheet> {
                 children: [
                   const Icon(Icons.videocam, color: Colors.blue),
                   const SizedBox(width: 8),
-                  const Text(
-                    '导出视频',
-                    style: TextStyle(
+                  Text(
+                    l10n.videoExport,
+                    style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
@@ -108,9 +110,9 @@ class _VideoExportSettingsSheetState extends State<_VideoExportSettingsSheet> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // 媒体导出模式
-                  const Text(
-                    '轨迹上的视频',
-                    style: TextStyle(
+                  Text(
+                    l10n.videoOnTrack,
+                    style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: Colors.black87,
@@ -119,13 +121,13 @@ class _VideoExportSettingsSheetState extends State<_VideoExportSettingsSheet> {
                   const SizedBox(height: 8),
                   _buildMediaModeOption(
                     MediaExportMode.fullPlayback,
-                    '完整播放',
-                    '播放轨迹上的完整视频',
+                    l10n.fullPlayback,
+                    l10n.playFullVideoOnTrack,
                   ),
                   _buildMediaModeOption(
                     MediaExportMode.fixedDuration,
-                    '固定时长后跳过',
-                    '播放固定秒数后跳过',
+                    l10n.fixedDurationSkip,
+                    l10n.playFixedSecondsAndSkip,
                   ),
                   // 时长滑块
                   if (_config.mediaMode == MediaExportMode.fixedDuration)
@@ -139,7 +141,8 @@ class _VideoExportSettingsSheetState extends State<_VideoExportSettingsSheet> {
                               min: 1,
                               max: 10,
                               divisions: 9,
-                              label: '${_config.maxVideoClipDuration}秒',
+                              label:
+                                  '${_config.maxVideoClipDuration} ${l10n.secondsUnit}',
                               onChanged: (value) {
                                 setState(() {
                                   _config = _config.copyWith(
@@ -150,7 +153,7 @@ class _VideoExportSettingsSheetState extends State<_VideoExportSettingsSheet> {
                             ),
                           ),
                           Text(
-                            '${_config.maxVideoClipDuration}秒',
+                            '${_config.maxVideoClipDuration} ${l10n.secondsUnit}',
                             style: const TextStyle(
                               fontSize: 14,
                               color: Colors.black54,
@@ -161,8 +164,8 @@ class _VideoExportSettingsSheetState extends State<_VideoExportSettingsSheet> {
                     ),
                   _buildMediaModeOption(
                     MediaExportMode.skipMedia,
-                    '不包含视频',
-                    '跳过所有照片和视频',
+                    l10n.skipMedia,
+                    l10n.skipAllPhotosAndVideos,
                   ),
 
                   const SizedBox(height: 16),
@@ -175,14 +178,14 @@ class _VideoExportSettingsSheetState extends State<_VideoExportSettingsSheet> {
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: Colors.blue.withOpacity(0.3)),
                     ),
-                    child: const Row(
+                    child: Row(
                       children: [
-                        Icon(Icons.mic, size: 20, color: Colors.blue),
-                        SizedBox(width: 8),
+                        const Icon(Icons.mic, size: 20, color: Colors.blue),
+                        const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            '需要麦克风权限才能录制视频中的声音',
-                            style: TextStyle(
+                            l10n.microphonePermissionNote,
+                            style: const TextStyle(
                               fontSize: 12,
                               color: Colors.blue,
                             ),
@@ -215,9 +218,10 @@ class _VideoExportSettingsSheetState extends State<_VideoExportSettingsSheet> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: const Text(
-                    '开始导出',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  child: Text(
+                    l10n.startExport,
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.w600),
                   ),
                 ),
               ),
@@ -305,6 +309,7 @@ class _VideoExportRecordingOverlayState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = S.of(context)!;
     return Positioned(
       top: MediaQuery.of(context).padding.top + 8,
       left: 16,
@@ -327,9 +332,9 @@ class _VideoExportRecordingOverlayState
               ),
             ),
             const SizedBox(width: 8),
-            const Text(
-              'REC',
-              style: TextStyle(
+            Text(
+              l10n.rec,
+              style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
                 fontSize: 14,
@@ -356,9 +361,9 @@ class _VideoExportRecordingOverlayState
                   color: Colors.white.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: const Text(
-                  '取消',
-                  style: TextStyle(
+                child: Text(
+                  l10n.cancel,
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 12,
                   ),
@@ -409,6 +414,7 @@ class VideoExportCompletionDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = S.of(context)!;
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
@@ -421,9 +427,9 @@ class VideoExportCompletionDialog extends StatelessWidget {
               children: [
                 const Icon(Icons.check_circle, color: Colors.green, size: 28),
                 const SizedBox(width: 8),
-                const Text(
-                  '导出完成',
-                  style: TextStyle(
+                Text(
+                  l10n.exportComplete,
+                  style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
@@ -504,7 +510,7 @@ class VideoExportCompletionDialog extends StatelessWidget {
                   child: OutlinedButton.icon(
                     onPressed: onSaveToGallery,
                     icon: const Icon(Icons.photo_library),
-                    label: const Text('保存相册'),
+                    label: Text(l10n.saveToGallery),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
@@ -518,7 +524,7 @@ class VideoExportCompletionDialog extends StatelessWidget {
                   child: ElevatedButton.icon(
                     onPressed: onShare,
                     icon: const Icon(Icons.share),
-                    label: const Text('分享'),
+                    label: Text(l10n.share),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue,
                       foregroundColor: Colors.white,

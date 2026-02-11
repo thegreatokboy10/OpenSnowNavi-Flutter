@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../models/session.dart';
@@ -76,12 +77,13 @@ class _SessionListViewState extends State<SessionListView> {
   }
 
   Future<void> _exportTracks() async {
+    final l10n = S.of(context)!;
     final filePath = await TrackExportService.exportAllTracks();
     if (filePath != null && mounted) {
       await TrackExportService.shareExport();
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('没有可导出的轨迹')),
+        SnackBar(content: Text(l10n.noTracksToExport)),
       );
     }
   }
@@ -99,23 +101,25 @@ class _SessionListViewState extends State<SessionListView> {
   }
 
   void _showExportImportMenu() {
+    final l10n = S.of(context)!;
     showModalBottomSheet(
       context: context,
       builder: (ctx) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Padding(
-              padding: EdgeInsets.all(16),
+            Padding(
+              padding: const EdgeInsets.all(16),
               child: Text(
-                '数据管理',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                l10n.dataManagement,
+                style:
+                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
             ),
             ListTile(
               leading: const Icon(Icons.upload_file, color: Colors.blue),
-              title: const Text('导出所有轨迹'),
-              subtitle: const Text('备份到 ZIP 文件并分享'),
+              title: Text(l10n.exportAllTracks),
+              subtitle: Text(l10n.backupToZip),
               onTap: () {
                 Navigator.pop(ctx);
                 _exportTracks();
@@ -123,8 +127,8 @@ class _SessionListViewState extends State<SessionListView> {
             ),
             ListTile(
               leading: const Icon(Icons.download, color: Colors.green),
-              title: const Text('导入轨迹'),
-              subtitle: const Text('从备份文件恢复'),
+              title: Text(l10n.importTracks),
+              subtitle: Text(l10n.importFromBackup),
               onTap: () {
                 Navigator.pop(ctx);
                 _importTracks();
@@ -139,14 +143,15 @@ class _SessionListViewState extends State<SessionListView> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = S.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('History'),
+        title: Text(l10n.history),
         centerTitle: true,
         actions: [
           IconButton(
             icon: const Icon(Icons.more_vert),
-            tooltip: '数据管理',
+            tooltip: l10n.dataManagement,
             onPressed: _showExportImportMenu,
           ),
         ],
@@ -169,16 +174,17 @@ class _SessionListViewState extends State<SessionListView> {
   }
 
   Widget _buildEmptyState() {
+    final l10n = S.of(context)!;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.history, size: 64, color: Colors.grey.shade400),
           const SizedBox(height: 16),
-          Text('No sessions yet',
+          Text(l10n.noSessionsYet,
               style: TextStyle(color: Colors.grey.shade600, fontSize: 18)),
           const SizedBox(height: 8),
-          Text('Start recording to see your sessions here',
+          Text(l10n.startRecordingHint,
               style: TextStyle(color: Colors.grey.shade500)),
         ],
       ),
@@ -186,6 +192,7 @@ class _SessionListViewState extends State<SessionListView> {
   }
 
   Widget _buildSessionCard(Session session) {
+    final l10n = S.of(context)!;
     final dateFormat = DateFormat('MMM d, yyyy HH:mm');
     final distanceKm = session.totalDistance / 1000;
     final maxSpeedKmh = session.maxSpeed * 3.6;
@@ -223,12 +230,12 @@ class _SessionListViewState extends State<SessionListView> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
+                  _buildStatColumn(l10n.totalDuration,
+                      _formatDuration(session.totalDuration)),
                   _buildStatColumn(
-                      'Duration', _formatDuration(session.totalDuration)),
+                      l10n.distance, '${distanceKm.toStringAsFixed(2)} km'),
                   _buildStatColumn(
-                      'Distance', '${distanceKm.toStringAsFixed(2)} km'),
-                  _buildStatColumn(
-                      'Max Speed', '${maxSpeedKmh.toStringAsFixed(1)} km/h'),
+                      l10n.maxSpeed, '${maxSpeedKmh.toStringAsFixed(1)} km/h'),
                 ],
               ),
             ],
@@ -249,18 +256,20 @@ class _SessionListViewState extends State<SessionListView> {
   }
 
   Future<void> _confirmDelete(Session session) async {
+    final l10n = S.of(context)!;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Session?'),
-        content: const Text('This action cannot be undone.'),
+        title: Text(l10n.deleteSession),
+        content: Text(l10n.deleteSessionWarning),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
+              child: Text(l10n.cancel)),
           TextButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Delete', style: TextStyle(color: Colors.red))),
+              child:
+                  Text(l10n.delete, style: const TextStyle(color: Colors.red))),
         ],
       ),
     );

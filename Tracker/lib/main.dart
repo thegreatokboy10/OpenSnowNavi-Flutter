@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'l10n/app_localizations.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:provider/provider.dart';
 import 'config/mapbox_config.dart';
@@ -26,6 +28,25 @@ class SnowNaviTrackerApp extends StatelessWidget {
       create: (_) => SessionManager(),
       child: MaterialApp(
         title: 'SnowNavi Tracker',
+        // 多语言支持配置
+        localizationsDelegates: const [
+          S.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: S.supportedLocales,
+        // 根据系统语言自动选择，如果不支持则默认英文
+        localeResolutionCallback: (locale, supportedLocales) {
+          // 如果系统语言在支持列表中，使用系统语言
+          for (var supportedLocale in supportedLocales) {
+            if (supportedLocale.languageCode == locale?.languageCode) {
+              return supportedLocale;
+            }
+          }
+          // 否则默认使用英文
+          return const Locale('en');
+        },
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(
             seedColor: Colors.orange,
@@ -112,39 +133,40 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
 
   /// 显示路线导入确认对话框
   Future<void> _showRouteImportDialog(SharedRouteData routeData) async {
-    final origin = routeData.origin?.name ?? '未知';
-    final destination = routeData.destination?.name ?? '未知';
-    final resortKey = routeData.resortKey ?? '未知雪场';
+    final l10n = S.of(context)!;
+    final origin = routeData.origin?.name ?? l10n.unknown;
+    final destination = routeData.destination?.name ?? l10n.unknown;
+    final resortKey = routeData.resortKey ?? l10n.unknownResort;
 
     final result = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.route, color: Colors.blue),
-            SizedBox(width: 8),
-            Text('发现分享路线'),
+            const Icon(Icons.route, color: Colors.blue),
+            const SizedBox(width: 8),
+            Text(l10n.sharedRouteFound),
           ],
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('检测到剪贴板中有分享的路线，是否导入？'),
+            Text(l10n.sharedRouteMessage),
             const SizedBox(height: 16),
-            Text('雪场: $resortKey',
+            Text(l10n.resort(resortKey),
                 style: TextStyle(color: Colors.grey.shade600)),
-            Text('路线: $origin → $destination',
+            Text(l10n.route(origin, destination),
                 style: TextStyle(color: Colors.grey.shade600)),
             if (routeData.stopovers.isNotEmpty)
-              Text('途径点: ${routeData.stopovers.length}个',
+              Text(l10n.stopovers(routeData.stopovers.length),
                   style: TextStyle(color: Colors.grey.shade600)),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('忽略'),
+            child: Text(l10n.ignore),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -152,7 +174,7 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
               backgroundColor: Colors.blue,
               foregroundColor: Colors.white,
             ),
-            child: const Text('导入路线'),
+            child: Text(l10n.importRoute),
           ),
         ],
       ),
@@ -170,6 +192,7 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
 
   /// 显示中断录制恢复对话框
   Future<void> _showInterruptedSessionDialog(SessionManager manager) async {
+    final l10n = S.of(context)!;
     final session = manager.interruptedSession!;
     final duration = DateTime.now().difference(session.startTime);
     final durationStr = _formatDuration(duration);
@@ -178,27 +201,25 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.warning_amber_rounded, color: Colors.orange),
-            SizedBox(width: 8),
-            Text('Recording Interrupted'),
+            const Icon(Icons.warning_amber_rounded, color: Colors.orange),
+            const SizedBox(width: 8),
+            Text(l10n.recordingInterrupted),
           ],
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'A recording session was interrupted. Would you like to continue?',
-            ),
+            Text(l10n.recordingInterruptedMessage),
             const SizedBox(height: 16),
             Text(
-              'Started: ${_formatDateTime(session.startTime)}',
+              l10n.started(_formatDateTime(session.startTime)),
               style: TextStyle(color: Colors.grey.shade600),
             ),
             Text(
-              'Duration: $durationStr',
+              l10n.duration(durationStr),
               style: TextStyle(color: Colors.grey.shade600),
             ),
           ],
@@ -206,7 +227,7 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Discard'),
+            child: Text(l10n.discard),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -214,7 +235,7 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
               backgroundColor: Colors.orange,
               foregroundColor: Colors.white,
             ),
-            child: const Text('Continue Recording'),
+            child: Text(l10n.continueRecording),
           ),
         ],
       ),
@@ -234,12 +255,13 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
   }
 
   String _formatDuration(Duration d) {
+    final l10n = S.of(context);
     final hours = d.inHours;
     final mins = d.inMinutes.remainder(60);
     if (hours > 0) {
-      return '$hours hr ${mins} min';
+      return l10n?.hourMinute(hours, mins) ?? '$hours hr $mins min';
     }
-    return '$mins min';
+    return l10n?.minuteOnly(mins) ?? '$mins min';
   }
 
   String _formatDateTime(DateTime dt) {
@@ -255,6 +277,8 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = S.of(context);
+
     // 初始化期间显示加载界面
     if (_isInitializing) {
       return Scaffold(
@@ -264,7 +288,8 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
             children: [
               const CircularProgressIndicator(),
               const SizedBox(height: 16),
-              Text('Loading...', style: TextStyle(color: Colors.grey.shade600)),
+              Text(l10n?.loading ?? 'Loading...',
+                  style: TextStyle(color: Colors.grey.shade600)),
             ],
           ),
         ),
@@ -291,26 +316,27 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
           // index == 1 表示地图页面
           TeamService.instance.setForegroundMode(index == 1);
         },
-        destinations: const [
+        destinations: [
           NavigationDestination(
-            icon: Icon(Icons.radio_button_checked),
-            selectedIcon: Icon(Icons.radio_button_checked, color: Colors.red),
-            label: 'Record',
+            icon: const Icon(Icons.radio_button_checked),
+            selectedIcon:
+                const Icon(Icons.radio_button_checked, color: Colors.red),
+            label: l10n?.tabRecord ?? 'Record',
           ),
           NavigationDestination(
-            icon: Icon(Icons.map_outlined),
-            selectedIcon: Icon(Icons.map, color: Colors.blue),
-            label: 'Map',
+            icon: const Icon(Icons.map_outlined),
+            selectedIcon: const Icon(Icons.map, color: Colors.blue),
+            label: l10n?.tabMap ?? 'Map',
           ),
           NavigationDestination(
-            icon: Icon(Icons.history),
-            selectedIcon: Icon(Icons.history, color: Colors.orange),
-            label: 'History',
+            icon: const Icon(Icons.history),
+            selectedIcon: const Icon(Icons.history, color: Colors.orange),
+            label: l10n?.tabHistory ?? 'History',
           ),
           NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person, color: Colors.deepPurple),
-            label: 'Me',
+            icon: const Icon(Icons.person_outline),
+            selectedIcon: const Icon(Icons.person, color: Colors.deepPurple),
+            label: l10n?.tabMe ?? 'Me',
           ),
         ],
       ),

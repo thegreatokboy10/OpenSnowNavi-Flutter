@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../l10n/app_localizations.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -185,11 +186,12 @@ class RouteFeedbackService {
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri);
       if (context.mounted) {
+        final l10n = S.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('邮件已打开，请手动添加附件'),
+            content: Text(l10n.emailOpenedAddAttachment),
             action: SnackBarAction(
-              label: '分享附件',
+              label: l10n.shareAttachment,
               onPressed: () async {
                 await Share.shareXFiles([XFile(file.path)]);
               },
@@ -224,23 +226,24 @@ class RouteFeedbackService {
     required re.Route route,
     String? resortKey,
   }) async {
+    final l10n = S.of(context)!;
     showModalBottomSheet(
       context: context,
       builder: (ctx) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Padding(
-              padding: EdgeInsets.all(16),
+            Padding(
+              padding: const EdgeInsets.all(16),
               child: Text(
-                '分享路线',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                l10n.shareRoute,
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
             ),
             ListTile(
               leading: const Icon(Icons.ios_share, color: Colors.blue),
-              title: const Text('分享到其他应用'),
-              subtitle: const Text('微信、QQ 等'),
+              title: Text(l10n.shareToOtherApps),
+              subtitle: Text(l10n.wechatQQEtc),
               onTap: () async {
                 Navigator.pop(ctx);
                 await shareRoute(
@@ -253,8 +256,8 @@ class RouteFeedbackService {
             ),
             ListTile(
               leading: const Icon(Icons.copy, color: Colors.orange),
-              title: const Text('复制分享文本'),
-              subtitle: const Text('对方复制后打开 App 自动加载'),
+              title: Text(l10n.copyShareText),
+              subtitle: Text(l10n.copyShareTextHint),
               onTap: () async {
                 Navigator.pop(ctx);
                 await copyRouteText(
@@ -268,8 +271,8 @@ class RouteFeedbackService {
             const Divider(),
             ListTile(
               leading: const Icon(Icons.bug_report, color: Colors.red),
-              title: const Text('反馈路线问题'),
-              subtitle: const Text('发送至 $_feedbackEmail'),
+              title: Text(l10n.feedbackRouteProblem),
+              subtitle: Text(l10n.sendToEmail(_feedbackEmail)),
               onTap: () async {
                 Navigator.pop(ctx);
                 await sendFeedbackByEmail(
@@ -395,9 +398,9 @@ $routeSharePrefix$compactData$routeShareSuffix''';
 
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('路线分享文本已复制'),
-          duration: Duration(seconds: 2),
+        SnackBar(
+          content: Text(S.of(context)!.routeShareTextCopied),
+          duration: const Duration(seconds: 2),
         ),
       );
     }

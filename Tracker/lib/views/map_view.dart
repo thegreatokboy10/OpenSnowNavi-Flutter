@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../l10n/app_localizations.dart';
 import 'package:geolocator/geolocator.dart' as geo;
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' hide Size;
 import 'package:polyline_codec/polyline_codec.dart';
@@ -697,6 +698,7 @@ class _MapViewState extends State<MapView> {
 
   /// 雪场选择器弹窗
   Widget _buildResortSelectorOverlay() {
+    final l10n = S.of(context)!;
     return GestureDetector(
       onTap: () => setState(() => _showResortSelector = false),
       child: Container(
@@ -718,9 +720,9 @@ class _MapViewState extends State<MapView> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        '选择雪场',
-                        style: TextStyle(
+                      Text(
+                        l10n.selectResort,
+                        style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
@@ -766,6 +768,7 @@ class _MapViewState extends State<MapView> {
 
   /// 图层选择器弹窗
   Widget _buildLayerSelectorOverlay() {
+    final l10n = S.of(context)!;
     return GestureDetector(
       onTap: () => setState(() => _showLayerSelector = false),
       child: Container(
@@ -787,9 +790,9 @@ class _MapViewState extends State<MapView> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        '图层设置',
-                        style: TextStyle(
+                      Text(
+                        l10n.layerSettings,
+                        style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
@@ -803,8 +806,8 @@ class _MapViewState extends State<MapView> {
                   ),
                   const Divider(),
                   SwitchListTile(
-                    title: const Text('雪道和缆车'),
-                    subtitle: const Text('显示当前雪场的雪道和缆车数据'),
+                    title: Text(l10n.pistesAndLifts),
+                    subtitle: Text(l10n.showResortPistesAndLifts),
                     value: _showResortData,
                     activeColor: AppTheme.toggleActiveColor,
                     onChanged: (value) {
@@ -813,8 +816,8 @@ class _MapViewState extends State<MapView> {
                     },
                   ),
                   SwitchListTile(
-                    title: const Text('OpenSnowMap'),
-                    subtitle: const Text('显示 OpenSnowMap 滑雪地图图层'),
+                    title: Text(l10n.openSnowMap),
+                    subtitle: Text(l10n.showOpenSnowMapLayer),
                     value: _showOpenSnowMap,
                     activeColor: AppTheme.toggleActiveColor,
                     onChanged: (value) {
@@ -828,20 +831,20 @@ class _MapViewState extends State<MapView> {
                   // 团队模式下的图层开关
                   if (TeamService.instance.currentTeam != null) ...[
                     const Divider(),
-                    const Padding(
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
                       child: Text(
-                        '组队滑雪',
-                        style: TextStyle(
+                        l10n.teamSkiing,
+                        style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           color: Colors.grey,
                         ),
                       ),
                     ),
                     SwitchListTile(
-                      title: const Text('队友位置'),
-                      subtitle: const Text('显示团队成员的实时位置'),
+                      title: Text(l10n.teammateLocations),
+                      subtitle: Text(l10n.showTeammateLocations),
                       value: _showMemberLocationsLayer,
                       activeColor: AppTheme.toggleActiveColor,
                       onChanged: (value) {
@@ -853,8 +856,8 @@ class _MapViewState extends State<MapView> {
                       },
                     ),
                     SwitchListTile(
-                      title: const Text('集合点'),
-                      subtitle: const Text('显示团队集合点'),
+                      title: Text(l10n.meetingPoints),
+                      subtitle: Text(l10n.showMeetingPoints),
                       value: _showMeetingPointsLayer,
                       activeColor: AppTheme.toggleActiveColor,
                       onChanged: (value) {
@@ -871,8 +874,8 @@ class _MapViewState extends State<MapView> {
                   ListTile(
                     leading: const Icon(Icons.download_for_offline,
                         color: Colors.blue),
-                    title: const Text('离线地图'),
-                    subtitle: const Text('下载雪场地图供离线使用'),
+                    title: Text(l10n.offlineMaps),
+                    subtitle: Text(l10n.downloadMapsForOffline),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () {
                       setState(() => _showLayerSelector = false);
@@ -1538,9 +1541,9 @@ class _MapViewState extends State<MapView> {
     // 如果正在编辑路线点，提示用户使用长按
     if (_currentEditingType != EditingPointType.none) {
       ScaffoldMessenger.of(this.context).showSnackBar(
-        const SnackBar(
-          content: Text('请长按地图选择位置'),
-          duration: Duration(seconds: 2),
+        SnackBar(
+          content: Text(S.of(this.context)!.longPressMapToSelect),
+          duration: const Duration(seconds: 2),
         ),
       );
       return;
@@ -1686,14 +1689,15 @@ class _MapViewState extends State<MapView> {
 
   /// 显示团队成员信息面板
   void _showMemberInfoPanel(MemberLocation member) {
+    final l10n = S.of(context)!;
     String timeAgoStr = '';
     if (member.lastUpdate != null) {
       final timeAgo = DateTime.now().difference(member.lastUpdate!);
       timeAgoStr = timeAgo.inMinutes < 1
-          ? '刚刚'
+          ? l10n.justNow
           : timeAgo.inMinutes < 60
-              ? '${timeAgo.inMinutes} 分钟前'
-              : '${timeAgo.inHours} 小时前';
+              ? l10n.minutesAgo(timeAgo.inMinutes)
+              : l10n.hoursAgo(timeAgo.inHours);
     }
 
     showModalBottomSheet(
@@ -1735,7 +1739,7 @@ class _MapViewState extends State<MapView> {
                       ),
                       if (timeAgoStr.isNotEmpty)
                         Text(
-                          '位置更新于 $timeAgoStr',
+                          l10n.locationUpdatedAt(timeAgoStr),
                           style: TextStyle(color: Colors.grey[600]),
                         ),
                     ],
@@ -1752,7 +1756,7 @@ class _MapViewState extends State<MapView> {
                   _planRouteToMember(member);
                 },
                 icon: const Icon(Icons.directions),
-                label: const Text('规划路线到 TA'),
+                label: Text(l10n.planRouteToMember),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primaryColor,
                   foregroundColor: Colors.white,
@@ -1767,6 +1771,7 @@ class _MapViewState extends State<MapView> {
 
   /// 显示集合点信息面板
   void _showMeetingPointInfoPanel(MeetingPoint point) {
+    final l10n = S.of(context)!;
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -1803,7 +1808,7 @@ class _MapViewState extends State<MapView> {
                         ),
                       ),
                       Text(
-                        point.isActive ? '当前活动集合点' : '集合点',
+                        point.isActive ? l10n.activeMeetingPoint : l10n.meetingPoint,
                         style: TextStyle(color: Colors.grey[600]),
                       ),
                     ],
@@ -1821,7 +1826,7 @@ class _MapViewState extends State<MapView> {
                       _planRouteToMeetingPoint(point);
                     },
                     icon: const Icon(Icons.directions),
-                    label: const Text('规划路线'),
+                    label: Text(l10n.planRoute),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.primaryColor,
                       foregroundColor: Colors.white,
@@ -1838,7 +1843,7 @@ class _MapViewState extends State<MapView> {
                             .setActiveMeetingPoint(point.id);
                       },
                       icon: const Icon(Icons.check_circle),
-                      label: const Text('设为活动'),
+                      label: Text(l10n.setAsActive),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.meetingPointActiveColor,
                         foregroundColor: Colors.white,
@@ -1856,7 +1861,8 @@ class _MapViewState extends State<MapView> {
   /// 显示地图元素（雪道/缆车）信息面板
   void _showFeatureInfoPanel(
       Map<String, dynamic> properties, Position coordinates) {
-    final name = (properties['name'] ?? properties['ref'] ?? '未知').toString();
+    final l10n = S.of(context)!;
+    final name = (properties['name'] ?? properties['ref'] ?? l10n.unknown).toString();
     final type =
         (properties['type'] ?? properties['aerialway'] ?? '').toString();
     final difficulty = (properties['piste:difficulty'] ?? '').toString();
@@ -1876,20 +1882,20 @@ class _MapViewState extends State<MapView> {
     String liftTypeLabel = '';
     if (isLift) {
       if (type.contains('chair')) {
-        liftTypeLabel = '吊椅缆车';
+        liftTypeLabel = l10n.chairLift;
       } else if (type.contains('gondola')) {
-        liftTypeLabel = '厢式缆车';
+        liftTypeLabel = l10n.gondolaLift;
       } else if (type.contains('cable')) {
-        liftTypeLabel = '索道';
+        liftTypeLabel = l10n.cableCar;
       } else if (type.contains('drag') ||
           type.contains('platter') ||
           type.contains('t-bar') ||
           type.contains('j-bar')) {
-        liftTypeLabel = '拖牵';
+        liftTypeLabel = l10n.dragLift;
       } else if (type.contains('magic_carpet')) {
-        liftTypeLabel = '魔毯';
+        liftTypeLabel = l10n.magicCarpet;
       } else {
-        liftTypeLabel = '缆车';
+        liftTypeLabel = l10n.lift;
       }
     }
 
@@ -1901,24 +1907,24 @@ class _MapViewState extends State<MapView> {
       switch (difficulty.toLowerCase()) {
         case 'novice':
           difficultyColor = Colors.green;
-          difficultyLabel = '初级';
+          difficultyLabel = l10n.noviceDifficulty;
           break;
         case 'easy':
           difficultyColor = Colors.blue;
-          difficultyLabel = '中级';
+          difficultyLabel = l10n.easyDifficulty;
           break;
         case 'intermediate':
           difficultyColor = Colors.red;
-          difficultyLabel = '高级';
+          difficultyLabel = l10n.intermediateDifficulty;
           break;
         case 'advanced':
         case 'expert':
           difficultyColor = Colors.black;
-          difficultyLabel = '专家';
+          difficultyLabel = l10n.advancedDifficulty;
           break;
         case 'freeride':
           difficultyColor = Colors.orange;
-          difficultyLabel = '野雪';
+          difficultyLabel = l10n.freerideDifficulty;
           break;
         default:
           difficultyColor = Colors.grey;
@@ -1998,7 +2004,7 @@ class _MapViewState extends State<MapView> {
                       _showRoutePlanningPanelWithAutoRoute();
                     },
                     icon: const Icon(Icons.trip_origin),
-                    label: const Text('设为起点'),
+                    label: Text(l10n.setOrigin),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.originColor,
                       foregroundColor: Colors.white,
@@ -2019,7 +2025,7 @@ class _MapViewState extends State<MapView> {
                       _showRoutePlanningPanelWithAutoRoute();
                     },
                     icon: const Icon(Icons.flag),
-                    label: const Text('设为终点'),
+                    label: Text(l10n.setDestination),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.destinationColor,
                       foregroundColor: Colors.white,
@@ -2039,11 +2045,12 @@ class _MapViewState extends State<MapView> {
 
   /// 规划路线到团队成员位置
   Future<void> _planRouteToMember(MemberLocation member) async {
+    final l10n = S.of(context)!;
     final currentPosition = await _getCurrentPosition();
     if (currentPosition == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('无法获取当前位置')),
+          SnackBar(content: Text(l10n.unableToGetCurrentLocation)),
         );
       }
       return;
@@ -2051,7 +2058,7 @@ class _MapViewState extends State<MapView> {
 
     _routePlanningData.origin = RoutePoint(
       id: 'origin',
-      name: '当前位置',
+      name: l10n.currentLocation,
       coordinates: currentPosition,
       type: RoutePointType.origin,
     );
@@ -2299,18 +2306,19 @@ class _MapViewState extends State<MapView> {
   }
 
   void _onUseCurrentLocationForRoute(RoutePointType type) {
+    final l10n = S.of(context)!;
     final manager = Provider.of<SessionManager>(context, listen: false);
     final position = manager.currentPosition;
 
     if (position == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('无法获取当前位置')),
+        SnackBar(content: Text(l10n.unableToGetCurrentLocation)),
       );
       return;
     }
 
     final coordinates = Position(position.longitude, position.latitude);
-    const name = '当前位置';
+    final name = l10n.currentLocation;
 
     _onRoutePointSelected(coordinates, name, type, -1);
   }
@@ -2335,39 +2343,40 @@ class _MapViewState extends State<MapView> {
   Future<void> _addPOIAsMeetingPoint() async {
     if (_selectedPOIPosition == null) return;
 
+    final l10n = S.of(context)!;
     final team = TeamService.instance.currentTeam;
     if (team == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请先加入或创建团队')),
+        SnackBar(content: Text(l10n.pleaseJoinOrCreateTeam)),
       );
       return;
     }
 
     // 弹出对话框让用户输入集合点名称
     final nameController = TextEditingController(
-      text: _selectedPOIName ?? '集合点',
+      text: _selectedPOIName ?? l10n.meetingPoint,
     );
 
     final name = await showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('添加集合点'),
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.addMeetingPoint),
         content: TextField(
           controller: nameController,
-          decoration: const InputDecoration(
-            labelText: '集合点名称',
-            hintText: '请输入集合点名称',
+          decoration: InputDecoration(
+            labelText: l10n.meetingPointName,
+            hintText: l10n.enterMeetingPointName,
           ),
           autofocus: true,
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(l10n.cancel),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(context, nameController.text),
-            child: const Text('确定'),
+            onPressed: () => Navigator.pop(dialogContext, nameController.text),
+            child: Text(l10n.confirm),
           ),
         ],
       ),
@@ -2389,13 +2398,13 @@ class _MapViewState extends State<MapView> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('集合点 "$name" 已添加')),
+          SnackBar(content: Text(l10n.meetingPointAdded(name))),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('添加集合点失败: $e')),
+          SnackBar(content: Text(l10n.addMeetingPointFailed(e.toString()))),
         );
       }
     }

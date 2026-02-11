@@ -1,5 +1,6 @@
 // 会员个人中心页面
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../member/member_service.dart';
 import '../member/member_models.dart';
@@ -37,14 +38,15 @@ class _MeViewState extends State<MeView> {
   }
 
   Future<void> _login() async {
+    final l10n = S.of(context)!;
     final email = _emailController.text.trim();
     if (email.isEmpty) {
-      setState(() => _errorMessage = '请输入邮箱地址');
+      setState(() => _errorMessage = l10n.emptyEmail);
       return;
     }
 
     if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
-      setState(() => _errorMessage = '请输入有效的邮箱地址');
+      setState(() => _errorMessage = l10n.invalidEmail);
       return;
     }
 
@@ -61,31 +63,32 @@ class _MeViewState extends State<MeView> {
       setState(() {});
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('登录成功'),
+          SnackBar(
+            content: Text(l10n.loginSuccess),
             backgroundColor: Colors.green,
           ),
         );
       }
     } else {
-      setState(() => _errorMessage = result.error ?? '登录失败');
+      setState(() => _errorMessage = result.error ?? l10n.loginFailed);
     }
   }
 
   Future<void> _logout() async {
+    final l10n = S.of(context)!;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('确认退出'),
-        content: const Text('确定要退出登录吗？'),
+        title: Text(l10n.logout),
+        content: Text(l10n.logoutConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('确定'),
+            child: Text(l10n.confirm),
           ),
         ],
       ),
@@ -105,6 +108,7 @@ class _MeViewState extends State<MeView> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = S.of(context)!;
     if (_isLoading) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
@@ -113,13 +117,13 @@ class _MeViewState extends State<MeView> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('我的'),
+        title: Text(l10n.tabMe),
         actions: _memberService.isLoggedIn
             ? [
                 IconButton(
                   icon: const Icon(Icons.refresh),
                   onPressed: _refresh,
-                  tooltip: '刷新',
+                  tooltip: l10n.refresh,
                 ),
               ]
             : null,
@@ -129,6 +133,7 @@ class _MeViewState extends State<MeView> {
   }
 
   Widget _buildLoginForm() {
+    final l10n = S.of(context)!;
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
@@ -141,13 +146,13 @@ class _MeViewState extends State<MeView> {
               color: Colors.grey[400],
             ),
             const SizedBox(height: 24),
-            const Text(
-              '会员登录',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            Text(
+              l10n.memberLogin,
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Text(
-              '登录以使用组队滑雪等会员功能',
+              l10n.memberLoginHint,
               style: TextStyle(color: Colors.grey[600]),
             ),
             const SizedBox(height: 32),
@@ -155,8 +160,8 @@ class _MeViewState extends State<MeView> {
               controller: _emailController,
               keyboardType: TextInputType.emailAddress,
               decoration: InputDecoration(
-                labelText: '邮箱地址',
-                hintText: '请输入注册邮箱',
+                labelText: l10n.emailAddress,
+                hintText: l10n.enterRegisteredEmail,
                 prefixIcon: const Icon(Icons.email_outlined),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -188,7 +193,7 @@ class _MeViewState extends State<MeView> {
                         width: 20,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('登录', style: TextStyle(fontSize: 16)),
+                    : Text(l10n.login, style: const TextStyle(fontSize: 16)),
               ),
             ),
           ],
@@ -198,6 +203,7 @@ class _MeViewState extends State<MeView> {
   }
 
   Widget _buildMemberInfo() {
+    final l10n = S.of(context)!;
     final member = _memberService.currentMember!;
     return Container(
       color: const Color(0xFF1A1A2E), // 深色背景
@@ -226,7 +232,7 @@ class _MeViewState extends State<MeView> {
                   const SizedBox(height: 16),
                   // 会员姓名
                   Text(
-                    member.name ?? '未设置姓名',
+                    member.name ?? l10n.nameNotSet,
                     style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -301,18 +307,18 @@ class _MeViewState extends State<MeView> {
                 padding: const EdgeInsets.all(20),
                 child: Column(
                   children: [
-                    const Text(
-                      '会员验证二维码',
-                      style: TextStyle(
+                    Text(
+                      l10n.memberQRCode,
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
                         color: Colors.black87,
                       ),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
-                      '扫描验证会员状态',
-                      style: TextStyle(
+                    Text(
+                      l10n.scanToVerify,
+                      style: const TextStyle(
                         fontSize: 12,
                         color: Colors.black54,
                       ),
@@ -358,7 +364,7 @@ class _MeViewState extends State<MeView> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: const Text('退出登录', style: TextStyle(fontSize: 16)),
+                child: Text(l10n.logout, style: const TextStyle(fontSize: 16)),
               ),
             ),
           ],
@@ -378,15 +384,16 @@ class _MeViewState extends State<MeView> {
   }
 
   String _getRoleText(String role) {
+    final l10n = S.of(context)!;
     switch (role) {
       case 'super_admin':
-        return '超级管理员';
+        return l10n.superAdmin;
       case 'admin':
-        return '管理员';
+        return l10n.admin;
       case 'instructor':
-        return '教练';
+        return l10n.coach;
       default:
-        return '会员';
+        return l10n.member;
     }
   }
 }
