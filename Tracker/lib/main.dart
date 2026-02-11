@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'config/mapbox_config.dart';
 import 'services/session_manager.dart';
 import 'services/deep_link_service.dart';
+import 'team/team_service.dart';
 import 'views/recording_view.dart';
 import 'views/session_list_view.dart';
 import 'views/map_view.dart';
@@ -286,6 +287,9 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
           setState(() {
             _selectedIndex = index;
           });
+          // 通知 TeamService 地图页面的前台/后台状态
+          // index == 1 表示地图页面
+          TeamService.instance.setForegroundMode(index == 1);
         },
         destinations: const [
           NavigationDestination(

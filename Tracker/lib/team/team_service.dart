@@ -22,6 +22,18 @@ class TeamService {
   bool _isRefreshing = false;
   String? _cachedDeviceId;
 
+  // 智能位置上传相关状态
+  Position? _lastUploadedPosition; // 上次上传的位置
+  DateTime? _lastUploadTime; // 上次上传时间
+  bool _isMoving = false; // 当前是否在移动
+  int _currentLocationUploadInterval =
+      TeamConfig.locationUploadIntervalStationarySeconds; // 当前上传间隔
+
+  // 团队刷新模式
+  bool _isForegroundMode = false; // 是否在前台模式
+  int _currentRefreshInterval =
+      TeamConfig.teamRefreshIntervalBackgroundSeconds; // 当前刷新间隔
+
   // 位置更新回调
   Function(List<TeamMember> members)? onMembersLocationUpdate;
   // 团队数据变化回调
@@ -390,10 +402,36 @@ class TeamService {
   void _startRefreshTimer() {
     _teamRefreshTimer?.cancel();
     _teamRefreshTimer = Timer.periodic(
-      Duration(seconds: TeamConfig.teamRefreshIntervalSeconds),
+      Duration(seconds: _currentRefreshInterval),
       (_) => _refreshTeam(),
     );
   }
+
+  /// 设置前台/后台模式
+  /// [isForeground] true 表示地图页面在前台，使用更频繁的刷新间隔
+  void setForegroundMode(bool isForeground) {
+    if (_isForegroundMode == isForeground) return;
+
+    _isForegroundMode = isForeground;
+    _currentRefreshInterval = isForeground
+        ? TeamConfig.teamRefreshIntervalForegroundSeconds
+        : TeamConfig.teamRefreshIntervalBackgroundSeconds;
+
+    print(
+        '[TeamService] setForegroundMode: $isForeground, refresh interval: $_currentRefreshInterval s');
+
+    // 如果有团队，重新启动刷新定时器
+    if (_currentTeam != null) {
+      _startRefreshTimer();
+      // 前台模式时立即刷新一次
+      if (isForeground) {
+        _refreshTeam();
+      }
+    }
+  }
+
+  /// 获取当前是否在前台模式
+  bool get isForegroundMode => _isForegroundMode;
 
   /// 手动刷新团队数据（供外部调用）
   Future<void> refreshTeam() async {
@@ -405,7 +443,7 @@ class TeamService {
     _locationUpdateTimer?.cancel();
     _updateLocation(); // 立即更新一次
     _locationUpdateTimer = Timer.periodic(
-      Duration(seconds: TeamConfig.locationUploadIntervalSeconds),
+      Duration(seconds: _currentLocationUploadInterval),
       (_) => _updateLocation(),
     );
   }
@@ -414,6 +452,9 @@ class TeamService {
   void _stopLocationUpdates() {
     _locationUpdateTimer?.cancel();
     _locationUpdateTimer = null;
+    _lastUploadedPosition = null;
+    _lastUploadTime = null;
+    _isMoving = false;
   }
 
   /// 更新当前位置
@@ -426,6 +467,17 @@ class TeamService {
           accuracy: LocationAccuracy.high,
         ),
       );
+
+      // 检测是否在移动
+      final wasMoving = _isMoving;
+      _isMoving = _checkIfMoving(position);
+
+      // 如果移动状态改变，调整上传间隔
+      if (_isMoving != wasMoving) {
+        _adjustLocationUploadInterval();
+      }
+
+      // 上传位置
       await _storageService.updateMemberLocation(
         teamId: _currentTeam!.id,
         deviceId: effectiveId,
@@ -436,9 +488,60 @@ class TeamService {
         heading: position.heading,
         speed: position.speed,
       );
+
+      // 更新上传状态
+      _lastUploadedPosition = position;
+      _lastUploadTime = DateTime.now();
+
       await _refreshTeam();
     } catch (e) {
       // 位置更新失败，静默处理
+      print('[TeamService] _updateLocation error: $e');
+    }
+  }
+
+  /// 检测是否在移动
+  bool _checkIfMoving(Position currentPosition) {
+    // 方法1：通过速度判断
+    if (currentPosition.speed > TeamConfig.movementSpeedThreshold) {
+      return true;
+    }
+
+    // 方法2：通过与上次位置的距离判断
+    if (_lastUploadedPosition != null) {
+      final distance = Geolocator.distanceBetween(
+        _lastUploadedPosition!.latitude,
+        _lastUploadedPosition!.longitude,
+        currentPosition.latitude,
+        currentPosition.longitude,
+      );
+      if (distance > TeamConfig.movementDistanceThreshold) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /// 调整位置上传间隔
+  void _adjustLocationUploadInterval() {
+    final newInterval = _isMoving
+        ? TeamConfig.locationUploadIntervalMovingSeconds
+        : TeamConfig.locationUploadIntervalStationarySeconds;
+
+    if (newInterval != _currentLocationUploadInterval) {
+      _currentLocationUploadInterval = newInterval;
+      print(
+          '[TeamService] Location upload interval changed: $_currentLocationUploadInterval s (moving: $_isMoving)');
+
+      // 重新启动定时器
+      if (_locationUpdateTimer != null) {
+        _locationUpdateTimer!.cancel();
+        _locationUpdateTimer = Timer.periodic(
+          Duration(seconds: _currentLocationUploadInterval),
+          (_) => _updateLocation(),
+        );
+      }
     }
   }
 
