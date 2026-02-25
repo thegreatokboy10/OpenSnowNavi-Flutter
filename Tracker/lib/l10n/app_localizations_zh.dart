@@ -996,4 +996,16 @@ class SZh extends S {
 
   @override
   String get slow => '慢速';
+
+  @override
+  String get elevationProfile => '海拔曲线';
+
+  @override
+  String get loadingElevation => '正在加载海拔数据...';
+
+  @override
+  String get elevationLoadError => '海拔数据加载失败';
+
+  @override
+  String get noElevationData => '无海拔数据';
 }

@@ -1960,6 +1960,30 @@ abstract class S {
   /// In en, this message translates to:
   /// **'Slow'**
   String get slow;
+
+  /// No description provided for @elevationProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Elevation Profile'**
+  String get elevationProfile;
+
+  /// No description provided for @loadingElevation.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading elevation data...'**
+  String get loadingElevation;
+
+  /// No description provided for @elevationLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load elevation data'**
+  String get elevationLoadError;
+
+  /// No description provided for @noElevationData.
+  ///
+  /// In en, this message translates to:
+  /// **'No elevation data available'**
+  String get noElevationData;
 }
 
 class _SDelegate extends LocalizationsDelegate<S> {

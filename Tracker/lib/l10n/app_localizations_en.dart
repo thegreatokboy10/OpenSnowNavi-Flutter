@@ -996,4 +996,16 @@ class SEn extends S {
 
   @override
   String get slow => 'Slow';
+
+  @override
+  String get elevationProfile => 'Elevation Profile';
+
+  @override
+  String get loadingElevation => 'Loading elevation data...';
+
+  @override
+  String get elevationLoadError => 'Failed to load elevation data';
+
+  @override
+  String get noElevationData => 'No elevation data available';
 }

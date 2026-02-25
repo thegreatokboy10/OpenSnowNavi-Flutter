@@ -25,6 +25,9 @@ import '../team/team_service.dart';
 import '../meeting_point/meeting_point_service.dart';
 import '../meeting_point/meeting_point_model.dart';
 import '../widgets/offline_map_manager.dart';
+import '../widgets/piste_elevation_chart.dart';
+import '../services/elevation_service.dart';
+import '../models/elevation_point.dart';
 
 /// 地图视图 - 用于滑雪路线规划
 class MapView extends StatefulWidget {
@@ -1673,7 +1676,7 @@ class _MapViewState extends State<MapView> {
               // 高亮整个 feature 并调整相机
               await _highlightFeature(
                   featureCoordinates, coordinates, properties);
-              _showFeatureInfoPanel(properties, coordinates);
+              _showFeatureInfoPanel(properties, coordinates, featureCoordinates);
               return;
             }
           }
@@ -1860,9 +1863,12 @@ class _MapViewState extends State<MapView> {
 
   /// 显示地图元素（雪道/缆车）信息面板
   void _showFeatureInfoPanel(
-      Map<String, dynamic> properties, Position coordinates) {
+      Map<String, dynamic> properties,
+      Position coordinates,
+      List<List<double>>? featureCoordinates) {
     final l10n = S.of(context)!;
-    final name = (properties['name'] ?? properties['ref'] ?? l10n.unknown).toString();
+    final name =
+        (properties['name'] ?? properties['ref'] ?? l10n.unknown).toString();
     final type =
         (properties['type'] ?? properties['aerialway'] ?? '').toString();
     final difficulty = (properties['piste:difficulty'] ?? '').toString();
@@ -1899,11 +1905,10 @@ class _MapViewState extends State<MapView> {
       }
     }
 
-    // 雪道难度图标和颜色
-    Widget difficultyWidget = const SizedBox.shrink();
+    // 雪道难度颜色
+    Color difficultyColor = Colors.grey;
+    String difficultyLabel = difficulty;
     if (!isLift && difficulty.isNotEmpty) {
-      Color difficultyColor;
-      String difficultyLabel;
       switch (difficulty.toLowerCase()) {
         case 'novice':
           difficultyColor = Colors.green;
@@ -1926,10 +1931,12 @@ class _MapViewState extends State<MapView> {
           difficultyColor = Colors.orange;
           difficultyLabel = l10n.freerideDifficulty;
           break;
-        default:
-          difficultyColor = Colors.grey;
-          difficultyLabel = difficulty;
       }
+    }
+
+    // 雪道难度图标
+    Widget difficultyWidget = const SizedBox.shrink();
+    if (!isLift && difficulty.isNotEmpty) {
       difficultyWidget = Row(
         children: [
           Icon(Icons.ac_unit, color: difficultyColor, size: 16),
@@ -1946,101 +1953,88 @@ class _MapViewState extends State<MapView> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        margin: const EdgeInsets.all(16),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  isLift
-                      ? Icons.airline_seat_recline_extra
-                      : Icons.downhill_skiing,
-                  color: isLift ? Colors.deepPurple : Colors.blue,
-                  size: 32,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        name,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      if (isLift)
-                        Text(liftTypeLabel,
-                            style: TextStyle(color: Colors.grey[600]))
-                      else
-                        difficultyWidget,
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      _routePlanningData.origin = RoutePoint(
-                        id: 'origin',
-                        name: name,
-                        coordinates: coordinates,
-                        type: RoutePointType.origin,
-                      );
-                      _showRoutePlanningPanelWithAutoRoute();
-                    },
-                    icon: const Icon(Icons.trip_origin),
-                    label: Text(l10n.setOrigin),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.originColor,
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      _routePlanningData.destination = RoutePoint(
-                        id: 'destination',
-                        name: name,
-                        coordinates: coordinates,
-                        type: RoutePointType.destination,
-                      );
-                      _showRoutePlanningPanelWithAutoRoute();
-                    },
-                    icon: const Icon(Icons.flag),
-                    label: Text(l10n.setDestination),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.destinationColor,
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+      isScrollControlled: true,
+      builder: (context) => _FeatureInfoPanelContent(
+        name: name,
+        isLift: isLift,
+        liftTypeLabel: liftTypeLabel,
+        difficultyWidget: difficultyWidget,
+        difficultyColor: difficultyColor,
+        coordinates: coordinates,
+        featureCoordinates: featureCoordinates,
+        onSetOrigin: () {
+          Navigator.pop(context);
+          _routePlanningData.origin = RoutePoint(
+            id: 'origin',
+            name: name,
+            coordinates: coordinates,
+            type: RoutePointType.origin,
+          );
+          _showRoutePlanningPanelWithAutoRoute();
+        },
+        onSetDestination: () {
+          Navigator.pop(context);
+          _routePlanningData.destination = RoutePoint(
+            id: 'destination',
+            name: name,
+            coordinates: coordinates,
+            type: RoutePointType.destination,
+          );
+          _showRoutePlanningPanelWithAutoRoute();
+        },
+        onElevationPositionChanged: (point) {
+          _updateElevationPositionMarker(point);
+        },
       ),
     ).whenComplete(() {
-      // 关闭面板时移除高亮
+      // 关闭面板时移除高亮和海拔位置标记
       _removeFeatureHighlight();
+      _removeElevationPositionMarker();
     });
+  }
+
+  /// 海拔位置标记管理
+  CircleAnnotationManager? _elevationPositionAnnotationManager;
+  CircleAnnotation? _elevationPositionAnnotation;
+
+  Future<void> _updateElevationPositionMarker(ElevationPoint point) async {
+    if (_mapboxMap == null) return;
+
+    try {
+      // 创建或更新标记管理器
+      _elevationPositionAnnotationManager ??=
+          await _mapboxMap!.annotations.createCircleAnnotationManager();
+
+      // 清除所有旧标记，避免快速拖动时残留
+      await _elevationPositionAnnotationManager!.deleteAll();
+
+      // 创建醒目的圆形标记 - 白色填充 + 蓝色描边
+      final options = CircleAnnotationOptions(
+        geometry: Point(coordinates: Position(point.longitude, point.latitude)),
+        circleRadius: 8.0,
+        circleColor: Colors.white.value,
+        circleStrokeColor: Colors.blue.value,
+        circleStrokeWidth: 3.0,
+      );
+
+      _elevationPositionAnnotation =
+          await _elevationPositionAnnotationManager!.create(options);
+    } catch (e) {
+      debugPrint('[MapView] Error updating elevation position marker: $e');
+    }
+  }
+
+  Future<void> _removeElevationPositionMarker() async {
+    if (_elevationPositionAnnotationManager != null && _mapboxMap != null) {
+      try {
+        await _mapboxMap!.annotations
+            .removeAnnotationManager(_elevationPositionAnnotationManager!);
+      } catch (e) {
+        debugPrint('[MapView] Error removing elevation position marker: $e');
+      }
+      _elevationPositionAnnotationManager = null;
+      _elevationPositionAnnotation = null;
+    }
   }
 
   /// 规划路线到团队成员位置
@@ -3269,5 +3263,263 @@ class _MapViewState extends State<MapView> {
       debugPrint('Error getting current position: $e');
       return null;
     }
+  }
+}
+
+/// 雪道/缆车信息面板内容组件
+class _FeatureInfoPanelContent extends StatefulWidget {
+  final String name;
+  final bool isLift;
+  final String liftTypeLabel;
+  final Widget difficultyWidget;
+  final Color difficultyColor;
+  final Position coordinates;
+  final List<List<double>>? featureCoordinates;
+  final VoidCallback onSetOrigin;
+  final VoidCallback onSetDestination;
+  final ValueChanged<ElevationPoint>? onElevationPositionChanged;
+
+  const _FeatureInfoPanelContent({
+    required this.name,
+    required this.isLift,
+    required this.liftTypeLabel,
+    required this.difficultyWidget,
+    required this.difficultyColor,
+    required this.coordinates,
+    this.featureCoordinates,
+    required this.onSetOrigin,
+    required this.onSetDestination,
+    this.onElevationPositionChanged,
+  });
+
+  @override
+  State<_FeatureInfoPanelContent> createState() =>
+      _FeatureInfoPanelContentState();
+}
+
+class _FeatureInfoPanelContentState extends State<_FeatureInfoPanelContent> {
+  ElevationProfile? _elevationProfile;
+  bool _isLoadingElevation = false;
+  String? _elevationError;
+
+  @override
+  void initState() {
+    super.initState();
+    // 只为雪道加载海拔数据，不为缆车加载
+    if (!widget.isLift && widget.featureCoordinates != null) {
+      _loadElevationData();
+    }
+  }
+
+  Future<void> _loadElevationData() async {
+    if (widget.featureCoordinates == null ||
+        widget.featureCoordinates!.isEmpty) {
+      return;
+    }
+
+    setState(() {
+      _isLoadingElevation = true;
+      _elevationError = null;
+    });
+
+    try {
+      final profile = await ElevationService.instance
+          .getElevationProfile(widget.featureCoordinates!);
+
+      if (mounted) {
+        setState(() {
+          _elevationProfile = profile;
+          _isLoadingElevation = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('[FeatureInfoPanel] Error loading elevation: $e');
+      if (mounted) {
+        setState(() {
+          _elevationError = e.toString();
+          _isLoadingElevation = false;
+        });
+      }
+    }
+  }
+
+  void _onElevationPositionChanged(int index) {
+    if (_elevationProfile != null &&
+        index < _elevationProfile!.points.length &&
+        widget.onElevationPositionChanged != null) {
+      widget.onElevationPositionChanged!(_elevationProfile!.points[index]);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = S.of(context)!;
+
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 标题行
+          Row(
+            children: [
+              Icon(
+                widget.isLift
+                    ? Icons.airline_seat_recline_extra
+                    : Icons.downhill_skiing,
+                color: widget.isLift ? Colors.deepPurple : Colors.blue,
+                size: 32,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.name,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    if (widget.isLift)
+                      Text(widget.liftTypeLabel,
+                          style: TextStyle(color: Colors.grey[600]))
+                    else
+                      widget.difficultyWidget,
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          // 海拔剖面图（仅雪道显示）
+          if (!widget.isLift && widget.featureCoordinates != null) ...[
+            const SizedBox(height: 16),
+            const Divider(),
+            const SizedBox(height: 8),
+            _buildElevationSection(l10n),
+          ],
+
+          const SizedBox(height: 16),
+
+          // 操作按钮
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: widget.onSetOrigin,
+                  icon: const Icon(Icons.trip_origin),
+                  label: Text(l10n.setOrigin),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.originColor,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: widget.onSetDestination,
+                  icon: const Icon(Icons.flag),
+                  label: Text(l10n.setDestination),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.destinationColor,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildElevationSection(S l10n) {
+    if (_isLoadingElevation) {
+      return Container(
+        height: 100,
+        alignment: Alignment.center,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              l10n.loadingElevation,
+              style: TextStyle(color: Colors.grey[600], fontSize: 12),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_elevationError != null) {
+      return Container(
+        height: 60,
+        alignment: Alignment.center,
+        child: Text(
+          l10n.elevationLoadError,
+          style: TextStyle(color: Colors.red[400], fontSize: 12),
+        ),
+      );
+    }
+
+    if (_elevationProfile == null || _elevationProfile!.points.isEmpty) {
+      return Container(
+        height: 60,
+        alignment: Alignment.center,
+        child: Text(
+          l10n.noElevationData,
+          style: TextStyle(color: Colors.grey[600], fontSize: 12),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // 标题
+        Row(
+          children: [
+            Icon(Icons.terrain, size: 16, color: Colors.grey[700]),
+            const SizedBox(width: 4),
+            Text(
+              l10n.elevationProfile,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[700],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+
+        // 海拔图
+        PisteElevationChart(
+          profile: _elevationProfile!,
+          height: 100,
+          chartColor: widget.difficultyColor,
+          onPositionChanged: _onElevationPositionChanged,
+        ),
+
+        const SizedBox(height: 8),
+
+        // 统计信息
+        PisteElevationStats(profile: _elevationProfile!),
+      ],
+    );
   }
 }

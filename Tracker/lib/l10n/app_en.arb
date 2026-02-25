@@ -339,5 +339,9 @@
   "unitPoints": "pts",
   "fast": "Fast",
   "normal": "Normal",
-  "slow": "Slow"
+  "slow": "Slow",
+  "elevationProfile": "Elevation Profile",
+  "loadingElevation": "Loading elevation data...",
+  "elevationLoadError": "Failed to load elevation data",
+  "noElevationData": "No elevation data available"
 }

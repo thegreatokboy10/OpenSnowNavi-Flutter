@@ -310,5 +310,9 @@
   "unitPoints": "点",
   "fast": "快速",
   "normal": "标准",
-  "slow": "慢速"
+  "slow": "慢速",
+  "elevationProfile": "海拔曲线",
+  "loadingElevation": "正在加载海拔数据...",
+  "elevationLoadError": "海拔数据加载失败",
+  "noElevationData": "无海拔数据"
 }
